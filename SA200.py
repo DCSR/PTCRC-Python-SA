@@ -411,43 +411,9 @@ class GuiClass(object):
 
         self.GraphFrame = ttk.Frame(self.graphTab,borderwidth=3, relief="sunken")
         self.GraphFrame.grid(column = 0, row = 0,rowspan=1,sticky = (N,E,W,S))
-
-        self.topCanvas = Canvas(self.GraphFrame,width=self.CANVAS_WIDTH, height=self.CANVAS_HEIGHT)
-        self.topCanvas.grid(column = 0, row = 0, columnspan = 10, stick = (W))
-        self.topCanvas.create_text(150, 10, fill="blue", text="topCanvas")
-    
-
-        self.graphControlFrame = ttk.Frame(self.GraphFrame,borderwidth=3, relief="sunken")
-        self.graphControlFrame.grid(column = 0, row = 1, columnspan = 10)
-        X_Axis_Label = ttk.Label(self.graphControlFrame, text="X Axis scales (min)")
-        X_Axis_Label.grid(column = 0, row = 2)
-        topRadiobutton30 = ttk.Radiobutton(self.graphControlFrame, text="10", variable=self.selectMax_x_Scale, value=10)
-        topRadiobutton30.grid(column = 1, row = 2)
-        topRadiobutton30 = ttk.Radiobutton(self.graphControlFrame, text="30", variable=self.selectMax_x_Scale, value=30)
-        topRadiobutton30.grid(column = 2, row = 2)
-        topRadiobutton60 = ttk.Radiobutton(self.graphControlFrame, text="60", variable=self.selectMax_x_Scale, value=60)
-        topRadiobutton60.grid(column = 3, row = 2)
-        topRadiobutton180 = ttk.Radiobutton(self.graphControlFrame, text="180", variable=self.selectMax_x_Scale, value=180)
-        topRadiobutton180.grid(column = 4, row = 2)
-        topRadiobutton180 = ttk.Radiobutton(self.graphControlFrame, text="360", variable=self.selectMax_x_Scale, value=360)
-        topRadiobutton180.grid(column = 5, row = 2)
-
+        
         self.graphButtonFrame = ttk.Frame(self.GraphFrame,borderwidth=3, relief="sunken")
-        self.graphButtonFrame.grid(column = 0, row = 2, columnspan = 10)
-        topTimeStampButton = ttk.Button(self.graphButtonFrame,text="Timestamps",command=lambda: \
-                                        self.drawAllTimeStamps(self.topCanvas, self.selectedBox.get(),self.selectMax_x_Scale.get()))
-        topTimeStampButton.grid(column = 0, row = 0)
-        topCumRecButton = ttk.Button(self.graphButtonFrame,text="Cum Rec",command=lambda: \
-                                     self.drawCumulativeRecord(self.topCanvas, self.selectedBox.get(),self.selectMax_x_Scale.get()))
-        topCumRecButton.grid(column = 1, row = 0)        
-        topEventButton = ttk.Button(self.graphButtonFrame, text="Events",  command=lambda: self.drawEventRecords())
-        topEventButton.grid(column = 2, row = 0)
-        topClearButton = ttk.Button(self.graphButtonFrame,text="Clear Canvas", \
-                                      command=lambda Canvas = 0: self.clearCanvas(Canvas))
-        topClearButton.grid(column = 3, row = 0)
-
-        self.graphButtonFrame = ttk.Frame(self.GraphFrame,borderwidth=3, relief="sunken")
-        self.graphButtonFrame.grid(column = 0, row = 3, rowspan = 8, sticky = (N))
+        self.graphButtonFrame.grid(column = 0, row = 1, sticky = (N))
         B1_Radiobutton = ttk.Radiobutton(self.graphButtonFrame, text="Box 1", variable=self.selectedBox, value=0)
         B1_Radiobutton.grid(column = 0, row = 0)
         B2_Radiobutton = ttk.Radiobutton(self.graphButtonFrame, text="Box 2", variable=self.selectedBox, value=1)
@@ -468,6 +434,44 @@ class GuiClass(object):
         example1_Radiobutton.grid(column = 8, row = 0)
         example2_Radiobutton = ttk.Radiobutton(self.graphButtonFrame, text="IntA", variable=self.selectedBox, value=9)
         example2_Radiobutton.grid(column = 9, row = 0)
+
+        self.graphButtonFrame = ttk.Frame(self.GraphFrame,borderwidth=3, relief="sunken")
+        self.graphButtonFrame.grid(column = 0, row = 2, columnspan = 10)
+        topTimeStampButton = ttk.Button(self.graphButtonFrame,text="Timestamps",command=lambda: \
+                                        self.drawAllTimeStamps(self.topCanvas, self.selectedBox.get(),self.selectMax_x_Scale.get()))
+        topTimeStampButton.grid(column = 0, row = 0)
+        topCumRecButton = ttk.Button(self.graphButtonFrame,text="Cum Rec",command=lambda: \
+                                     self.drawCumulativeRecord(self.topCanvas, self.selectedBox.get(),self.selectMax_x_Scale.get()))
+        topCumRecButton.grid(column = 1, row = 0)        
+        topEventButton = ttk.Button(self.graphButtonFrame, text="Events",  command=lambda: self.drawEventRecords())
+        topEventButton.grid(column = 2, row = 0)
+        topClearButton = ttk.Button(self.graphButtonFrame,text="Clear Canvas", \
+                                      command=lambda Canvas = 0: self.clearCanvas(Canvas))
+        topClearButton.grid(column = 3, row = 0)
+
+        self.topCanvas = Canvas(self.GraphFrame,width=self.CANVAS_WIDTH, height=self.CANVAS_HEIGHT)
+        self.topCanvas.grid(column = 0, row = 3, columnspan = 10, stick = (W))
+        self.topCanvas.create_text(150, 10, fill="blue", text="topCanvas")
+    
+
+        self.graphControlFrame = ttk.Frame(self.GraphFrame,borderwidth=3, relief="sunken")
+        self.graphControlFrame.grid(column = 0, row = 4, columnspan = 10, sticky = (S))
+        X_Axis_Label = ttk.Label(self.graphControlFrame, text="X Axis scales (min)")
+        X_Axis_Label.grid(column = 0, row = 2)
+        topRadiobutton30 = ttk.Radiobutton(self.graphControlFrame, text="10", variable=self.selectMax_x_Scale, value=10)
+        topRadiobutton30.grid(column = 1, row = 2)
+        topRadiobutton30 = ttk.Radiobutton(self.graphControlFrame, text="30", variable=self.selectMax_x_Scale, value=30)
+        topRadiobutton30.grid(column = 2, row = 2)
+        topRadiobutton60 = ttk.Radiobutton(self.graphControlFrame, text="60", variable=self.selectMax_x_Scale, value=60)
+        topRadiobutton60.grid(column = 3, row = 2)
+        topRadiobutton180 = ttk.Radiobutton(self.graphControlFrame, text="180", variable=self.selectMax_x_Scale, value=180)
+        topRadiobutton180.grid(column = 4, row = 2)
+        topRadiobutton180 = ttk.Radiobutton(self.graphControlFrame, text="360", variable=self.selectMax_x_Scale, value=360)
+        topRadiobutton180.grid(column = 5, row = 2)
+
+
+
+
         """
         self.bottomCanvas = Canvas(self.GraphFrame,width=self.CANVAS_WIDTH, height=self.CANVAS_HEIGHT)
         self.bottomCanvas.grid(column = 1, row = 3, columnspan = 8)
