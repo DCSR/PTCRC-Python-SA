@@ -31,11 +31,10 @@ def main(argv=None):
 
 class GuiClass(object):
     def __init__(self):
-        
-        self.verbose = True
 
+        self.version = "SA200.02"
+        self.verbose = True
         self.sched = ['0: Do not run', '1: FR', '2:FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25']
-        
         self.box1 = Box(1)    # note that boxes[0] is box1
         self.box2 = Box(2)
         self.box3 = Box(3)
@@ -60,13 +59,21 @@ class GuiClass(object):
 
         # ******************* tk - GUI interface   ****************************** 
         self.root = Tk()
-        self.root.title("SA200.py")
+        self.root.title(self.version)
 
         # ***** tk specific variables (StringVars, IntVars and BooleanVars) *****
 
         self.selectMax_x_Scale = IntVar(value = 180)
         self.selectedBox = IntVar(value = 0)
         self.OS_String = StringVar(value="OS = ?")
+
+        # ***** Pump Chaos ****
+        self.pumpChaosCheckVar = BooleanVar(value=False)
+        self.pumpChaosBoxNum = 0
+        self.pumpChaosState = False
+        self.pumpChaosDelay = 3
+        self.pumpChaosCount = 0
+        # *********************
         
         self.showDataStreamCheckVar = BooleanVar(value=False)
         self.checkLeversCheckVar = BooleanVar(value=True)
@@ -719,6 +726,10 @@ class GuiClass(object):
         self.bottomTextbox.grid(column = 0, row = 1,sticky = (N))        
         self.bottomTextbox.insert('1.0',"Bottom Text Box\n")
 
+        pumpChaosCheckButton = Checkbutton(self.diagnosticFrame, text = "Pump Chaos - Extremely Dangerous", variable = self.pumpChaosCheckVar, \
+                onvalue = True, offvalue = False)       
+        pumpChaosCheckButton.grid(column = 0, row = 2)
+
         # ********************** Lists used to read and write to initialization file ******************
         self.IDStrList = [self.B1_IDStr, self.B2_IDStr, self.B3_IDStr, self.B4_IDStr, \
                           self.B5_IDStr, self.B6_IDStr, self.B7_IDStr, self.B8_IDStr]
@@ -1341,7 +1352,23 @@ class GuiClass(object):
                     self.L2ResponsesList[listIndex].set(self.L2ResponsesList[listIndex].get()+1)    # update Dummy response label
                 elif (strCode == "P"):
                     self.InfList[listIndex].set(self.InfList[listIndex].get()+1)                # update response label
-        elif (boxNum == 9): self.writeToTextbox(strCode,0)              
+        elif (boxNum == 9): self.writeToTextbox(strCode,0)
+
+
+    def pumpChaos(self):
+        self.pumpChaosCount = self.pumpChaosCount + 1
+        if self.pumpChaosCount >= self.pumpChaosDelay:
+            self.pumpChaosCount = 0
+            if self.pumpChaosState == True:
+                tempStr = "<P "+str(self.pumpChaosBoxNum)+">"
+            else:
+                tempStr = "<p "+str(self.pumpChaosBoxNum)+">"
+                #print(tempStr)
+            self.outputText(tempStr)
+            self.pumpChaosBoxNum = self.pumpChaosBoxNum + 1
+            if self.pumpChaosBoxNum > 7:
+                self.pumpChaosBoxNum = 0
+                self.pumpChaosState = not(self.pumpChaosState)       
 
     def periodic_check(self):
         if self.arduino0.activeConnection == True:    
@@ -1349,6 +1376,8 @@ class GuiClass(object):
                 try:
                     inputLine = self.arduino0.getInput()
                     self.handleInput(inputLine)
+                    if self.pumpChaosCheckVar.get() == 1:
+                        self.pumpChaos()
                 except queue.Empty:
                     pass
         self.root.after(100, self.periodic_check)  # procedure reschedules its own reoccurance in 100 mSec
