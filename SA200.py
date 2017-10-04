@@ -1016,14 +1016,14 @@ class GuiClass(object):
         
     def readExampleFiles(self):
         self.example1List = []
-        aFile = open('TestDataFile.dat','r')
+        aFile = open('PR_Example_File.dat','r')
         for line in  aFile:
             pair = line.split()
             pair[0] = int(pair[0])
             self.example1List.append(pair)
         aFile.close()
         self.example2List = []
-        aFile = open('A008_Jun_17.dat','r')
+        aFile = open('IntA_Example_File.dat','r')
         for line in  aFile:
             pair = line.split()
             pair[0] = int(pair[0])
