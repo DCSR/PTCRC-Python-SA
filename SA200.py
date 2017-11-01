@@ -32,7 +32,7 @@ def main(argv=None):
 class GuiClass(object):
     def __init__(self):
 
-        self.version = "SA200.02"
+        self.version = "SA200.03"
         self.verbose = True
         self.sched = ['0: Do not run', '1: FR', '2:FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25']
         self.box1 = Box(1)    # note that boxes[0] is box1
@@ -1114,6 +1114,14 @@ class GuiClass(object):
 
     def testFunction6(self):        # Get Diagnostics
         self.outputText("<D>")
+        self.outputText("<R 7>")
+        self.outputText("<R 6>")
+        self.outputText("<R 5>")
+        self.outputText("<R 4>")
+        self.outputText("<R 3>")
+        self.outputText("<R 2>")
+        self.outputText("<R 1>")
+        self.outputText("<R 0>")
 
     def drawCumulativeRecord(self, aCanvas, selectedList, max_x_scale):
         aCanvas.delete('all')
