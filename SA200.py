@@ -1122,6 +1122,8 @@ class GuiClass(object):
         self.outputText("<R 2>")
         self.outputText("<R 1>")
         self.outputText("<R 0>")
+        self.outputText("<V>")
+        
 
     def drawCumulativeRecord(self, aCanvas, selectedList, max_x_scale):
         aCanvas.delete('all')
