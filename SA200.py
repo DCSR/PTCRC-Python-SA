@@ -1153,7 +1153,7 @@ class GuiClass(object):
         x_zero = self.X_ZERO
         y_zero = self.Y_ZERO
         x_pixel_width = 500
-        max_x_scale = 180   #minutes
+        max_x_scale = self.selectMax_x_Scale.get()
         x_divisions = 6
         self.topCanvas.delete('all')
         self.topCanvas.create_text(150, 10, fill="blue", text="topCanvas")
