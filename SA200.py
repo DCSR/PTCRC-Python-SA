@@ -477,204 +477,152 @@ class GuiClass(object):
         topRadiobutton180.grid(column = 5, row = 2)
 
 
-
-
-        """
-        self.bottomCanvas = Canvas(self.GraphFrame,width=self.CANVAS_WIDTH, height=self.CANVAS_HEIGHT)
-        self.bottomCanvas.grid(column = 1, row = 3, columnspan = 8)
-       
-        self.bottomCanvas.create_text(150, 10, fill="blue", text="bottomCanvas")
-        bottomTimeStampButton = ttk.Button(self.GraphFrame,text="Timestamps",command=lambda: \
-                                           self.drawAllTimeStamps(self.bottomCanvas, self.selectedBox.get(),self.selectMax_x_Scale.get()))
-        bottomTimeStampButton.grid(column = 1, row = 4)
-        bottomCumRecButton = ttk.Button(self.GraphFrame,text="Cum Rec",command=lambda: \
-                                     self.drawCumulativeRecord(self.bottomCanvas, self.selectedBox.get(),self.selectMax_x_Scale.get()))
-        bottomCumRecButton.grid(column = 2, row = 4)
-        bottomEventButton = ttk.Button(self.GraphFrame, text="Events", command=lambda canvasNum = 1: self.drawEventRecords(canvasNum))
-        bottomEventButton.grid(column = 3, row = 4)
-        bottomClearButton = ttk.Button(self.GraphFrame,text="Clear Canvas", \
-                                      command=lambda Canvas = 1: self.clearCanvas(Canvas))
-        bottomClearButton.grid(column = 4, row = 4)
-        """
-
         # ********************** Text Boxes - DiagnosticsTab ****************************************
         self.diagnosticFrame = ttk.Frame(self.diagnosticTab,borderwidth=3, relief="sunken")
         self.diagnosticFrame.grid(column = 0, row = 0,rowspan=1, sticky = (N,E,W,S))
 
         self.diagnostic_IO_Frame = ttk.Frame(self.diagnosticFrame,borderwidth=3, relief="sunken")
         self.diagnostic_IO_Frame.grid(column = 0, row = 0, columnspan = 2, sticky = (W))
+
         B1_Lever1CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L1", variable = self.B1_lever1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.moveLever1(0,self.B1_lever1CheckVar.get()))
-        B1_Lever1CheckButton.grid(column = 1, row = 0)
+                onvalue = True, offvalue = False, command=lambda: self.moveLever1(0,self.B1_lever1CheckVar.get())).grid(column = 1, row = 0)
         B1_Lever2CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L2", variable = self.B1_lever2CheckVar, \
-             onvalue = True, offvalue = False, command=lambda: self.moveLever2(0,self.B1_lever2CheckVar.get()))
-        B1_Lever2CheckButton.grid(column = 2, row = 0)
+             onvalue = True, offvalue = False, command=lambda: self.moveLever2(0,self.B1_lever2CheckVar.get())).grid(column = 2, row = 0)
         B1_PumpCheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "Pump", variable = self.B1_pumpCheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.togglePump(0,self.B1_pumpCheckVar.get()))
-        B1_PumpCheckButton.grid(column = 3, row = 0)
+                onvalue = True, offvalue = False, command=lambda: self.togglePump(0,self.B1_pumpCheckVar.get())).grid(column = 3, row = 0)
         B1_LED1_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED1", variable = self.B1_LED1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(0,self.B1_LED1CheckVar.get()))
-        B1_LED1_CheckButton.grid(column = 4, row = 0)
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(0,self.B1_LED1CheckVar.get())).grid(column = 4, row = 0)
         B1_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B1_LED2CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(0,self.B1_LED2CheckVar.get()))
-        B1_LED2_CheckButton.grid(column = 5, row = 0)       
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(0,self.B1_LED2CheckVar.get())).grid(column = 5, row = 0)
+        B1_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L1 test", command=lambda: self.mimicL1Response(0)).grid(column = 6, row = 0)
+        # B1_L2_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L2 test", command=lambda: self.mimicL2Response(0)).grid(column = 7, row = 0)
+
         B2_Lever1CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L1", variable = self.B2_lever1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.moveLever1(1,self.B2_lever1CheckVar.get()))
-        B2_Lever1CheckButton.grid(column = 1, row = 1)
+                onvalue = True, offvalue = False, command=lambda: self.moveLever1(1,self.B2_lever1CheckVar.get())).grid(column = 1, row = 1)
         B2_Lever2CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L2", variable = self.B2_lever2CheckVar, \
-             onvalue = True, offvalue = False, command=lambda: self.moveLever2(1,self.B2_lever2CheckVar.get()))
-        B2_Lever2CheckButton.grid(column = 2, row = 1)
+             onvalue = True, offvalue = False, command=lambda: self.moveLever2(1,self.B2_lever2CheckVar.get())).grid(column = 2, row = 1)
         B2_PumpCheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "Pump", variable = self.B2_pumpCheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.togglePump(1,self.B2_pumpCheckVar.get()))
-        B2_PumpCheckButton.grid(column = 3, row = 1)
+                onvalue = True, offvalue = False, command=lambda: self.togglePump(1,self.B2_pumpCheckVar.get())).grid(column = 3, row = 1)
         B2_LED1_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED1", variable = self.B2_LED1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(1,self.B2_LED1CheckVar.get()))
-        B2_LED1_CheckButton.grid(column = 4, row = 1)
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(1,self.B2_LED1CheckVar.get())).grid(column = 4, row = 1)
         B2_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B2_LED2CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(1,self.B2_LED2CheckVar.get()))
-        B2_LED2_CheckButton.grid(column = 5, row = 1)        
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(1,self.B2_LED2CheckVar.get())).grid(column = 5, row = 1)
+        B2_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L2 test", command=lambda: self.mimicL1Response(1)).grid(column = 6, row = 1)        
+
         B3_Lever1CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L1", variable = self.B3_lever1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.moveLever1(2,self.B3_lever1CheckVar.get()))
-        B3_Lever1CheckButton.grid(column = 1, row = 2)
+                onvalue = True, offvalue = False, command=lambda: self.moveLever1(2,self.B3_lever1CheckVar.get())).grid(column = 1, row = 2)
         B3_Lever2CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L2", variable = self.B3_lever2CheckVar, \
-             onvalue = True, offvalue = False, command=lambda: self.moveLever2(2,self.B3_lever2CheckVar.get()))
-        B3_Lever2CheckButton.grid(column = 2, row = 2)
+             onvalue = True, offvalue = False, command=lambda: self.moveLever2(2,self.B3_lever2CheckVar.get())).grid(column = 2, row = 2)
         B3_PumpCheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "Pump", variable = self.B3_pumpCheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.togglePump(2,self.B3_pumpCheckVar.get()))
-        B3_PumpCheckButton.grid(column = 3, row = 2)
+                onvalue = True, offvalue = False, command=lambda: self.togglePump(2,self.B3_pumpCheckVar.get())).grid(column = 3, row = 2)
         B3_LED1_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED1", variable = self.B3_LED1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(2,self.B3_LED1CheckVar.get()))
-        B3_LED1_CheckButton.grid(column = 4, row = 2)
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(2,self.B3_LED1CheckVar.get())).grid(column = 4, row = 2)
         B3_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B3_LED2CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(2,self.B3_LED2CheckVar.get()))
-        B3_LED2_CheckButton.grid(column = 5, row = 2)        
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(2,self.B3_LED2CheckVar.get())).grid(column = 5, row = 2)
+        B3_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L3 test", command=lambda: self.mimicL1Response(2)).grid(column = 6, row = 2)
+
         B4_Lever1CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L1", variable = self.B4_lever1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.moveLever1(3,self.B4_lever1CheckVar.get()))
-        B4_Lever1CheckButton.grid(column = 1, row = 3)
+                onvalue = True, offvalue = False, command=lambda: self.moveLever1(3,self.B4_lever1CheckVar.get())).grid(column = 1, row = 3)
         B4_Lever2CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L2", variable = self.B4_lever2CheckVar, \
-             onvalue = True, offvalue = False, command=lambda: self.moveLever2(3,self.B4_lever2CheckVar.get()))
-        B4_Lever2CheckButton.grid(column = 2, row = 3)
+             onvalue = True, offvalue = False, command=lambda: self.moveLever2(3,self.B4_lever2CheckVar.get())).grid(column = 2, row = 3)
         B4_PumpCheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "Pump", variable = self.B4_pumpCheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.togglePump(3,self.B4_pumpCheckVar.get()))
-        B4_PumpCheckButton.grid(column = 3, row = 3)
+                onvalue = True, offvalue = False, command=lambda: self.togglePump(3,self.B4_pumpCheckVar.get())).grid(column = 3, row = 3)
         B4_LED1_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED1", variable = self.B4_LED1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(3,self.B4_LED1CheckVar.get()))
-        B4_LED1_CheckButton.grid(column = 4, row = 3)
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(3,self.B4_LED1CheckVar.get())).grid(column = 4, row = 3)
         B4_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B4_LED2CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(3,self.B4_LED2CheckVar.get()))
-        B4_LED2_CheckButton.grid(column = 5, row = 3)
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(3,self.B4_LED2CheckVar.get())).grid(column = 5, row = 3)
+        B4_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L4 test", command=lambda: self.mimicL1Response(3)).grid(column = 6, row = 3)
+
         B5_Lever1CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L1", variable = self.B5_lever1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.moveLever1(4,self.B5_lever1CheckVar.get()))
-        B5_Lever1CheckButton.grid(column = 1, row = 4)
+                onvalue = True, offvalue = False, command=lambda: self.moveLever1(4,self.B5_lever1CheckVar.get())).grid(column = 1, row = 4)
         B5_Lever2CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L2", variable = self.B5_lever2CheckVar, \
-             onvalue = True, offvalue = False, command=lambda: self.moveLever2(4,self.B5_lever2CheckVar.get()))
-        B5_Lever2CheckButton.grid(column = 2, row = 4)
+             onvalue = True, offvalue = False, command=lambda: self.moveLever2(4,self.B5_lever2CheckVar.get())).grid(column = 2, row = 4)
         B5_PumpCheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "Pump", variable = self.B5_pumpCheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.togglePump(4,self.B5_pumpCheckVar.get()))
-        B5_PumpCheckButton.grid(column = 3, row = 4)
+                onvalue = True, offvalue = False, command=lambda: self.togglePump(4,self.B5_pumpCheckVar.get())).grid(column = 3, row = 4)
         B5_LED1_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED1", variable = self.B5_LED1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(4,self.B5_LED1CheckVar.get()))
-        B5_LED1_CheckButton.grid(column = 4, row = 4)
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(4,self.B5_LED1CheckVar.get())).grid(column = 4, row = 4)
         B5_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B5_LED2CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(4,self.B5_LED2CheckVar.get()))
-        B5_LED2_CheckButton.grid(column = 5, row = 4)
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(4,self.B5_LED2CheckVar.get())).grid(column = 5, row = 4)
+        B5_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L5 test", command=lambda: self.mimicL1Response(4)).grid(column = 6, row = 4)
+
         B6_Lever1CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L1", variable = self.B6_lever1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.moveLever1(5,self.B6_lever1CheckVar.get()))
-        B6_Lever1CheckButton.grid(column = 1, row = 5)
+                onvalue = True, offvalue = False, command=lambda: self.moveLever1(5,self.B6_lever1CheckVar.get())).grid(column = 1, row = 5)
         B6_Lever2CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L2", variable = self.B6_lever2CheckVar, \
-             onvalue = True, offvalue = False, command=lambda: self.moveLever2(5,self.B6_lever2CheckVar.get()))
-        B6_Lever2CheckButton.grid(column = 2, row = 5)
+             onvalue = True, offvalue = False, command=lambda: self.moveLever2(5,self.B6_lever2CheckVar.get())).grid(column = 2, row = 5)
         B6_PumpCheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "Pump", variable = self.B6_pumpCheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.togglePump(5,self.B6_pumpCheckVar.get()))
-        B6_PumpCheckButton.grid(column = 3, row = 5)
+                onvalue = True, offvalue = False, command=lambda: self.togglePump(5,self.B6_pumpCheckVar.get())).grid(column = 3, row = 5)
         B6_LED1_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED1", variable = self.B6_LED1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(5,self.B6_LED1CheckVar.get()))
-        B6_LED1_CheckButton.grid(column = 4, row = 5)
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(5,self.B6_LED1CheckVar.get())).grid(column = 4, row = 5)
         B6_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B6_LED2CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(5,self.B6_LED2CheckVar.get()))
-        B6_LED2_CheckButton.grid(column = 5, row = 5) 
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(5,self.B6_LED2CheckVar.get())).grid(column = 5, row = 5)
+        B6_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L6 test", command=lambda: self.mimicL1Response(5)).grid(column = 6, row = 5)
+
         B7_Lever1CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L1", variable = self.B7_lever1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.moveLever1(6,self.B7_lever1CheckVar.get()))
-        B7_Lever1CheckButton.grid(column = 1, row = 6)
+                onvalue = True, offvalue = False, command=lambda: self.moveLever1(6,self.B7_lever1CheckVar.get())).grid(column = 1, row = 6)
         B7_Lever2CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L2", variable = self.B7_lever2CheckVar, \
-             onvalue = True, offvalue = False, command=lambda: self.moveLever2(6,self.B7_lever2CheckVar.get()))
-        B7_Lever2CheckButton.grid(column = 2, row = 6)
+             onvalue = True, offvalue = False, command=lambda: self.moveLever2(6,self.B7_lever2CheckVar.get())).grid(column = 2, row = 6)
         B7_PumpCheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "Pump", variable = self.B7_pumpCheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.togglePump(6,self.B7_pumpCheckVar.get()))
-        B7_PumpCheckButton.grid(column = 3, row = 6)        
+                onvalue = True, offvalue = False, command=lambda: self.togglePump(6,self.B7_pumpCheckVar.get())).grid(column = 3, row = 6)        
         B7_LED1_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED1", variable = self.B7_LED1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(6,self.B7_LED1CheckVar.get()))
-        B7_LED1_CheckButton.grid(column = 4, row = 6)
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(6,self.B7_LED1CheckVar.get())).grid(column = 4, row = 6)
         B7_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B7_LED2CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(6,self.B7_LED2CheckVar.get()))
-        B7_LED2_CheckButton.grid(column = 5, row = 6)         
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(6,self.B7_LED2CheckVar.get())).grid(column = 5, row = 6)
+        B7_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L7 test", command=lambda: self.mimicL1Response(6)).grid(column = 6, row = 6)
+
         B8_Lever1CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L1", variable = self.B8_lever1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.moveLever1(7,self.B8_lever1CheckVar.get()))
-        B8_Lever1CheckButton.grid(column = 1, row = 7)
+                onvalue = True, offvalue = False, command=lambda: self.moveLever1(7,self.B8_lever1CheckVar.get())).grid(column = 1, row = 7)
         B8_Lever2CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L2", variable = self.B8_lever2CheckVar, \
-             onvalue = True, offvalue = False, command=lambda: self.moveLever2(7,self.B8_lever2CheckVar.get()))
-        B8_Lever2CheckButton.grid(column = 2, row = 7)
+             onvalue = True, offvalue = False, command=lambda: self.moveLever2(7,self.B8_lever2CheckVar.get())).grid(column = 2, row = 7)
         B8_PumpCheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "Pump", variable = self.B8_pumpCheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.togglePump(7,self.B8_pumpCheckVar.get()))
-        B8_PumpCheckButton.grid(column = 3, row = 7)
+                onvalue = True, offvalue = False, command=lambda: self.togglePump(7,self.B8_pumpCheckVar.get())).grid(column = 3, row = 7)
         B8_LED1_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED1", variable = self.B8_LED1CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(7,self.B8_LED1CheckVar.get()))
-        B8_LED1_CheckButton.grid(column = 4, row = 7)
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED1(7,self.B8_LED1CheckVar.get())).grid(column = 4, row = 7)
         B8_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B8_LED2CheckVar, \
-                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(7,self.B8_LED2CheckVar.get()))
-        B8_LED2_CheckButton.grid(column = 5, row = 7)
+                onvalue = True, offvalue = False, command=lambda: self.toggleLED2(7,self.B8_LED2CheckVar.get())).grid(column = 5, row = 7)
+        B8_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L8 test", command=lambda: self.mimicL1Response(7)).grid(column = 6, row = 7)
 
         self.startStopButtonFrame = ttk.Frame(self.diagnosticFrame,borderwidth=3, relief="sunken")
         self.startStopButtonFrame.grid(column = 2, row = 0, sticky = (N))
-        B1_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
-                                   command=lambda boxIndex = 0: self.startSession(boxIndex))
-        B1_StartButton.grid(column = 0, row = 0)
-        B1_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
-                                   command=lambda boxIndex = 0: self.stopSession(boxIndex))
-        B1_StopButton.grid(column = 1, row = 0) 
-        B2_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
-                                   command=lambda boxIndex = 1: self.startSession(boxIndex))
-        B2_StartButton.grid(column = 0, row = 1)
-        B2_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
-                                   command=lambda boxIndex = 1: self.stopSession(boxIndex))
-        B2_StopButton.grid(column = 1, row = 1)
-        B3_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
-                                   command=lambda boxIndex = 2: self.startSession(boxIndex))
-        B3_StartButton.grid(column = 0, row = 2)
-        B3_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
-                                   command=lambda boxIndex = 2: self.stopSession(boxIndex))
-        B3_StopButton.grid(column = 1, row = 2)
-        B4_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
-                                   command=lambda boxIndex = 3: self.startSession(boxIndex))
-        B4_StartButton.grid(column = 0, row = 3)
-        B4_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
-                                   command=lambda boxIndex = 3: self.stopSession(boxIndex))
-        B4_StopButton.grid(column = 1, row = 3)
-        B5_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
-                                   command=lambda boxIndex = 4: self.startSession(boxIndex))
-        B5_StartButton.grid(column = 0, row = 4)
-        B5_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
-                                   command=lambda boxIndex = 4: self.stopSession(boxIndex))
-        B5_StopButton.grid(column = 1, row = 4)
-        B6_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
-                                   command=lambda boxIndex = 5: self.startSession(boxIndex))
-        B6_StartButton.grid(column = 0, row = 5)
-        B6_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
-                                   command=lambda boxIndex = 5: self.stopSession(boxIndex))
-        B6_StopButton.grid(column = 1, row = 5)
-        B7_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
-                                   command=lambda boxIndex = 6: self.startSession(boxIndex))
-        B7_StartButton.grid(column = 0, row = 6)
-        B7_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
-                                   command=lambda boxIndex = 6: self.stopSession(boxIndex))
-        B7_StopButton.grid(column = 1, row = 6)
-        B8_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
-                                   command=lambda boxIndex = 7: self.startSession(boxIndex))
-        B8_StartButton.grid(column = 0, row = 7)
-        B8_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
-                                   command=lambda boxIndex = 7: self.stopSession(boxIndex))
-        B8_StopButton.grid(column = 1, row = 7) 
 
+        B1_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
+                command=lambda boxIndex = 0: self.startSession(boxIndex)).grid(column = 0, row = 0)
+        B1_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
+                command=lambda boxIndex = 0: self.stopSession(boxIndex)).grid(column = 1, row = 0) 
+
+        B2_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
+                command=lambda boxIndex = 1: self.startSession(boxIndex)).grid(column = 0, row = 1)
+        B2_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
+                command=lambda boxIndex = 1: self.stopSession(boxIndex)).grid(column = 1, row = 1)
+
+        B3_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
+                command=lambda boxIndex = 2: self.startSession(boxIndex)).grid(column = 0, row = 2)
+        B3_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
+                command=lambda boxIndex = 2: self.stopSession(boxIndex)).grid(column = 1, row = 2)
+
+        B4_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
+                command=lambda boxIndex = 3: self.startSession(boxIndex)).grid(column = 0, row = 3)
+        B4_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
+                command=lambda boxIndex = 3: self.stopSession(boxIndex)).grid(column = 1, row = 3)
+
+        B5_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
+                command=lambda boxIndex = 4: self.startSession(boxIndex)).grid(column = 0, row = 4)
+        B5_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
+                command=lambda boxIndex = 4: self.stopSession(boxIndex)).grid(column = 1, row = 4)
+
+        B6_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
+                command=lambda boxIndex = 5: self.startSession(boxIndex)).grid(column = 0, row = 5)
+        B6_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
+                command=lambda boxIndex = 5: self.stopSession(boxIndex)).grid(column = 1, row = 5)
+
+        B7_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
+                command=lambda boxIndex = 6: self.startSession(boxIndex)).grid(column = 0, row = 6)
+        B7_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
+                command=lambda boxIndex = 6: self.stopSession(boxIndex)).grid(column = 1, row = 6)
+
+        B8_StartButton = ttk.Button(self.startStopButtonFrame,text="Start", \
+                command=lambda boxIndex = 7: self.startSession(boxIndex)).grid(column = 0, row = 7)
+        B8_StopButton = ttk.Button(self.startStopButtonFrame,text="Stop", \
+                command=lambda boxIndex = 7: self.stopSession(boxIndex)).grid(column = 1, row = 7) 
 
         self.diagnosticButtonFrame = ttk.Frame(self.diagnosticFrame,borderwidth=3, relief="sunken")
         self.diagnosticButtonFrame.grid(column = 0, row = 1)
@@ -683,22 +631,7 @@ class GuiClass(object):
         checkLeversCheckButton = Checkbutton(self.diagnosticButtonFrame, text = "Check Levers", variable = self.checkLeversCheckVar, \
                     onvalue = True, offvalue = False, command=lambda: self.toggleCheckLevers(self.checkLeversCheckVar.get()))       
         checkLeversCheckButton.grid(column = 0, row = 0, sticky = (EW))
-        B1_L1_TestButton = ttk.Button(self.diagnosticButtonFrame,text="L1 test", command=lambda: self.mimicL1Response(0))
-        B1_L1_TestButton.grid(column = 0, row = 1)
-        B2_L1_TestButton = ttk.Button(self.diagnosticButtonFrame,text="L2 test", command=lambda: self.mimicL1Response(1))
-        B2_L1_TestButton.grid(column = 0, row = 2)
-        B3_L1_TestButton = ttk.Button(self.diagnosticButtonFrame,text="L3 test", command=lambda: self.mimicL1Response(2))
-        B3_L1_TestButton.grid(column = 0, row = 3)
-        B4_L1_TestButton = ttk.Button(self.diagnosticButtonFrame,text="L4 test", command=lambda: self.mimicL1Response(3))
-        B4_L1_TestButton.grid(column = 0, row = 4)
-        B5_L1_TestButton = ttk.Button(self.diagnosticButtonFrame,text="L5 test", command=lambda: self.mimicL1Response(4))
-        B5_L1_TestButton.grid(column = 0, row = 5)
-        B6_L1_TestButton = ttk.Button(self.diagnosticButtonFrame,text="L6 test", command=lambda: self.mimicL1Response(5))
-        B6_L1_TestButton.grid(column = 0, row = 6)
-        B7_L1_TestButton = ttk.Button(self.diagnosticButtonFrame,text="L7 test", command=lambda: self.mimicL1Response(6))
-        B7_L1_TestButton.grid(column = 0, row = 7)
-        B8_L1_TestButton = ttk.Button(self.diagnosticButtonFrame,text="L8 test", command=lambda: self.mimicL1Response(7))
-        B8_L1_TestButton.grid(column = 0, row = 8)
+
 
         testButton = ttk.Button(self.diagnosticButtonFrame,text="MaxDelta",command = self.testFunction)
         testButton.grid(column = 0, row = 9)
@@ -781,158 +714,119 @@ class GuiClass(object):
 
         """
         B1_ROW_ =  ttk.Label(INI_Frame, text="BOX 1").grid(column=0, row=0, sticky=(W, E))
-        B1_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B1_IDStr)
-        B1_ID_Entry.grid(column = 1, row = 0) 
-        B1_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B1_Weight)                                                 
-        B1_Weight_Entry.grid(column = 2, row = 0)
-        B1_Ratio = Spinbox(INI_Frame, textvariable = self.B1_FR_value, width = 3, from_=1, to=1000)
-        B1_Ratio.grid(column=4, row=0)
-        B1_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B1_sched, width = 12)
-        B1_SchedComboBox.grid(column=5, row=0)
-        B1_SchedComboBox['values'] = self.sched 
-        B1_SessionLength = Spinbox(INI_Frame, textvariable = self.B1_SessionLength, width = 3, values = [2, 5, 30, 60, 90, 120, 180, 240, 300, 360])
-        B1_SessionLength.grid(column=8, row=0)
+        B1_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B1_IDStr).grid(column = 1, row = 0) 
+        B1_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B1_Weight).grid(column = 2, row = 0)
+        B1_Ratio = Spinbox(INI_Frame, textvariable = self.B1_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=0)
+        B1_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B1_sched, width = 12, \
+                values = self.sched).grid(column=5, row=0)
+        B1_SessionLength = Spinbox(INI_Frame, textvariable = self.B1_SessionLength, width = 3, \
+                values = [2, 5, 30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=0)
         B1_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=0, sticky=(W, E))
-        B1_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B1_PumpTime), width = 3, from_=300, to=600)
-        B1_PumpTime.grid(column=10,row=0)
+        B1_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B1_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=0)
         B1_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B1_calcPumpTime, \
-                onvalue = True, offvalue = False, command=lambda boxIndex = 0: self.calcPumpTime(self.B1_calcPumpTime.get(),boxIndex))
-        B1_CalcPumpTime.grid(column=11, row=0)
+                onvalue = True, offvalue = False, command=lambda boxIndex = 0: \
+                self.calcPumpTime(self.B1_calcPumpTime.get(),boxIndex)).grid(column=11, row=0)
 
 
         B2_ROW_ =  ttk.Label(INI_Frame, text="BOX 2").grid(column=0, row=1, sticky=(W, E))
-        B2_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B2_IDStr)
-        B2_ID_Entry.grid(column = 1, row=1) 
-        B2_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B2_Weight)                                                 
-        B2_Weight_Entry.grid(column = 2, row=1)
-        B2_Ratio = Spinbox(INI_Frame, textvariable = self.B2_FR_value, width = 3, from_=1, to=1000)
-        B2_Ratio.grid(column=4, row=1)
-        B2_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B2_sched, width = 12)
-        B2_SchedComboBox.grid(column=5, row=1)
-        B2_SchedComboBox['values'] = self.sched
-        B2_SessionLength = Spinbox(INI_Frame, textvariable = self.B2_SessionLength, width = 3, values = [2, 5, 30, 60, 90, 120, 180, 240, 300, 360])
-        B2_SessionLength.grid(column=8, row=1)
+        B2_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B2_IDStr).grid(column = 1, row=1) 
+        B2_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B2_Weight).grid(column = 2, row=1)
+        B2_Ratio = Spinbox(INI_Frame, textvariable = self.B2_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=1)
+        B2_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B2_sched, width = 12, \
+                values = self.sched).grid(column=5, row=1)
+        B2_SessionLength = Spinbox(INI_Frame, textvariable = self.B2_SessionLength, width = 3, \
+                values = [2, 5, 30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=1)
         B2_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=1, sticky=(W, E))
-        B2_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B2_PumpTime), width = 3, from_=300, to=600)
-        B2_PumpTime.grid(column=10,row=1)
+        B2_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B2_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=1)
         B2_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B2_calcPumpTime, \
-                onvalue = True, offvalue = False, command=lambda boxIndex = 1: self.calcPumpTime(self.B2_calcPumpTime.get(),boxIndex))
-        B2_CalcPumpTime.grid(column=11, row=1)
+                onvalue = True, offvalue = False, command=lambda boxIndex = 1: \
+                self.calcPumpTime(self.B2_calcPumpTime.get(),boxIndex)).grid(column=11, row=1)
 
 
         B3_ROW_ =  ttk.Label(INI_Frame, text="BOX 3").grid(column=0, row=2, sticky=(W, E))
-        B3_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B3_IDStr)
-        B3_ID_Entry.grid(column = 1, row=2) 
-        B3_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B3_Weight)                                                 
-        B3_Weight_Entry.grid(column = 2, row=2)
-        B3_Ratio = Spinbox(INI_Frame, textvariable = self.B3_FR_value, width = 3, from_=1, to=1000)
-        B3_Ratio.grid(column=4, row=2)
-        B3_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B3_sched, width = 12)
-        B3_SchedComboBox.grid(column=5, row=2)
-        B3_SchedComboBox['values'] = self.sched
-        B3_SessionLength = Spinbox(INI_Frame, textvariable = self.B3_SessionLength, width = 3, values = [30, 60, 90, 120, 180, 240, 300, 360])
-        B3_SessionLength.grid(column=8, row=2)
+        B3_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B3_IDStr).grid(column = 1, row=2) 
+        B3_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B3_Weight).grid(column = 2, row=2)
+        B3_Ratio = Spinbox(INI_Frame, textvariable = self.B3_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=2)
+        B3_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B3_sched, width = 12, \
+                values = self.sched).grid(column=5, row=2)
+
+        B3_SessionLength = Spinbox(INI_Frame, textvariable = self.B3_SessionLength, width = 3, \
+                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=2)
         B3_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=2, sticky=(W, E))
-        B3_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B3_PumpTime), width = 3, from_=300, to=600)
-        B3_PumpTime.grid(column=10,row=2)
+        B3_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B3_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=2)
         B3_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B3_calcPumpTime, \
-                onvalue = True, offvalue = False, command=lambda boxIndex = 2: self.calcPumpTime(self.B3_calcPumpTime.get(),boxIndex))
-        B3_CalcPumpTime.grid(column=11, row=2)
+                onvalue = True, offvalue = False, command=lambda boxIndex = 2: \
+                self.calcPumpTime(self.B3_calcPumpTime.get(),boxIndex)).grid(column=11, row=2)
 
         B4_ROW_ =  ttk.Label(INI_Frame, text="BOX 4").grid(column=0, row=3, sticky=(W, E))
-        B4_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B4_IDStr)
-        B4_ID_Entry.grid(column = 1, row=3) 
-        B4_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B4_Weight)                                                 
-        B4_Weight_Entry.grid(column = 2, row=3)
-        B4_Ratio = Spinbox(INI_Frame, textvariable = self.B4_FR_value, width = 3, from_=1, to=1000)
-        B4_Ratio.grid(column=4, row=3)
-        B4_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B4_sched, width = 12)
-        B4_SchedComboBox.grid(column=5, row=3)
-        B4_SchedComboBox['values'] = self.sched
-        B4_SessionLength = Spinbox(INI_Frame, textvariable = self.B4_SessionLength, width = 3, values = [30, 60, 90, 120, 180, 240, 300, 360])
-        B4_SessionLength.grid(column=8, row=3)
+        B4_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B4_IDStr).grid(column = 1, row=3) 
+        B4_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B4_Weight).grid(column = 2, row=3)
+        B4_Ratio = Spinbox(INI_Frame, textvariable = self.B4_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=3)
+        B4_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B4_sched, width = 12,
+                values = self.sched).grid(column=5, row=3)
+        B4_SessionLength = Spinbox(INI_Frame, textvariable = self.B4_SessionLength, width = 3, \
+                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=3)
         B4_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=3, sticky=(W, E))
-        B4_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B4_PumpTime), width = 3, from_=300, to=600)
-        B4_PumpTime.grid(column=10,row=3)
+        B4_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B4_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=3)
         B4_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B4_calcPumpTime, \
-                onvalue = True, offvalue = False, command=lambda boxIndex = 3: self.calcPumpTime(self.B4_calcPumpTime.get(),boxIndex))
-        B4_CalcPumpTime.grid(column=11, row=3)
+                onvalue = True, offvalue = False, command=lambda boxIndex = 3: \
+                self.calcPumpTime(self.B4_calcPumpTime.get(),boxIndex)).grid(column=11, row=3)
 
         B5_ROW_ =  ttk.Label(INI_Frame, text="BOX 5").grid(column=0, row=4, sticky=(W, E))
-        B5_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B5_IDStr)
-        B5_ID_Entry.grid(column = 1, row = 4) 
-        B5_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B5_Weight)                                                 
-        B5_Weight_Entry.grid(column = 2, row = 4)
-        B5_Ratio = Spinbox(INI_Frame, textvariable = self.B5_FR_value, width = 3, from_=1, to=1000)
-        B5_Ratio.grid(column=4, row=4)
-        B5_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B5_sched, width = 12)
-        B5_SchedComboBox.grid(column=5, row=4)
-        B5_SchedComboBox['values'] = self.sched
-        B5_SessionLength = Spinbox(INI_Frame, textvariable = self.B5_SessionLength, width = 3, values = [30, 60, 90, 120, 180, 240, 300, 360])
-        B5_SessionLength.grid(column=8, row=4)
+        B5_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B5_IDStr).grid(column = 1, row = 4) 
+        B5_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B5_Weight).grid(column = 2, row = 4)
+        B5_Ratio = Spinbox(INI_Frame, textvariable = self.B5_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=4)
+        B5_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B5_sched, width = 12, \
+                values = self.sched).grid(column=5, row=4)
+        B5_SessionLength = Spinbox(INI_Frame, textvariable = self.B5_SessionLength, width = 3, \
+                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=4)
         B5_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=4, sticky=(W, E))
-        B5_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B5_PumpTime), width = 3, from_=300, to=600)
-        B5_PumpTime.grid(column=10,row=4)
+        B5_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B5_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=4)
         B5_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B5_calcPumpTime, \
-                onvalue = True, offvalue = False, command=lambda boxIndex = 4: self.calcPumpTime(self.B5_calcPumpTime.get(),boxIndex))
-        B5_CalcPumpTime.grid(column=11, row=4)
+                onvalue = True, offvalue = False, command=lambda boxIndex = 4: \
+                self.calcPumpTime(self.B5_calcPumpTime.get(),boxIndex)).grid(column=11, row=4)
         
         B6_ROW_ =  ttk.Label(INI_Frame, text="BOX 6").grid(column=0, row=5, sticky=(W, E))
-        B6_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B6_IDStr)
-        B6_ID_Entry.grid(column = 1, row=5) 
-        B6_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B6_Weight)                                                 
-        B6_Weight_Entry.grid(column = 2, row=5)
-        B6_Ratio = Spinbox(INI_Frame, textvariable = self.B6_FR_value, width = 3, from_=1, to=1000)
-        B6_Ratio.grid(column=4, row=5)
-        B6_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B6_sched, width = 12)
-        B6_SchedComboBox.grid(column=5, row=5)
-        B6_SchedComboBox['values'] = self.sched
-        B6_SessionLength = Spinbox(INI_Frame, textvariable = self.B6_SessionLength, width = 3, values = [30, 60, 90, 120, 180, 240, 300, 360])
-        B6_SessionLength.grid(column=8, row=5)
+        B6_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B6_IDStr).grid(column = 1, row=5) 
+        B6_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B6_Weight).grid(column = 2, row=5)
+        B6_Ratio = Spinbox(INI_Frame, textvariable = self.B6_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=5)
+        B6_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B6_sched, width = 12, \
+                values = self.sched).grid(column=5, row=5)
+        B6_SessionLength = Spinbox(INI_Frame, textvariable = self.B6_SessionLength, width = 3, \
+                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=5)
         B6_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=5, sticky=(W, E))
-        B6_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B6_PumpTime), width = 3, from_=300, to=600)
-        B6_PumpTime.grid(column=10,row=5)
+        B6_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B6_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=5)
         B6_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B6_calcPumpTime, \
-                onvalue = True, offvalue = False, command=lambda boxIndex = 5: self.calcPumpTime(self.B6_calcPumpTime.get(),boxIndex))
-        B6_CalcPumpTime.grid(column=11, row=5)
+                onvalue = True, offvalue = False, command=lambda boxIndex = 5: \
+                self.calcPumpTime(self.B6_calcPumpTime.get(),boxIndex)).grid(column=11, row=5)
 
         B7_ROW_ =  ttk.Label(INI_Frame, text="BOX 7").grid(column=0, row=6, sticky=(W, E))
-        B7_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B7_IDStr)
-        B7_ID_Entry.grid(column = 1, row=6) 
-        B7_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B7_Weight)                                                 
-        B7_Weight_Entry.grid(column = 2, row=6)
-        B7_Ratio = Spinbox(INI_Frame, textvariable = self.B7_FR_value, width = 3, from_=1, to=1000)
-        B7_Ratio.grid(column=4, row=6)
-        B7_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B7_sched, width = 12)
-        B7_SchedComboBox.grid(column=5, row=6)
-        B7_SchedComboBox['values'] = self.sched
-        B7_SessionLength = Spinbox(INI_Frame, textvariable = self.B7_SessionLength, width = 3, values = [30, 60, 90, 120, 180, 240, 300, 360])
-        B7_SessionLength.grid(column=8, row=6)
+        B7_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B7_IDStr).grid(column = 1, row=6) 
+        B7_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B7_Weight).grid(column = 2, row=6)
+        B7_Ratio = Spinbox(INI_Frame, textvariable = self.B7_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=6)
+        B7_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B7_sched, width = 12, \
+                values = self.sched).grid(column=5, row=6)
+        B7_SessionLength = Spinbox(INI_Frame, textvariable = self.B7_SessionLength, width = 3, \
+                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=6)
         B7_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=6, sticky=(W, E))
-        B7_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B7_PumpTime), width = 3, from_=300, to=600)
-        B7_PumpTime.grid(column=10,row=6)
+        B7_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B7_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=6)
         B7_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B7_calcPumpTime, \
-                onvalue = True, offvalue = False, command=lambda boxIndex = 6: self.calcPumpTime(self.B7_calcPumpTime.get(),boxIndex))
-        B7_CalcPumpTime.grid(column=11, row=6)
+                onvalue = True, offvalue = False, command=lambda boxIndex = 6: \
+                self.calcPumpTime(self.B7_calcPumpTime.get(),boxIndex)).grid(column=11, row=6)
 
         B8_ROW_ =  ttk.Label(INI_Frame, text="BOX 8").grid(column=0, row=7, sticky=(W, E))
-        B8_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B8_IDStr)
-        B8_ID_Entry.grid(column = 1, row=7) 
-        B8_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B8_Weight)                                                 
-        B8_Weight_Entry.grid(column = 2, row=7)
-        B8_Ratio = Spinbox(INI_Frame, textvariable = self.B8_FR_value, width = 3, from_=1, to=1000)
-        B8_Ratio.grid(column=4, row=7)
-        B8_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B8_sched, width = 12)
-        B8_SchedComboBox.grid(column=5, row=7)
-        B8_SchedComboBox['values'] = self.sched
-        B8_SessionLength = Spinbox(INI_Frame, textvariable = self.B8_SessionLength, width = 3, values = [30, 60, 90, 120, 180, 240, 300, 360])
-        B8_SessionLength.grid(column=8, row=7)
+        B8_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B8_IDStr).grid(column = 1, row=7) 
+        B8_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B8_Weight).grid(column = 2, row=7)
+        B8_Ratio = Spinbox(INI_Frame, textvariable = self.B8_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=7)
+        B8_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B8_sched, width = 12, \
+                values = self.sched).grid(column=5, row=7)
+        B8_SessionLength = Spinbox(INI_Frame, textvariable = self.B8_SessionLength, width = 3, \
+                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=7)
         B8_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=7, sticky=(W, E))
-        B8_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B8_PumpTime), width = 3, from_=300, to=600)
-        B8_PumpTime.grid(column=10,row=7)
+        B8_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B8_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=7)
         B8_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B8_calcPumpTime, \
-                onvalue = True, offvalue = False, command=lambda boxIndex = 7: self.calcPumpTime(self.B8_calcPumpTime.get(),boxIndex))
-        B8_CalcPumpTime.grid(column=11, row=7)
+                onvalue = True, offvalue = False, command=lambda boxIndex = 7: \
+                self.calcPumpTime(self.B8_calcPumpTime.get(),boxIndex)).grid(column=11, row=7)
 
         tempLabel =  ttk.Label(INI_Frame, text="            RatID     Weight       Ratio   Sched                                          Session        Pump (10mSec)")
         tempLabel.grid(column=0, row=12, columnspan = 12, sticky = (EW))
