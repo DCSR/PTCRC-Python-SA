@@ -10,6 +10,7 @@ Renamed to SA200.py
 from tkinter import *
 import tkinter.ttk as ttk
 import tkinter.scrolledtext
+from tkinter import messagebox
 import serial
 import serial.tools.list_ports
 import os
@@ -32,7 +33,7 @@ def main(argv=None):
 class GuiClass(object):
     def __init__(self):
 
-        self.version = "SA200.04"
+        self.version = "SA200.06"
         self.verbose = True
         self.sched = ['0: Do not run', '1: FR', '2:FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25']
         self.box1 = Box(1)    # note that boxes[0] is box1
@@ -60,6 +61,7 @@ class GuiClass(object):
         # ******************* tk - GUI interface   ****************************** 
         self.root = Tk()
         self.root.title(self.version)
+        self.root.protocol("WM_DELETE_WINDOW", self.askBeforeExiting) 
 
         # ***** tk specific variables (StringVars, IntVars and BooleanVars) *****
 
@@ -445,15 +447,15 @@ class GuiClass(object):
         self.graphButtonFrame = ttk.Frame(self.GraphFrame,borderwidth=3, relief="sunken")
         self.graphButtonFrame.grid(column = 0, row = 2, columnspan = 10)
         topTimeStampButton = ttk.Button(self.graphButtonFrame,text="Timestamps",command=lambda: \
-                                        self.drawAllTimeStamps(self.topCanvas, self.selectedBox.get(),self.selectMax_x_Scale.get()))
+                self.drawAllTimeStamps(self.topCanvas, self.selectedBox.get(),self.selectMax_x_Scale.get()))
         topTimeStampButton.grid(column = 0, row = 0)
         topCumRecButton = ttk.Button(self.graphButtonFrame,text="Cum Rec",command=lambda: \
-                                     self.drawCumulativeRecord(self.topCanvas, self.selectedBox.get(),self.selectMax_x_Scale.get()))
+                self.drawCumulativeRecord(self.topCanvas, self.selectedBox.get(),self.selectMax_x_Scale.get()))
         topCumRecButton.grid(column = 1, row = 0)        
         topEventButton = ttk.Button(self.graphButtonFrame, text="Events",  command=lambda: self.drawEventRecords())
         topEventButton.grid(column = 2, row = 0)
         topClearButton = ttk.Button(self.graphButtonFrame,text="Clear Canvas", \
-                                      command=lambda Canvas = 0: self.clearCanvas(Canvas))
+                command=lambda Canvas = 0: self.clearCanvas(Canvas))
         topClearButton.grid(column = 3, row = 0)
 
         self.topCanvas = Canvas(self.GraphFrame,width=self.CANVAS_WIDTH, height=self.CANVAS_HEIGHT)
@@ -494,7 +496,7 @@ class GuiClass(object):
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED1(0,self.B1_LED1CheckVar.get())).grid(column = 4, row = 0)
         B1_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B1_LED2CheckVar, \
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED2(0,self.B1_LED2CheckVar.get())).grid(column = 5, row = 0)
-        B1_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L1 test", command=lambda: self.mimicL1Response(0)).grid(column = 6, row = 0)
+        B1_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L1 test", command=lambda: self.sendCode("<L1 0>")).grid(column = 6, row = 0)
         # B1_L2_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L2 test", command=lambda: self.mimicL2Response(0)).grid(column = 7, row = 0)
 
         B2_Lever1CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L1", variable = self.B2_lever1CheckVar, \
@@ -507,7 +509,7 @@ class GuiClass(object):
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED1(1,self.B2_LED1CheckVar.get())).grid(column = 4, row = 1)
         B2_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B2_LED2CheckVar, \
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED2(1,self.B2_LED2CheckVar.get())).grid(column = 5, row = 1)
-        B2_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L2 test", command=lambda: self.mimicL1Response(1)).grid(column = 6, row = 1)        
+        B2_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L2 test", command=lambda: self.sendCode("<L1 1>")).grid(column = 6, row = 1)        
 
         B3_Lever1CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L1", variable = self.B3_lever1CheckVar, \
                 onvalue = True, offvalue = False, command=lambda: self.moveLever1(2,self.B3_lever1CheckVar.get())).grid(column = 1, row = 2)
@@ -519,7 +521,7 @@ class GuiClass(object):
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED1(2,self.B3_LED1CheckVar.get())).grid(column = 4, row = 2)
         B3_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B3_LED2CheckVar, \
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED2(2,self.B3_LED2CheckVar.get())).grid(column = 5, row = 2)
-        B3_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L3 test", command=lambda: self.mimicL1Response(2)).grid(column = 6, row = 2)
+        B3_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L3 test", command=lambda: self.sendCode("<L1 2>")).grid(column = 6, row = 2)
 
         B4_Lever1CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L1", variable = self.B4_lever1CheckVar, \
                 onvalue = True, offvalue = False, command=lambda: self.moveLever1(3,self.B4_lever1CheckVar.get())).grid(column = 1, row = 3)
@@ -531,7 +533,7 @@ class GuiClass(object):
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED1(3,self.B4_LED1CheckVar.get())).grid(column = 4, row = 3)
         B4_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B4_LED2CheckVar, \
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED2(3,self.B4_LED2CheckVar.get())).grid(column = 5, row = 3)
-        B4_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L4 test", command=lambda: self.mimicL1Response(3)).grid(column = 6, row = 3)
+        B4_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L4 test", command=lambda: self.sendCode("<L1 3>")).grid(column = 6, row = 3)
 
         B5_Lever1CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L1", variable = self.B5_lever1CheckVar, \
                 onvalue = True, offvalue = False, command=lambda: self.moveLever1(4,self.B5_lever1CheckVar.get())).grid(column = 1, row = 4)
@@ -543,7 +545,7 @@ class GuiClass(object):
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED1(4,self.B5_LED1CheckVar.get())).grid(column = 4, row = 4)
         B5_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B5_LED2CheckVar, \
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED2(4,self.B5_LED2CheckVar.get())).grid(column = 5, row = 4)
-        B5_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L5 test", command=lambda: self.mimicL1Response(4)).grid(column = 6, row = 4)
+        B5_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L5 test", command=lambda: self.sendCode("<L1 4>")).grid(column = 6, row = 4)
 
         B6_Lever1CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L1", variable = self.B6_lever1CheckVar, \
                 onvalue = True, offvalue = False, command=lambda: self.moveLever1(5,self.B6_lever1CheckVar.get())).grid(column = 1, row = 5)
@@ -555,7 +557,7 @@ class GuiClass(object):
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED1(5,self.B6_LED1CheckVar.get())).grid(column = 4, row = 5)
         B6_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B6_LED2CheckVar, \
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED2(5,self.B6_LED2CheckVar.get())).grid(column = 5, row = 5)
-        B6_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L6 test", command=lambda: self.mimicL1Response(5)).grid(column = 6, row = 5)
+        B6_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L6 test", command=lambda: self.sendCode("<L1 5>")).grid(column = 6, row = 5)
 
         B7_Lever1CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L1", variable = self.B7_lever1CheckVar, \
                 onvalue = True, offvalue = False, command=lambda: self.moveLever1(6,self.B7_lever1CheckVar.get())).grid(column = 1, row = 6)
@@ -567,7 +569,7 @@ class GuiClass(object):
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED1(6,self.B7_LED1CheckVar.get())).grid(column = 4, row = 6)
         B7_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B7_LED2CheckVar, \
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED2(6,self.B7_LED2CheckVar.get())).grid(column = 5, row = 6)
-        B7_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L7 test", command=lambda: self.mimicL1Response(6)).grid(column = 6, row = 6)
+        B7_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L7 test", command=lambda: self.sendCode("<L1 6>")).grid(column = 6, row = 6)
 
         B8_Lever1CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "L1", variable = self.B8_lever1CheckVar, \
                 onvalue = True, offvalue = False, command=lambda: self.moveLever1(7,self.B8_lever1CheckVar.get())).grid(column = 1, row = 7)
@@ -579,7 +581,7 @@ class GuiClass(object):
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED1(7,self.B8_LED1CheckVar.get())).grid(column = 4, row = 7)
         B8_LED2_CheckButton = Checkbutton(self.diagnostic_IO_Frame, text = "LED2", variable = self.B8_LED2CheckVar, \
                 onvalue = True, offvalue = False, command=lambda: self.toggleLED2(7,self.B8_LED2CheckVar.get())).grid(column = 5, row = 7)
-        B8_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L8 test", command=lambda: self.mimicL1Response(7)).grid(column = 6, row = 7)
+        B8_L1_TestButton = ttk.Button(self.diagnostic_IO_Frame,text="L8 test", command=lambda: self.sendCode("<L1 7>")).grid(column = 6, row = 7)
 
         self.startStopButtonFrame = ttk.Frame(self.diagnosticFrame,borderwidth=3, relief="sunken")
         self.startStopButtonFrame.grid(column = 2, row = 0, sticky = (N))
@@ -627,14 +629,13 @@ class GuiClass(object):
         self.diagnosticButtonFrame = ttk.Frame(self.diagnosticFrame,borderwidth=3, relief="sunken")
         self.diagnosticButtonFrame.grid(column = 0, row = 1)
         
-
         checkLeversCheckButton = Checkbutton(self.diagnosticButtonFrame, text = "Check Levers", variable = self.checkLeversCheckVar, \
                     onvalue = True, offvalue = False, command=lambda: self.toggleCheckLevers(self.checkLeversCheckVar.get()))       
         checkLeversCheckButton.grid(column = 0, row = 0, sticky = (EW))
 
 
-        testButton = ttk.Button(self.diagnosticButtonFrame,text="MaxDelta",command = self.testFunction)
-        testButton.grid(column = 0, row = 9)
+        testButton = ttk.Button(self.diagnosticButtonFrame,text="MaxDelta", command=lambda: self.sendCode("<M>")).grid(column = 0, row = 9)
+        
         testButton4 = ttk.Button(self.diagnosticButtonFrame,text="Block Time 0",command = self.testFunction4)
         testButton4.grid(column = 0, row = 10)
         testButton5 = ttk.Button(self.diagnosticButtonFrame,text="Block Time 1",command = self.testFunction5)
@@ -657,7 +658,7 @@ class GuiClass(object):
         showOutputStreamCheckButton.grid(column = 0, row = 0, sticky = (EW)) 
         self.bottomTextbox = tkinter.scrolledtext.ScrolledText(self.bottomTextFrame,height=20,width= 25)
         self.bottomTextbox.grid(column = 0, row = 1,sticky = (N))        
-        self.bottomTextbox.insert('1.0',"Bottom Text Box\n")
+        self.bottomTextbox.insert('1.0',"Text Box\n")
 
         pumpChaosCheckButton = Checkbutton(self.diagnosticFrame, text = "Pump Chaos - Extremely Dangerous", variable = self.pumpChaosCheckVar, \
                 onvalue = True, offvalue = False)       
@@ -987,14 +988,18 @@ class GuiClass(object):
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-70,  x_pixel_width, max_x_scale, dataList, ["t","T"], "Timeout")
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-40,  x_pixel_width, max_x_scale, dataList, ["B","b"], "Block")
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-10,  x_pixel_width, max_x_scale, dataList, ["G","E"], "Session")
+
+    def sendCode(self, codeStr):
+        self.outputText(codeStr)
     
     def testFunction(self):
-        # report maxDelta (uSec)        
-        self.outputText("<M>")
+        pass
 
+    """
     def mimicL1Response(self,boxIndex):
         tempStr = "<L1 "+str(boxIndex)+">"
         self.outputText(tempStr)
+    """
 
     def toggleCheckLevers(self,checkLeversState):
         if (checkLeversState): self.outputText("<CL>")
@@ -1006,9 +1011,9 @@ class GuiClass(object):
     def testFunction5(self):
         self.outputText("<B 1>")
 
-    def testFunction6(self):        # Get Diagnostics
-        self.outputText("<D>")
-        self.outputText("<R 7>")
+    def testFunction6(self):        
+        self.outputText("<D>")      # Get Diagnostics
+        self.outputText("<R 7>")    # Report parameters
         self.outputText("<R 6>")
         self.outputText("<R 5>")
         self.outputText("<R 4>")
@@ -1016,7 +1021,7 @@ class GuiClass(object):
         self.outputText("<R 2>")
         self.outputText("<R 1>")
         self.outputText("<R 0>")
-        self.outputText("<V>")
+        self.outputText("<V>")      # Get version on M0
         
 
     def drawCumulativeRecord(self, aCanvas, selectedList, max_x_scale):
@@ -1303,6 +1308,12 @@ class GuiClass(object):
     def about(self):
         tkMessageBox.showinfo("About",__doc__,parent=self.root)
         return
+    
+    def askBeforeExiting(self):
+        response = messagebox.askyesno("Close Warning", "Remember to save the data before closing program\n\n"+ \
+                                          "Close Program?")
+        if (response == True):
+            self.root.destroy()
 
     def go(self):
         self.root.after(100, self.periodic_check)
