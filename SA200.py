@@ -1,7 +1,6 @@
 """
-Master
+August 13, Beta
 
-Initial commit was from SelfAdmin202a.py
 Renamed to SA200.py
 
 """
@@ -33,7 +32,7 @@ def main(argv=None):
 class GuiClass(object):
     def __init__(self):
 
-        self.version = "SA200.06"
+        self.version = "SA200.07"
         self.verbose = True
         self.sched = ['0: Do not run', '1: FR', '2:FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25']
         self.box1 = Box(1)    # note that boxes[0] is box1
@@ -933,7 +932,7 @@ class GuiClass(object):
         while os.path.isfile(fileName) == True:
             ID_Date = ID_Date+"a"
             fileName = ID_Date+extension
-        print("Saving file to", fileName)
+        print("   Saving file to", fileName)
         fileToSave = open(fileName,'w')
         for pairs in dataList:
             line = str(pairs[0])+" "+pairs[1]+"\n"
@@ -942,6 +941,26 @@ class GuiClass(object):
 
     def saveAllData(self):
         print("Trying to save data")
+
+        for i in range(8):
+            tempStr = "Box "+str(i+1)
+            if (self.boxes[i].sessionStarted == True):               
+                if (self.boxes[i].sessionCompleted == False):
+                    tempStr = tempStr+" still running"
+                    print(tempStr)
+                else:
+                    tempStr = tempStr+" session completed - "
+                    if (self.boxes[i].dataSaved == True):
+                        tempStr = tempStr+" data previously saved"
+                        print(tempStr)
+                    else:
+                        print(tempStr)
+                        self.saveFile(self.boxes[i].subject_ID_string,self.boxes[i].dataList)
+                        self.boxes[i].dataSaved = True
+            else:
+                print(tempStr+" no data to save")
+
+        """
         if len(self.box1.dataList) > 0:
             self.saveFile(self.box1.subject_ID_string,self.box1.dataList)
         if len(self.box2.dataList) > 0:
@@ -957,7 +976,8 @@ class GuiClass(object):
         if len(self.box7.dataList) > 0:
             self.saveFile(self.box7.subject_ID_string,self.box7.dataList)
         if len(self.box8.dataList) > 0:
-            self.saveFile(self.box8.subject_ID_string,self.box8.dataList)           
+            self.saveFile(self.box8.subject_ID_string,self.box8.dataList)
+        """
 
     def dumpData(self):
         for pairs in self.boxes[self.selectedBox.get()].dataList:
@@ -1156,7 +1176,7 @@ class GuiClass(object):
             self.L1ResponsesList[listIndex].set(0)
             self.L2ResponsesList[listIndex].set(0)
             self.InfList[listIndex].set(0)
-            # send Parameters 
+            # send Parameters
             self.outputText("<SCHED "+str(boxIndex)+" "+str(self.schedList[listIndex].get())+">")
             self.outputText("<RATIO "+str(boxIndex)+" "+str(self.FR_valueList[listIndex].get())+">")
             self.outputText("<TIME "+str(boxIndex)+" "+str(self.SessionLengthList[listIndex].get()*60)+">")
@@ -1165,23 +1185,37 @@ class GuiClass(object):
             self.outputText("<R "+str(boxIndex)+">")
             # send Go signal
             self.outputText("<G "+str(boxIndex)+">")
-        else:
+            sched = self.schedList[listIndex].get()
+            if sched == "0: Do not run":
+                self.boxes[boxIndex].sessionStarted = False
+            else:
+                self.boxes[boxIndex].sessionStarted = True
+        else:           
            self.writeToTextbox("No arduino connected",0)
-
-    def stopSession(self, boxIndex):
-        self.outputText("<Q "+str(boxIndex)+">")
-
 
     def startAllBoxes(self):
         self.writeToINIFile()
         for i in range(8):
             self.startSession(i)
-            sleep(0.1) # Time in seconds.
+            sleep(0.1) # Time in seconds.           
+
+    def stopSession(self, boxIndex):
+        self.outputText("<Q "+str(boxIndex)+">")
 
     def stopAllBoxes(self):
         for i in range(8):
             self.stopSession(i)
             # sleep(0.25) # Time in seconds.
+
+    def sessionEnded(self, boxIndex):
+        """
+        Called when Feather sends "E" indicating that a box session has timed out
+        or a "Q" command was received. 
+        """
+        self.boxes[boxIndex].sessionEnded()
+        tempStr = "Box "+str(boxIndex+1)+" ended" 
+        self.writeToTextbox(tempStr,0)
+        
 
     def reportPhase(self,arduino):
         print("Report Phase for ardunino number",arduino)
@@ -1259,8 +1293,10 @@ class GuiClass(object):
                     self.L1ResponsesList[listIndex].set(self.L1ResponsesList[listIndex].get()+1)    # update response label
                 if (strCode == "J"):
                     self.L2ResponsesList[listIndex].set(self.L2ResponsesList[listIndex].get()+1)    # update Dummy response label
-                elif (strCode == "P"):
+                if (strCode == "P"):
                     self.InfList[listIndex].set(self.InfList[listIndex].get()+1)                # update response label
+                elif (strCode == "E"):
+                    self.boxes[listIndex].sessionEnded()
         elif (boxNum == 9): self.writeToTextbox(strCode,0)
 
 
@@ -1310,8 +1346,17 @@ class GuiClass(object):
         return
     
     def askBeforeExiting(self):
-        response = messagebox.askyesno("Close Warning", "Remember to save the data before closing program\n\n"+ \
-                                          "Close Program?")
+        self.saveAllData()
+        aBoxStillRunning = False
+        for i in range(8):
+            if (self.boxes[i].sessionStarted == True) and (self.boxes[i].sessionCompleted == False):
+                print("Box "+ str(i+1)+" still running")
+                aBoxStillRunning = True
+
+        response = True
+        if aBoxStillRunning == True:
+            response = messagebox.askyesno("Close Warning", "At Least One Box Is Still Running\n\n"+ \
+                                           "End Session without Saving?")
         if (response == True):
             self.root.destroy()
 
@@ -1325,7 +1370,10 @@ class Box(object):
         This function essentially creates a new box. Initial values are arbitrary
         The initialize procedure sets (or resets) the values after the box has been created. 
         """
-        self.boxNum = boxNum        
+        self.boxNum = boxNum
+        self.sessionStarted = False
+        self.sessionCompleted = False
+        self.dataSaved = False       
         self.subject_ID_string = 'box'+str(boxNum)
         self.weight = 330
         self.schedNum = 0      # To Do: define schedules such as 0 = "do not run", 1 = FR etc.
@@ -1333,24 +1381,28 @@ class Box(object):
         self.dataList = []
 
     def initialize(self,ID_Str, initWeight, initSched, initDose):
+        self.sessionStarted = True
+        self.sessionCompleted = False
+        self.dataSaved = False
         self.subject_ID_string = ID_Str
         self.weight = initWeight
         self.schedNum = initSched
         self.dose = initDose
         self.dataList = []
-        self.report()
-
-        """
-        timestamp = int(str(event)[1:str(event).find(',')])
-        char = str(event)[-3]
-        data.append([timestamp, char])
-
-        """
-
-    def report(self):
         print("Initialize report: ",self.subject_ID_string,self.weight,self.schedNum,self.dose)
 
+    def sessionEnded(self):
+        """
+        self.sessionCompleted is an important boolean which indicates that a session has started
+        and has ended. It is used to decide whether to save a data file.
 
+        This procedure is called when "E" is recieved from Feather indicating that the session has
+        timed out or has met other criteria. But the Feather could also be responding to a "Q"
+        command, which tells it to quit regardless of whether a session was runnning or not.       
+        """
+        if self.sessionStarted == True:                
+            self.sessionCompleted = True
+            print("Box "+str(self.boxNum)+" Session Completed")
 
 if __name__ == "__main__":
     sys.exit(main())  
