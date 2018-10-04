@@ -144,18 +144,30 @@ void Box::startSession() {
   //  '4: PR', '5: TH', '6: IntA: 5-25', '7: HD', '8: IntA-HD']
 
   if (_protocolNum == 0) _boxPhase = 4;  // if "do not run" then boxPhase = "finished"
-  else  {
-      _responseCriterion = _paramNum;
-      if (_protocolNum == 1)      _maxTrialNumber = 999;     
-      else if (_protocolNum == 2) _maxTrialNumber = 20;   
-      else if (_protocolNum == 3) _maxTrialNumber = 40;
-      else if (_protocolNum == 4) _PRstepNum  = _paramNum;  // PR  
+  else  {   
+      if (_protocolNum == 1)      {     // FR(N)
+          _maxTrialNumber = 999;
+          _responseCriterion = _paramNum;     
+      }
+      else if (_protocolNum == 2) {      // FR1 x 20
+          _maxTrialNumber = 20;
+          _responseCriterion = 1;   
+      }
+      else if (_protocolNum == 3) {      // FR1 x N
+          _maxTrialNumber = _paramNum;
+          _responseCriterion = 1;
+      }
+      else if (_protocolNum == 4) {      // PR(N)
+          _PRstepNum  = _paramNum;   
+      }
       else if (_protocolNum == 5) {      // TH
+          _responseCriterion = 1;
           _blockDuration = 600;          // 600 seconds = 10 min
           _IBILength = 0;                // no IBI
           _maxBlockNumber = 12;          // 12 blocks
       }
       else if (_protocolNum == 6) {      // IntA 5-25 6h
+          _responseCriterion = 1; 
           _blockDuration = 300;          // 300 seconds = 5 min
           _IBILength = 1500;             // 1500 seconds = 25 min
           _maxBlockNumber = 12;          // 12 blocks

@@ -1,7 +1,9 @@
 """
-August 13, Beta
+Oct 4th
 
-Renamed to SA200.py
+SA200.08
+
+Changes to allow paramNum to be used for FR and PR-step
 
 """
 
@@ -34,7 +36,7 @@ class GuiClass(object):
 
         self.version = "SA200.07"
         self.verbose = True
-        self.sched = ['0: Do not run', '1: FR', '2:FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25']
+        self.sched = ['0: Do not run', '1: FR(N)', '2:FR1 x 20', '3: FR1 x N', '4: PR(step N)', '5: TH', '6: IntA: 5-25']
         self.box1 = Box(1)    # note that boxes[0] is box1
         self.box2 = Box(2)
         self.box3 = Box(3)
@@ -705,7 +707,7 @@ class GuiClass(object):
         # ********************* Initialization Parameters ****************************
 
         INI_Frame = ttk.Frame(self.iniTab, borderwidth = 3, relief="sunken")
-        INI_Frame.grid(column = 0, row = 0)
+        INI_Frame.grid(column = 0, row = 0, sticky=(W, E))
         
         """
         The GUIClass has lists of ttk variables (IntVar or textvariable) which 
@@ -716,120 +718,123 @@ class GuiClass(object):
         B1_ROW_ =  ttk.Label(INI_Frame, text="BOX 1").grid(column=0, row=0, sticky=(W, E))
         B1_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B1_IDStr).grid(column = 1, row = 0) 
         B1_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B1_Weight).grid(column = 2, row = 0)
-        B1_Ratio = Spinbox(INI_Frame, textvariable = self.B1_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=0)
+        B1_Ratio = Spinbox(INI_Frame, textvariable = self.B1_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=0)
         B1_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B1_sched, width = 12, \
-                values = self.sched).grid(column=5, row=0)
+                values = self.sched).grid(column=4, row=0)
         B1_SessionLength = Spinbox(INI_Frame, textvariable = self.B1_SessionLength, width = 3, \
-                values = [2, 5, 30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=0)
-        B1_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=0, sticky=(W, E))
-        B1_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B1_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=0)
+                values = [2, 5, 30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=0)
+        B1_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B1_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=0)
         B1_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B1_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 0: \
-                self.calcPumpTime(self.B1_calcPumpTime.get(),boxIndex)).grid(column=11, row=0)
+                self.calcPumpTime(self.B1_calcPumpTime.get(),boxIndex)).grid(column=7, row=0)
 
 
         B2_ROW_ =  ttk.Label(INI_Frame, text="BOX 2").grid(column=0, row=1, sticky=(W, E))
         B2_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B2_IDStr).grid(column = 1, row=1) 
         B2_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B2_Weight).grid(column = 2, row=1)
-        B2_Ratio = Spinbox(INI_Frame, textvariable = self.B2_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=1)
+        B2_Ratio = Spinbox(INI_Frame, textvariable = self.B2_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=1)
         B2_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B2_sched, width = 12, \
-                values = self.sched).grid(column=5, row=1)
+                values = self.sched).grid(column=4, row=1)
         B2_SessionLength = Spinbox(INI_Frame, textvariable = self.B2_SessionLength, width = 3, \
-                values = [2, 5, 30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=1)
-        B2_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=1, sticky=(W, E))
-        B2_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B2_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=1)
+                values = [2, 5, 30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=1)
+        B2_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B2_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=1)
         B2_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B2_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 1: \
-                self.calcPumpTime(self.B2_calcPumpTime.get(),boxIndex)).grid(column=11, row=1)
+                self.calcPumpTime(self.B2_calcPumpTime.get(),boxIndex)).grid(column=7, row=1)
 
 
         B3_ROW_ =  ttk.Label(INI_Frame, text="BOX 3").grid(column=0, row=2, sticky=(W, E))
         B3_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B3_IDStr).grid(column = 1, row=2) 
         B3_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B3_Weight).grid(column = 2, row=2)
-        B3_Ratio = Spinbox(INI_Frame, textvariable = self.B3_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=2)
+        B3_Ratio = Spinbox(INI_Frame, textvariable = self.B3_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=2)
         B3_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B3_sched, width = 12, \
-                values = self.sched).grid(column=5, row=2)
-
+                values = self.sched).grid(column=4, row=2)
         B3_SessionLength = Spinbox(INI_Frame, textvariable = self.B3_SessionLength, width = 3, \
-                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=2)
-        B3_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=2, sticky=(W, E))
-        B3_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B3_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=2)
+                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=2)
+        B3_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B3_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=2)
         B3_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B3_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 2: \
-                self.calcPumpTime(self.B3_calcPumpTime.get(),boxIndex)).grid(column=11, row=2)
+                self.calcPumpTime(self.B3_calcPumpTime.get(),boxIndex)).grid(column=7, row=2)
 
         B4_ROW_ =  ttk.Label(INI_Frame, text="BOX 4").grid(column=0, row=3, sticky=(W, E))
         B4_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B4_IDStr).grid(column = 1, row=3) 
         B4_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B4_Weight).grid(column = 2, row=3)
-        B4_Ratio = Spinbox(INI_Frame, textvariable = self.B4_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=3)
+        B4_Ratio = Spinbox(INI_Frame, textvariable = self.B4_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=3)
         B4_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B4_sched, width = 12,
-                values = self.sched).grid(column=5, row=3)
+                values = self.sched).grid(column=4, row=3)
         B4_SessionLength = Spinbox(INI_Frame, textvariable = self.B4_SessionLength, width = 3, \
-                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=3)
-        B4_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=3, sticky=(W, E))
-        B4_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B4_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=3)
+                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=3)
+        B4_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B4_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=3)
         B4_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B4_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 3: \
-                self.calcPumpTime(self.B4_calcPumpTime.get(),boxIndex)).grid(column=11, row=3)
+                self.calcPumpTime(self.B4_calcPumpTime.get(),boxIndex)).grid(column=7, row=3)
 
         B5_ROW_ =  ttk.Label(INI_Frame, text="BOX 5").grid(column=0, row=4, sticky=(W, E))
         B5_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B5_IDStr).grid(column = 1, row = 4) 
         B5_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B5_Weight).grid(column = 2, row = 4)
-        B5_Ratio = Spinbox(INI_Frame, textvariable = self.B5_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=4)
+        B5_Ratio = Spinbox(INI_Frame, textvariable = self.B5_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=4)
         B5_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B5_sched, width = 12, \
-                values = self.sched).grid(column=5, row=4)
+                values = self.sched).grid(column=4, row=4)
         B5_SessionLength = Spinbox(INI_Frame, textvariable = self.B5_SessionLength, width = 3, \
-                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=4)
-        B5_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=4, sticky=(W, E))
-        B5_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B5_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=4)
+                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=4)
+        B5_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B5_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=4)
         B5_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B5_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 4: \
-                self.calcPumpTime(self.B5_calcPumpTime.get(),boxIndex)).grid(column=11, row=4)
+                self.calcPumpTime(self.B5_calcPumpTime.get(),boxIndex)).grid(column=7, row=4)
         
         B6_ROW_ =  ttk.Label(INI_Frame, text="BOX 6").grid(column=0, row=5, sticky=(W, E))
         B6_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B6_IDStr).grid(column = 1, row=5) 
         B6_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B6_Weight).grid(column = 2, row=5)
-        B6_Ratio = Spinbox(INI_Frame, textvariable = self.B6_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=5)
+        B6_Ratio = Spinbox(INI_Frame, textvariable = self.B6_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=5)
         B6_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B6_sched, width = 12, \
-                values = self.sched).grid(column=5, row=5)
+                values = self.sched).grid(column=4, row=5)
         B6_SessionLength = Spinbox(INI_Frame, textvariable = self.B6_SessionLength, width = 3, \
-                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=5)
-        B6_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=5, sticky=(W, E))
-        B6_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B6_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=5)
+                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=5)
+        B6_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B6_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=5)
         B6_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B6_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 5: \
-                self.calcPumpTime(self.B6_calcPumpTime.get(),boxIndex)).grid(column=11, row=5)
+                self.calcPumpTime(self.B6_calcPumpTime.get(),boxIndex)).grid(column=7, row=5)
 
         B7_ROW_ =  ttk.Label(INI_Frame, text="BOX 7").grid(column=0, row=6, sticky=(W, E))
         B7_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B7_IDStr).grid(column = 1, row=6) 
         B7_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B7_Weight).grid(column = 2, row=6)
-        B7_Ratio = Spinbox(INI_Frame, textvariable = self.B7_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=6)
+        B7_Ratio = Spinbox(INI_Frame, textvariable = self.B7_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=6)
         B7_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B7_sched, width = 12, \
-                values = self.sched).grid(column=5, row=6)
+                values = self.sched).grid(column=4, row=6)
         B7_SessionLength = Spinbox(INI_Frame, textvariable = self.B7_SessionLength, width = 3, \
-                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=6)
-        B7_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=6, sticky=(W, E))
-        B7_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B7_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=6)
+                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=6)
+        B7_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B7_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=6)
         B7_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B7_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 6: \
-                self.calcPumpTime(self.B7_calcPumpTime.get(),boxIndex)).grid(column=11, row=6)
+                self.calcPumpTime(self.B7_calcPumpTime.get(),boxIndex)).grid(column=7, row=6)
 
         B8_ROW_ =  ttk.Label(INI_Frame, text="BOX 8").grid(column=0, row=7, sticky=(W, E))
         B8_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B8_IDStr).grid(column = 1, row=7) 
         B8_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B8_Weight).grid(column = 2, row=7)
-        B8_Ratio = Spinbox(INI_Frame, textvariable = self.B8_FR_value, width = 3, from_=1, to=1000).grid(column=4, row=7)
+        B8_Ratio = Spinbox(INI_Frame, textvariable = self.B8_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=7)
         B8_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B8_sched, width = 12, \
-                values = self.sched).grid(column=5, row=7)
+                values = self.sched).grid(column=4, row=7)
         B8_SessionLength = Spinbox(INI_Frame, textvariable = self.B8_SessionLength, width = 3, \
-                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=8, row=7)
-        B8_SessionLabel_ =  ttk.Label(INI_Frame, text="Min").grid(column=9, row=7, sticky=(W, E))
-        B8_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B8_PumpTime), width = 3, from_=300, to=600).grid(column=10,row=7)
+                values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=7)
+        B8_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B8_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=7)
         B8_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B8_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 7: \
-                self.calcPumpTime(self.B8_calcPumpTime.get(),boxIndex)).grid(column=11, row=7)
+                self.calcPumpTime(self.B8_calcPumpTime.get(),boxIndex)).grid(column=7, row=7)
+        """
+            1     2      3     4      5      6    
+            RatID Weight Ratio Sched Session Pump")
+                  (gms)              (min)   (10 mSec)
+        """
+        aLabel =  ttk.Label(INI_Frame, text="RatID ").grid(column=1, row=12)
+        aLabel =  ttk.Label(INI_Frame, text="Weight").grid(column=2, row=12)
+        aLabel =  ttk.Label(INI_Frame, text="N").grid(column=3, row=12)
+        aLabel =  ttk.Label(INI_Frame, text="Sched ").grid(column=4, row=12)
+        aLabel =  ttk.Label(INI_Frame, text="Session ").grid(column=5, row=12)
+        aLabel =  ttk.Label(INI_Frame, text="Pump").grid(column=6, row=12)
+        aLabel =  ttk.Label(INI_Frame, text="(gms)").grid(column=2, row=13)
+        aLabel =  ttk.Label(INI_Frame, text="(Min)").grid(column=5, row=13)
+        aLabel =  ttk.Label(INI_Frame, text="(10 mSec)").grid(column=6, row=13)
 
-        tempLabel =  ttk.Label(INI_Frame, text="            RatID     Weight       Ratio   Sched                                          Session        Pump (10mSec)")
-        tempLabel.grid(column=0, row=12, columnspan = 12, sticky = (EW))
 
         self.loadFromINIFile()
         self.readExampleFiles()
