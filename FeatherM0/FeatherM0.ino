@@ -143,7 +143,7 @@ void Box::startSession() {
   // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40',
   //  '4: PR', '5: TH', '6: IntA: 5-25', '7: HD', '8: IntA-HD']
 
-  if (_protocolNum == 0) _boxPhase = 5;  // if "do not run" then boxPhase = "finished"
+  if (_protocolNum == 0) _boxPhase = 4;  // if "do not run" then boxPhase = "finished"
   else  {
       _responseCriterion = _paramNum;
       if (_protocolNum == 1)      _maxTrialNumber = 999;     
