@@ -1,6 +1,6 @@
 
 /*  Version 200.05
- *. 
+ *.  
  * This should handle eight boxes with or without an inactive lever.
  * 
  * Two MCP23S17 port expanders are controled by the MCP23S17 library 
