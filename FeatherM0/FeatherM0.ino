@@ -1,6 +1,5 @@
-
-/*  Version 200.05
- *.  
+/*  Version 200.04b - 
+ *. 
  * This should handle eight boxes with or without an inactive lever.
  * 
  * Two MCP23S17 port expanders are controled by the MCP23S17 library 
@@ -11,8 +10,8 @@
  * Chip1, Port0:  8 active lever inputs
  * Chip1, Port1:  8  pumps
  * ************* if Two Levers *************************
- * Chip2, Port0:  8 inactive levers - retract/extend
- * Chip2, Port1:  8 inactive lever LEDs
+ * Chip2, Port0:  8 in active levers - retract/extend
+ * Chip2, Port1:  8 in active lever LEDs 
  * Chip3, Port0:  8 active lever inputs
  * Chip3, Port1:  8 spare DIOs (alternate reinforcer?)
  * 
@@ -54,18 +53,19 @@ extern "C" char *sbrk(int i);   // used in FreeRam()
 byte portOneValue, portTwoValue;
 String instruction;
 
-boolean lastLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
-boolean lastLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
+int lastLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
+int newLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
+int lastLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
+int newLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 volatile boolean tickFlag = false;
 
-// program housekeeping variables
+// program housekeeping varaibles
 String inputString;
 boolean sessionRunning = false;
 boolean echoInput = false;
 boolean twoLever = false;
 unsigned long maxDelta = 0;
 byte maxQueueRecs = 0;
-boolean IOconnected = false;   // Set to false when debugging program without the breakout board connected
 
 // ***************************  Box Class *************************************
 class Box  {
@@ -89,39 +89,35 @@ class Box  {
     void moveLever1(int state);
     void moveLever2(int state);
     void tick();
-    void handle_L1_Response(boolean bitState);
-    void handle_L2_Response(boolean bitState);
+    void handle_L1_Response();
+    void handle_L2_Response();
     void setProtocolNum(int protocalNum);
     void setPumpDuration(int pumpDuration);
-    void setParamNum(int paramNum);
+    void setResponseCriterion(int responseCriterion);
     void setBlockDuration(int blockDuration);    
     void reportParameters();
     void getBlockTime();
     
     //************
   private:
-    //these class members are only available within the class, 
     int _boxNum;
     int _tickCounts = 0; 
     boolean _verbose = false;
-    boolean _holdDown = false;
     // defaults to a 6h FR1 session 
-    int _protocolNum = 1;  // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', 
-                           //  '4: PR', '5: TH', '6: IntA: 5-25', '7: HD',  '8: IntA-HD']
-    int _paramNum = 1;
-    int _PRstepNum = 1;
-    int _boxPhase = 0;     // 0 = preStart; 1 = timeIn; 2 = timeOut; 3 = IBI; 4 = finished
+    int _protocolNum = 1;  // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25']
+    int _boxPhase = 0;                   // 0 = preStart; 1 = timeIn; 2 = timeOut; 3 = IBI; 4 = finished
     unsigned long _blockDuration = 21600;  // 60 * 60 * 6 = 21600 seconds = 6 hrs;
     unsigned long _IBILength = 0;
     unsigned int _maxBlockNumber = 1;
     unsigned int _maxTrialNumber = 999;
     unsigned int _responseCriterion = 1;  // default to FR1
-    int _pumpDuration = 400;    // default to 4 seconds - 400 x 10 mSec ticks = 4000 mSec
+    int _pumpDuration = 400;    // 400 x 10 mSec = 4 seconds;
     int _THPumpTimeArray[12] = {316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};    // different from SelfAdmin201.ino
     int _stimDuration = 400;   // default to same as pumpDuration;
     int _pumpTimer = 0;
     int _stimTimer = 0;
-    unsigned long _blockTime = 0;    // unsigned int would only allow 65,535 seconds = 18.2 hours     
+    unsigned long _blockTime = 0;    // unsigned int would only allow 65,535 seconds = 18.2 hours 
+    //these class members can only be used from within the class,     
     unsigned long _startTime = 0;
     unsigned int _blockNumber = 0;
     unsigned int _trialNumber = 0;
@@ -129,58 +125,33 @@ class Box  {
 };
 
 // **************  Box Class Procedures *************************************
-Box::Box(int boxNum) {    // This is the constructor
+Box::Box(int boxNum) {    //this is the constructor
   _boxNum = boxNum; 
 }
 
-void Box::begin() {       // Not sure this procedure is necessary
+void Box::begin() {
   _protocolNum = 1;
 }
 
 void Box::startSession() { 
   // ******** set Protocol defaults here ********
-  // Python protocol list as defined in SA200.py:
-  // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40',
-  //  '4: PR', '5: TH', '6: IntA: 5-25', '7: HD', '8: IntA-HD']
+  // Python protocol list:  ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25']
 
-  if (_protocolNum == 0) _boxPhase = 4;  // if "do not run" then boxPhase = "finished"
-  else  {   
-      if (_protocolNum == 1)      {     // FR(N)
-          _maxTrialNumber = 999;
-          _responseCriterion = _paramNum;     
-      }
-      else if (_protocolNum == 2) {      // FR1 x 20
-          _maxTrialNumber = 20;
-          _responseCriterion = 1;   
-      }
-      else if (_protocolNum == 3) {      // FR1 x N
-          _maxTrialNumber = _paramNum;
-          _responseCriterion = 1;
-      }
-      else if (_protocolNum == 4) {      // PR(N)
-          _PRstepNum  = _paramNum;   
-      }
+  if (_protocolNum == 0) _boxPhase = 5;  // if "do not run" then boxPhase = "finished"
+  else  {  
+      if (_protocolNum == 1)      _maxTrialNumber = 999;        // different from SelfAdmin201.ino
+      else if (_protocolNum == 2) _maxTrialNumber = 20;   
+      else if (_protocolNum == 3) _maxTrialNumber = 40;   
       else if (_protocolNum == 5) {      // TH
-          _responseCriterion = 1;
-          _blockDuration = 600;          // 600 seconds = 10 min
+          _blockDuration = 600;            // 60 seconds * 10 min
           _IBILength = 0;                // no IBI
           _maxBlockNumber = 12;          // 12 blocks
       }
-      else if (_protocolNum == 6) {      // IntA 5-25 6h
-          _responseCriterion = 1; 
-          _blockDuration = 300;          // 300 seconds = 5 min
-          _IBILength = 1500;             // 1500 seconds = 25 min
+      if (_protocolNum == 6) {           // IntA 5-25 6h
+          _blockDuration = 300;            // 60 seconds * 5 min
+          _IBILength = 1500;             // 25 * 60 sec = 1500 seconds
           _maxBlockNumber = 12;          // 12 blocks
-      }
-      else if (_protocolNum == 7) {      // HD
-          _holdDown = true;
-          _blockDuration = 10800;        // 60 * 60 * 3 = 10800 seconds = 3 hrs; 
-      }
-      else if (_protocolNum == 8) {      // IntA-HD 5-25
-          _blockDuration = 300;          // 300 seconds = 5 min
-          _IBILength = 1500;             // 1500 seconds = 25 min
-          _maxBlockNumber = 12;          // 12 blocks
-      }
+      }  
       _startTime = millis();
       _blockNumber = 0;  
       _pumpTimer = 0; 
@@ -193,7 +164,8 @@ void Box::startSession() {
   }
 }
 
-void Box::endSession () {
+void Box::endSession () {   
+ // endTrial(); the only thing this did was retract the lever, but see next line. 
     moveLever1(Retract);
     moveLever2(Retract);
     switchStim1(Off);
@@ -227,8 +199,7 @@ void Box::endBlock() {
 void Box::startTrial() {   
     _trialResponses = 0;
     _trialNumber++;
-    if (_protocolNum == 4) _responseCriterion = round((5 * exp(0.2 * _PRstepNum)) - 5);    // Sched = PR 
-    _PRstepNum++;
+    if (_protocolNum == 4) _responseCriterion = round((5 * exp(0.2 * _trialNumber)) - 5);    // Sched = PR 
     moveLever1(Extend);             // extend lever
     _boxPhase = 1;                // 0 = preStart; 1 = timeIn; 2 = timeOut; 3 = IBI; 4 = finished  
     TStamp tStamp = {_boxNum, 'T', millis() - _startTime, 0, 9};
@@ -252,9 +223,9 @@ void Box::endIBI() {
      startBlock();
 }
 
-void Box::reinforce() {
+void Box::reinforce() {   
     switchPump(HIGH);            // On
-    _pumpTimer = _pumpDuration;  // 400 (4 sec) or adjusted for body weight
+    _pumpTimer = _pumpDuration;  // 400 = 4 seconds}   
 }
 
 void Box::startTimeOut() {   
@@ -274,7 +245,7 @@ void Box::endTimeOut() {
 
 void Box::switchPump(int state) {
     // boxNum 0..7 maps to pin 0..7 on chip1
-    if (IOconnected) chip1.digitalWrite(_boxNum+8,state);             
+    chip1.digitalWrite(_boxNum+8,state);             // Ver 200.04
     // HIGH = On
     if (state) {
           TStamp tStamp = {_boxNum, 'P', millis() - _startTime, 1, 2};
@@ -288,7 +259,7 @@ void Box::switchPump(int state) {
 }
 
 void Box::switchStim1(int state) {   
-    if (IOconnected) chip0.digitalWrite(_boxNum+8,state);   // boxNum 0..7 maps to pin 8..15 on chip0
+    chip0.digitalWrite(_boxNum+8,state);   // boxNum 0..7 maps to pin 8..15 on chip0
     // HIGH = OFF
     if (state) {
           TStamp tStamp = {_boxNum, 's', millis() - _startTime, 0, 3};
@@ -302,7 +273,7 @@ void Box::switchStim1(int state) {
 }
 
 void Box::switchStim2(int state) {   
-    if (IOconnected) chip2.digitalWrite(_boxNum+8,state);   // boxNum 0..7  maps to pin 8..15 on chip2
+    chip2.digitalWrite(_boxNum+8,state);   // boxNum 0..7  maps to pin 8..15 on chip2
     // HIGH = OFF
     if (state) {
           TStamp tStamp = {_boxNum, 'c', millis() - _startTime, 0, 4};
@@ -316,7 +287,7 @@ void Box::switchStim2(int state) {
 }
 
 void Box::moveLever1(int state) {          // boxNum 0..7  maps to pin 0..7 on chip0
-    if (IOconnected) chip0.digitalWrite(_boxNum,state);
+    chip0.digitalWrite(_boxNum,state);
     // HIGH = Retract; LOW = extend
     if (state) {
            TStamp tStamp = {_boxNum, '-', millis() - _startTime, 0, 0};
@@ -330,7 +301,7 @@ void Box::moveLever1(int state) {          // boxNum 0..7  maps to pin 0..7 on c
 }
 
 void Box::moveLever2(int state) {          // boxNum 0..7  maps to pin 0..7 on chip2
-    if (IOconnected) chip2.digitalWrite(_boxNum,state);
+    chip2.digitalWrite(_boxNum,state);
     // HIGH = Retract
     if (state) { 
           TStamp tStamp = {_boxNum, ',', millis() - _startTime, 0, 1};
@@ -343,7 +314,7 @@ void Box::moveLever2(int state) {          // boxNum 0..7  maps to pin 0..7 on c
     // Lever2 (inactive) CheckBox is index 1 
 }
 
-void Box::tick() {                           // do stuff every 10 mSec
+void Box::tick() { // do stuff every 10 mSec      
     if (_pumpTimer > 0) {  
       _pumpTimer--;
       if (_pumpTimer == 0) switchPump(LOW);  // Off
@@ -369,49 +340,27 @@ void Box::tick() {                           // do stuff every 10 mSec
     }
 }   
 
-void Box::handle_L1_Response(boolean bitState) {
-   /*  Sends something like "0 L 23456 0 9" 
-   *  i.e boxNum, code, mSecTime, state and index
-   *  Note: state and index are irrelevant, only used to update checkboxes
-   */    
-    if (bitState == 0){
-         TStamp tStamp = {_boxNum, 'L', millis() - _startTime, 0, 9};
-         printQueue.push(&tStamp);
-         if (_boxPhase == 1) {             // timeIn
-               if (_holdDown == false) {   // normal stuff
-                    _trialResponses++;
-                    if (_trialResponses >= _responseCriterion) { 
-                        /*if (_protocolNum == 5 && _blockNumber == 12) {
-                        // do nothing. This is because the 12 block of TH has pumptime = 0
-                        // check on this. The pumptime is now 2 in block 12   */
-                        reinforce();
-                        endTrial();
-                        startTimeOut();               
-                    }
-               }
-               else {                       // (_holdDown == true)
-                  switchPump(HIGH);         // Switch On
-               }
-          }
-    }
-    else {                  // bitState == 1
-         TStamp tStamp = {_boxNum, 'l', millis() - _startTime, 0, 9};
-         printQueue.push(&tStamp);
-         // if (_boxPhase == 1 && _holdDown == true) {     // HD
-            switchPump(LOW);                // Switch Off
+void Box::handle_L1_Response() { 
+  if (_boxPhase == 1) {  
+       TStamp tStamp = {_boxNum, 'L', millis() - _startTime, 0, 9};
+       printQueue.push(&tStamp);
+       _trialResponses++;
+       if (_trialResponses >= _responseCriterion) {
+           if (_protocolNum == 5 && _blockNumber == 12) {
+            // do nothing. This is because the 12 block of TH has pumptime = 0
+            }
+            else {  
+               reinforce();
+               endTrial();
+               startTimeOut();               
+            }
+       }
     }
 }
 
-void Box::handle_L2_Response(boolean bitState) {           // Inactive lever press
-    if (bitState == 0){
-       TStamp tStamp = {_boxNum, 'J', millis() - _startTime, 0, 9};
-       printQueue.push(&tStamp);
-    }
-    /*  Probably no need to report lever up on inactive lever
-    else {
-       TStamp tStamp = {_boxNum, 'j', millis() - _startTime, 0, 9};
-       printQueue.push(&tStamp);
-    } */
+void Box::handle_L2_Response() {           // Inactive lever press
+  TStamp tStamp = {_boxNum, 'J', millis() - _startTime, 0, 9};
+  printQueue.push(&tStamp);
 }
 
 void Box::setProtocolNum(int protocolNum) {
@@ -422,8 +371,8 @@ void Box::setPumpDuration(int pumpDuration) {
   _pumpDuration = pumpDuration;
 }
 
-void Box::setParamNum(int paramNum) {
-  _paramNum = paramNum;
+void Box::setResponseCriterion(int responseCriterion) {
+  _responseCriterion = responseCriterion;
 }
 
 void Box::setBlockDuration(int blockDuration) {
@@ -438,7 +387,7 @@ void Box::reportParameters() {
 } 
 
 void Box::getBlockTime() {
-  Serial.println("9 "+String(_boxNum)+"_BTime="+ String(_blockTime));
+  Serial.println("9 "+String(_boxNum)+" BTime: "+ String(_blockTime));
   // TStamp tStamp = {_boxNum, '9', millis() - _startTime, 0, 9};
   // printQueue.push(&tStamp);
 }
@@ -500,41 +449,44 @@ void TC4_Handler()                                // Interrupt Service Routine (
 // **************************  End Timer stuff ****************************
 
 void turnStuffOff(){
-  if (IOconnected) {
-     chip0.writePort(0xFFFF);
-     chip1.writePort(1,0x00);    
-     chip2.writePort(0xFFFF);
-     chip3.writePort(1,0x00); 
-  }      
+  chip0.writePort(0xFFFF);
+  chip1.writePort(1,0x00);    // Ver 200.04
+  chip2.writePort(0xFFFF);
+  chip3.writePort(1,0x00);    // Ver 200.04  
+}
+
+void testOutputs() {
+  static byte pin = 15;
+  chip0.digitalWrite(pin,HIGH);   // turn something OFF
+  pin++;
+  if (pin > 15) pin = 0;
+  chip0.digitalWrite(pin,LOW);   // turn something ON
 }
 
 void setup() {
   Serial.begin(115200);
-  delay(1000); 
-  Serial.println("9 SA200.ino");
   pinMode(ledPin, OUTPUT);   // GPIO 5
-  if (IOconnected == true) {
-      chip0.begin();     // This starts SPI and set the chip select
-      chip1.begin();     // pin (10) to OUTPUT
-      chip2.begin();                             // different from SelfAdmin201.ino
-      chip3.begin();                             // different from SelfAdmin201.ino
-      for (uint8_t i = 0; i <= 15; i++) {
-        chip0.pinMode(i,OUTPUT);             // Set chip0 to OUTPUT
-        chip2.pinMode(i,OUTPUT);             // Set chip2 to OUTPUT
-      }
-      for (uint8_t i = 0; i <= 7; i++)  {
-        chip1.pinMode(i,INPUT_PULLUP);          // Ver 200.04
-        chip3.pinMode(i,INPUT_PULLUP);          // Ver 200.04
-      }
-      for (uint8_t i = 8; i <= 15; i++) {
-        chip1.pinMode(i, OUTPUT);               // Ver 200.04
-        chip3.pinMode(i, OUTPUT);               // Ver 200.04
-      }
-      turnStuffOff();  
-      portOneValue = chip1.readPort(0);          
-      portTwoValue = chip3.readPort(0);          
-      // Serial.println(portOneValue,BIN);
+  chip0.begin();     // This starts SPI and set the chip select
+  chip1.begin();     // pin (10) to OUTPUT
+  chip2.begin();                             // different from SelfAdmin201.ino
+  chip3.begin();                             // different from SelfAdmin201.ino
+  for (uint8_t i = 0; i <= 15; i++) {
+    chip0.pinMode(i,OUTPUT);             // Set chip0 to OUTPUT
+    chip2.pinMode(i,OUTPUT);             // Set chip2 to OUTPUT
   }
+  for (uint8_t i = 0; i <= 7; i++)  {
+     chip1.pinMode(i,INPUT_PULLUP);          // Ver 200.04
+     chip3.pinMode(i,INPUT_PULLUP);          // Ver 200.04
+  }
+  for (uint8_t i = 8; i <= 15; i++) {
+     chip1.pinMode(i, OUTPUT);               // Ver 200.04
+     chip3.pinMode(i, OUTPUT);               // Ver 200.04
+  }
+  turnStuffOff();  
+  portOneValue = chip1.readPort(0);          // Ver 200.04
+  portTwoValue = chip3.readPort(0);          // Ver 200.04
+  // Serial.println(portOneValue,BIN);
+
   boxArray[0].begin();
   boxArray[1].begin();
   boxArray[2].begin();
@@ -543,39 +495,47 @@ void setup() {
   boxArray[5].begin();
   boxArray[6].begin();
   boxArray[7].begin();
-  init_10_mSec_Timer();    
+  
+  delay(500); 
+  init_10_mSec_Timer(); 
+  Serial.println("9 SA200.ino");
 }
 
 void checkLeverOne() {
-   static byte oldPortOneValue = 255;
-   boolean bitState;       
-   portOneValue = chip1.readPort(0);
-   if(portOneValue != oldPortOneValue) {
+   static byte oldPortOneValue = 255;       
+    portOneValue = chip1.readPort(0);              // Ver 200.04
+    if(portOneValue != oldPortOneValue) {
          oldPortOneValue = portOneValue;
          // Serial.println (portOneValue,BIN);
          for (byte i = 0; i < 8; i++) {
-             bitState = bitRead(portOneValue,i);
-             if (bitState != lastLeverOneState[i]) {     
-                  lastLeverOneState[i] = bitState;
-                  boxArray[i].handle_L1_Response(bitState);
+             newLeverOneState[i] = bitRead(portOneValue,i);
+             if (newLeverOneState[i] != lastLeverOneState[i]) {          
+                  lastLeverOneState[i] = newLeverOneState[i]; 
+                  if (newLeverOneState[i] == 0) {
+                     boxArray[i].handle_L1_Response();
+                     String tempStr = "9 L1_Response:pin_"+String(i); 
+                     Serial.println(tempStr);
+                  }
              }
-         }
-    }    
-}           
-
+         }    
+    }           
+}
 
 void checkLeverTwo() {
-   static byte oldPortTwoValue = 255;
-   boolean bitState;
-   portTwoValue = chip3.readPort(0);
-   if(portTwoValue != oldPortTwoValue) {
+   static byte oldPortTwoValue = 255;       
+    portTwoValue = chip3.readPort(0);
+    if(portTwoValue != oldPortTwoValue) {
         oldPortTwoValue = portTwoValue;
          // Serial.println (portTwoValue,BIN);
          for (byte i = 0; i < 8; i++) {
-             bitState = bitRead(portTwoValue,i);
-             if (bitState != lastLeverTwoState[i]) {
-                  lastLeverTwoState[i] = bitState;
-                  boxArray[i].handle_L2_Response(bitState);
+             newLeverTwoState[i] = bitRead(portTwoValue,i);
+             if (newLeverTwoState[i] != lastLeverTwoState[i]) {          
+                  lastLeverTwoState[i] = newLeverTwoState[i]; 
+                  if (newLeverTwoState[i] == 0) {
+                     boxArray[i].handle_L2_Response();
+                     String tempStr = "9 L2_Response:pin_"+String(i); 
+                     Serial.println(tempStr);
+                  }
              }
          }    
     }           
@@ -628,13 +588,14 @@ void handleInputString()
         num1 = num1Code.toInt();         // turn the text value into an interger
      }
      if (echoInput) Serial.println("9 <"+stringCode+":"+num1+":"+num2+">"); 
-     if (stringCode == "G")     boxArray[num1].startSession();
+     if (stringCode == "chip0") chip0.digitalWrite(num1,num2); 
+     else if (stringCode == "G")     boxArray[num1].startSession();
      else if (stringCode == "Q")     boxArray[num1].endSession(); 
      else if (stringCode == "P")     boxArray[num1].switchPump(HIGH);
      else if (stringCode == "p")     boxArray[num1].switchPump(LOW);
      else if (stringCode == "SCHED") boxArray[num1].setProtocolNum(num2);
      else if (stringCode == "PUMP")  boxArray[num1].setPumpDuration(num2); 
-     else if (stringCode == "RATIO") boxArray[num1].setParamNum(num2);
+     else if (stringCode == "RATIO") boxArray[num1].setResponseCriterion(num2);
      else if (stringCode == "TIME")  boxArray[num1].setBlockDuration(num2);
      else if (stringCode == "R")     boxArray[num1].reportParameters();
      else if (stringCode == "=")     boxArray[num1].moveLever1(Extend);   // extend lever1
@@ -645,24 +606,19 @@ void handleInputString()
      else if (stringCode == "S")     boxArray[num1].switchStim1(On);
      else if (stringCode == "c")     boxArray[num1].switchStim2(Off);
      else if (stringCode == "C")     boxArray[num1].switchStim2(On);
+     // else if (stringCode == "1")     boxArray[0].handle_L1_Response();
+     // else if (stringCode == "2")     boxArray[1].handle_L1_Response();
+     else if (stringCode == "V")     Serial.println("9 200.04a");
      else if (stringCode == "T")     twoLever = true;
      else if (stringCode == "t")     twoLever = false;
      // debug stuff 
-     else if (stringCode == "L1")    boxArray[num1].handle_L1_Response(0);  
-     // else if (stringCode == "chip0")      chip0.digitalWrite(num1,num2); 
+     else if (stringCode == "L1")    boxArray[num1].handle_L1_Response();  // Ver 200.04
      else if (stringCode == "off")   turnStuffOff();
      else if (stringCode == "i")     timeUSB();
      else if (stringCode == "E")     echoInput = !echoInput;
      else if (stringCode == "M")     reportMaxDelta();
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "B")     boxArray[num1].getBlockTime();
-     else if (stringCode == "V")     {
-        Serial.println("9 v200.05");
-        if (IOconnected == false) {
-           Serial.println("9 IOconnected=false");
-           Serial.println("9 --------WARNING------"); 
-        }
-     }
      inputString = "";
    }
 }
@@ -718,10 +674,8 @@ void tick()    {
      boxArray[i].tick();
    }
    getInputString();
-   if (IOconnected) {
-       checkLeverOne();
-       if (twoLever) checkLeverTwo();
-   }
+   checkLeverOne();
+   if (twoLever) checkLeverTwo();
    sendOneTimeStamp();
    delta = micros() - micro1;
    if (delta > maxDelta) maxDelta = delta;   
