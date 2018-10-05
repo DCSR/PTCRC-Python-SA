@@ -1,4 +1,6 @@
-/*  Version 200.04b - 
+/*  Version 200.06 
+ *   
+ *   Oct 5, 2018. Adapted from SA200.04 that has been working.
  *. 
  * This should handle eight boxes with or without an inactive lever.
  * 
@@ -93,7 +95,7 @@ class Box  {
     void handle_L2_Response();
     void setProtocolNum(int protocalNum);
     void setPumpDuration(int pumpDuration);
-    void setResponseCriterion(int responseCriterion);
+    void setParamNum(int paramNum);
     void setBlockDuration(int blockDuration);    
     void reportParameters();
     void getBlockTime();
@@ -105,6 +107,8 @@ class Box  {
     boolean _verbose = false;
     // defaults to a 6h FR1 session 
     int _protocolNum = 1;  // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25']
+    int _paramNum = 1;
+    int _PRstepNum = 1;   
     int _boxPhase = 0;                   // 0 = preStart; 1 = timeIn; 2 = timeOut; 3 = IBI; 4 = finished
     unsigned long _blockDuration = 21600;  // 60 * 60 * 6 = 21600 seconds = 6 hrs;
     unsigned long _IBILength = 0;
@@ -135,13 +139,26 @@ void Box::begin() {
 
 void Box::startSession() { 
   // ******** set Protocol defaults here ********
-  // Python protocol list:  ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25']
+  // Python protocol list:  ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', 
+  //  '4: PR', '5: TH', '6: IntA: 5-25']
 
-  if (_protocolNum == 0) _boxPhase = 5;  // if "do not run" then boxPhase = "finished"
+  if (_protocolNum == 0) _boxPhase = 4;  // if "do not run" then boxPhase = "finished"
   else  {  
-      if (_protocolNum == 1)      _maxTrialNumber = 999;        // different from SelfAdmin201.ino
-      else if (_protocolNum == 2) _maxTrialNumber = 20;   
-      else if (_protocolNum == 3) _maxTrialNumber = 40;   
+      if (_protocolNum == 1) {           // FR(N)
+        _maxTrialNumber = 999;           // different from SelfAdmin201.ino
+        _responseCriterion = _paramNum;
+      }
+      else if (_protocolNum == 2) {      // FR1 x 20
+        _maxTrialNumber = 20;
+        _responseCriterion = 1;   
+      }
+      else if (_protocolNum == 3) {      // FR x N
+          _maxTrialNumber = _paramNum;
+          _responseCriterion = 1;  
+      }
+      else if (_protocolNum == 4) {      // PR(N)
+          _PRstepNum  = _paramNum;   
+      }   
       else if (_protocolNum == 5) {      // TH
           _blockDuration = 600;            // 60 seconds * 10 min
           _IBILength = 0;                // no IBI
@@ -199,7 +216,8 @@ void Box::endBlock() {
 void Box::startTrial() {   
     _trialResponses = 0;
     _trialNumber++;
-    if (_protocolNum == 4) _responseCriterion = round((5 * exp(0.2 * _trialNumber)) - 5);    // Sched = PR 
+    if (_protocolNum == 4) _responseCriterion = round((5 * exp(0.2 * _PRstepNum)) - 5);    // Sched = PR 
+    _PRstepNum++;
     moveLever1(Extend);             // extend lever
     _boxPhase = 1;                // 0 = preStart; 1 = timeIn; 2 = timeOut; 3 = IBI; 4 = finished  
     TStamp tStamp = {_boxNum, 'T', millis() - _startTime, 0, 9};
@@ -371,8 +389,8 @@ void Box::setPumpDuration(int pumpDuration) {
   _pumpDuration = pumpDuration;
 }
 
-void Box::setResponseCriterion(int responseCriterion) {
-  _responseCriterion = responseCriterion;
+void Box::setParamNum(int paramNum) {
+  _paramNum = paramNum;
 }
 
 void Box::setBlockDuration(int blockDuration) {
@@ -595,7 +613,7 @@ void handleInputString()
      else if (stringCode == "p")     boxArray[num1].switchPump(LOW);
      else if (stringCode == "SCHED") boxArray[num1].setProtocolNum(num2);
      else if (stringCode == "PUMP")  boxArray[num1].setPumpDuration(num2); 
-     else if (stringCode == "RATIO") boxArray[num1].setResponseCriterion(num2);
+     else if (stringCode == "RATIO") boxArray[num1].setParamNum(num2);
      else if (stringCode == "TIME")  boxArray[num1].setBlockDuration(num2);
      else if (stringCode == "R")     boxArray[num1].reportParameters();
      else if (stringCode == "=")     boxArray[num1].moveLever1(Extend);   // extend lever1
