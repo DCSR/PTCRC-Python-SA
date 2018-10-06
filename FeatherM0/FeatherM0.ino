@@ -1,6 +1,4 @@
-/*  Version 200.06 
- *   
- *   Oct 5, 2018. Adapted from SA200.04 that has been working.
+/*  Version 200.07Beta
  *. 
  * This should handle eight boxes with or without an inactive lever.
  * 
@@ -105,6 +103,8 @@ class Box  {
     int _boxNum;
     int _tickCounts = 0; 
     boolean _verbose = false;
+    boolean _schedPR = false;
+    boolean _schedTH = false;
     // defaults to a 6h FR1 session 
     int _protocolNum = 1;  // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25']
     int _paramNum = 1;
@@ -115,11 +115,11 @@ class Box  {
     unsigned int _maxBlockNumber = 1;
     unsigned int _maxTrialNumber = 999;
     unsigned int _responseCriterion = 1;  // default to FR1
-    int _pumpDuration = 400;    // 400 x 10 mSec = 4 seconds;
+    int _pumpDuration = 400;    // 400 x 10 mSec = 4,000 mSec = 4 seconds;
     int _THPumpTimeArray[12] = {316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};    // different from SelfAdmin201.ino
-    int _stimDuration = 400;   // default to same as pumpDuration;
     int _pumpTimer = 0;
-    int _stimTimer = 0;
+    int _timeOutTimer = 0;
+    int _timeOutDuration = 400;  // default to 4 sec
     unsigned long _blockTime = 0;    // unsigned int would only allow 65,535 seconds = 18.2 hours 
     //these class members can only be used from within the class,     
     unsigned long _startTime = 0;
@@ -142,37 +142,52 @@ void Box::startSession() {
   // Python protocol list:  ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', 
   //  '4: PR', '5: TH', '6: IntA: 5-25']
 
+   _timeOutDuration = _pumpDuration;     // except in protocol 2
+
   if (_protocolNum == 0) _boxPhase = 4;  // if "do not run" then boxPhase = "finished"
   else  {  
       if (_protocolNum == 1) {           // FR(N)
+        _schedPR = false;
+        _schedTH = false;
         _maxTrialNumber = 999;           // different from SelfAdmin201.ino
         _responseCriterion = _paramNum;
       }
       else if (_protocolNum == 2) {      // FR1 x 20
+        _schedPR = false;
+        _schedTH = false;
         _maxTrialNumber = 20;
-        _responseCriterion = 1;   
+        _responseCriterion = 1;
+        _timeOutDuration = 2000;         // 20 sec
       }
       else if (_protocolNum == 3) {      // FR x N
-          _maxTrialNumber = _paramNum;
-          _responseCriterion = 1;  
+        _schedPR = false;
+        _schedTH = false;
+        _maxTrialNumber = _paramNum;
+        _responseCriterion = 1;
       }
       else if (_protocolNum == 4) {      // PR(N)
-          _PRstepNum  = _paramNum;   
+        _schedPR = true;
+        _PRstepNum  = _paramNum;
+        _schedTH = false;
       }   
       else if (_protocolNum == 5) {      // TH
-          _blockDuration = 600;            // 60 seconds * 10 min
-          _IBILength = 0;                // no IBI
-          _maxBlockNumber = 12;          // 12 blocks
+        _schedPR = false;
+        _schedTH = true;
+        _blockDuration = 600;            // 60 seconds * 10 min
+        _IBILength = 0;                  // no IBI
+        _maxBlockNumber = 12;            // 12 blocks
       }
-      if (_protocolNum == 6) {           // IntA 5-25 6h
-          _blockDuration = 300;            // 60 seconds * 5 min
-          _IBILength = 1500;             // 25 * 60 sec = 1500 seconds
-          _maxBlockNumber = 12;          // 12 blocks
+      else if (_protocolNum == 6) {      // IntA 5-25 6h
+        _schedPR = false;
+        _schedTH = false;
+        _blockDuration = 300;            // 60 seconds * 5 min
+        _IBILength = 1500;               // 25 * 60 sec = 1500 seconds
+        _maxBlockNumber = 12;            // 12 blocks
       }  
       _startTime = millis();
       _blockNumber = 0;  
       _pumpTimer = 0; 
-      _stimTimer = 0;
+      _timeOutTimer = 0;
       // sessionRunning = true;     
       TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9};
       printQueue.push(&tStamp);
@@ -188,7 +203,7 @@ void Box::endSession () {
     switchStim1(Off);
     switchPump(LOW);
     _pumpTimer = 0;
-    _stimTimer = 0; 
+    _timeOutTimer = 0;
     _boxPhase = 4;    
     TStamp tStamp = {_boxNum, 'E', millis() - _startTime, 0, 9};
     printQueue.push(&tStamp);
@@ -200,7 +215,7 @@ void Box::startBlock() {
   _blockNumber++;
   TStamp tStamp = {_boxNum, 'B', millis() - _startTime, 0, 9};
   printQueue.push(&tStamp);  
-  if (_protocolNum == 5){                                    // TH
+  if (_schedTH == true){                                    // TH
       _pumpDuration = _THPumpTimeArray[_blockNumber - 1];    // zero indexed array; block 1 = index 0
   }
   startTrial();
@@ -216,7 +231,7 @@ void Box::endBlock() {
 void Box::startTrial() {   
     _trialResponses = 0;
     _trialNumber++;
-    if (_protocolNum == 4) _responseCriterion = round((5 * exp(0.2 * _PRstepNum)) - 5);    // Sched = PR 
+    if (_schedPR == true) _responseCriterion = round((5 * exp(0.2 * _PRstepNum)) - 5);    // Sched = PR
     _PRstepNum++;
     moveLever1(Extend);             // extend lever
     _boxPhase = 1;                // 0 = preStart; 1 = timeIn; 2 = timeOut; 3 = IBI; 4 = finished  
@@ -248,8 +263,7 @@ void Box::reinforce() {
 
 void Box::startTimeOut() {   
     switchStim1(On); 
-    if (_protocolNum == 2) _stimTimer = _stimDuration;
-    else _stimTimer = _pumpDuration;
+    _timeOutTimer = _timeOutDuration;       // _timeOutTimer counts down with each tick
     _boxPhase = 2;                  //timeOut    
     TStamp tStamp = {_boxNum, 't', millis() - _startTime, 0, 9};
     printQueue.push(&tStamp);
@@ -337,9 +351,9 @@ void Box::tick() { // do stuff every 10 mSec
       _pumpTimer--;
       if (_pumpTimer == 0) switchPump(LOW);  // Off
     }
-    if (_stimTimer > 0)  {  
-      _stimTimer--; 
-      if (_stimTimer == 0) endTimeOut();  
+    if (_timeOutTimer > 0)  { 
+      _timeOutTimer--;
+      if (_timeOutTimer == 0) endTimeOut();
     }   
     _tickCounts++;
     if (_tickCounts == 100)    {         // every second
@@ -364,8 +378,8 @@ void Box::handle_L1_Response() {
        printQueue.push(&tStamp);
        _trialResponses++;
        if (_trialResponses >= _responseCriterion) {
-           if (_protocolNum == 5 && _blockNumber == 12) {
-            // do nothing. This is because the 12 block of TH has pumptime = 0
+           if (_schedTH == true && _blockNumber == 12) {
+            // do nothing. This is because the 12th block of TH has pumptime = 0
             }
             else {  
                reinforce();
@@ -400,7 +414,7 @@ void Box::setBlockDuration(int blockDuration) {
 void Box::reportParameters() { 
   Serial.print("9 "+String(_boxNum)+":"+String(_protocolNum)+":");
   Serial.print(String(_responseCriterion)+":"+String(_blockDuration)+":");
-  Serial.print(String(_pumpDuration)+":"+String(_stimDuration));
+  Serial.print(String(_pumpDuration)+":"+String(_timeOutDuration));
   Serial.println("-"+String(_maxTrialNumber));
 } 
 
@@ -625,12 +639,12 @@ void handleInputString()
      else if (stringCode == "c")     boxArray[num1].switchStim2(Off);
      else if (stringCode == "C")     boxArray[num1].switchStim2(On);
      // else if (stringCode == "1")     boxArray[0].handle_L1_Response();
-     // else if (stringCode == "2")     boxArray[1].handle_L1_Response();
-     else if (stringCode == "V")     Serial.println("9 200.04a");
+     // else if (stringCode == "2")     boxArray[1].handle_L2_Response();
+     else if (stringCode == "V")     Serial.println("9 200.06");
      else if (stringCode == "T")     twoLever = true;
      else if (stringCode == "t")     twoLever = false;
      // debug stuff 
-     else if (stringCode == "L1")    boxArray[num1].handle_L1_Response();  // Ver 200.04
+     else if (stringCode == "L1")    boxArray[num1].handle_L1_Response();
      else if (stringCode == "off")   turnStuffOff();
      else if (stringCode == "i")     timeUSB();
      else if (stringCode == "E")     echoInput = !echoInput;
