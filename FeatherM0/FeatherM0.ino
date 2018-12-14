@@ -21,7 +21,7 @@
  */
 
 
-#include <Queue.h>
+#include <cppQueue.h>
 #include <SPI.h>        // Arduino Library SPI.h
 #include "MCP23S17.h"   // Forked from Majenko MCP23S17 library
 
