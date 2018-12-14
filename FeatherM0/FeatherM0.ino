@@ -119,7 +119,7 @@ class Box  {
     unsigned int _maxTrialNumber = 999;
     unsigned int _responseCriterion = 1;  // default to FR1
     int _pumpDuration = 400;    // 400 x 10 mSec = 4,000 mSec = 4 seconds;
-    int _THPumpTimeArray[12] = {316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};    // different from SelfAdmin201.ino
+    int _THPumpTimeArray[12] = {316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};
     int _pumpTimer = 0;
     int _timeOutTimer = 0;
     int _timeOutDuration = 400;  // default to 4 sec
