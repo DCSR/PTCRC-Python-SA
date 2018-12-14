@@ -1,5 +1,8 @@
-/*  Version 200.07Beta
- *. 
+/*  Version 200.08
+ *   
+ *   BetaTH branch created Dec 13th.
+ *   
+ *
  * This should handle eight boxes with or without an inactive lever.
  * 
  * Two MCP23S17 port expanders are controled by the MCP23S17 library 
@@ -18,7 +21,7 @@
  */
 
 
-#include <Queue.h> 
+#include <Queue.h>
 #include <SPI.h>        // Arduino Library SPI.h
 #include "MCP23S17.h"   // Forked from Majenko MCP23S17 library
 
