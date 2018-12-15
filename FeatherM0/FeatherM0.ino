@@ -2,7 +2,7 @@
  *   
  *   BetaTH branch created Dec 13th.
  *   
- *
+ * 
  * This should handle eight boxes with or without an inactive lever.
  * 
  * Two MCP23S17 port expanders are controled by the MCP23S17 library 
@@ -220,6 +220,7 @@ void Box::startBlock() {
   printQueue.push(&tStamp);  
   if (_schedTH == true){                                    // TH
       _pumpDuration = _THPumpTimeArray[_blockNumber - 1];    // zero indexed array; block 1 = index 0
+      _timeOutDuration = _pumpDuration;
   }
   startTrial();
 }
@@ -384,7 +385,7 @@ void Box::handle_L1_Response() {
            if (_schedTH == true && _blockNumber == 12) {
             // do nothing. This is because the 12th block of TH has pumptime = 0
             }
-            else {  
+            else { 
                reinforce();
                endTrial();
                startTimeOut();               
@@ -643,7 +644,7 @@ void handleInputString()
      else if (stringCode == "C")     boxArray[num1].switchStim2(On);
      // else if (stringCode == "1")     boxArray[0].handle_L1_Response();
      // else if (stringCode == "2")     boxArray[1].handle_L2_Response();
-     else if (stringCode == "V")     Serial.println("9 200.06");
+     else if (stringCode == "V")     Serial.println("9 200.08");
      else if (stringCode == "T")     twoLever = true;
      else if (stringCode == "t")     twoLever = false;
      // debug stuff 
