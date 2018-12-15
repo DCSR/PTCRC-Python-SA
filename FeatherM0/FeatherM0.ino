@@ -119,7 +119,7 @@ class Box  {
     unsigned int _maxTrialNumber = 999;
     unsigned int _responseCriterion = 1;  // default to FR1
     int _pumpDuration = 400;    // 400 x 10 mSec = 4,000 mSec = 4 seconds;
-    int _THPumpTimeArray[12] = {316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};
+    int _THPumpTimeArray[13] = {316, 316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};
     int _pumpTimer = 0;
     int _timeOutTimer = 0;
     int _timeOutDuration = 400;  // default to 4 sec
@@ -179,7 +179,7 @@ void Box::startSession() {
         _maxTrialNumber = 4;
         _blockDuration = 21600;          // 60 * 60 * 6 = 21600 seconds = 6 hrs; This changes in Block 2
         _IBILength = 0;                  // no IBI
-        _maxBlockNumber = 12;            // 12 blocks
+        _maxBlockNumber = 13;            // 13 blocks
       }
       else if (_protocolNum == 6) {      // IntA 5-25 6h
         _schedPR = false;
