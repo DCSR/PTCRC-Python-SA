@@ -382,14 +382,9 @@ void Box::handle_L1_Response() {
        printQueue.push(&tStamp);
        _trialResponses++;
        if (_trialResponses >= _responseCriterion) {
-           if (_schedTH == true && _blockNumber == 12) {
-            // do nothing. This is because the 12th block of TH has pumptime = 0
-            }
-            else { 
                reinforce();
                endTrial();
-               startTimeOut();               
-            }
+               startTimeOut();
        }
     }
 }
