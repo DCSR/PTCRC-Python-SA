@@ -1,8 +1,8 @@
-/*  Version 200.08
+/*  
+ *   Version 200.08
  *   
  *   BetaTH branch created Dec 13th.
  *   
- * 
  * This should handle eight boxes with or without an inactive lever.
  * 
  * Two MCP23S17 port expanders are controled by the MCP23S17 library 
@@ -176,7 +176,8 @@ void Box::startSession() {
       else if (_protocolNum == 5) {      // TH
         _schedPR = false;
         _schedTH = true;
-        _blockDuration = 600;            // 60 seconds * 10 min
+        _maxTrialNumber = 4;
+        _blockDuration = 21600;          // 60 * 60 * 6 = 21600 seconds = 6 hrs; This changes in Block 2
         _IBILength = 0;                  // no IBI
         _maxBlockNumber = 12;            // 12 blocks
       }
@@ -276,7 +277,14 @@ void Box::startTimeOut() {
 void Box::endTimeOut() {   
     switchStim1(Off);
     if (_trialNumber < _maxTrialNumber) startTrial(); 
-    else endBlock();
+    else {
+      if (_schedTH == true) {
+        _maxTrialNumber = 999;    // _maxTrialNumber is 4 for block 1 and 999 thereafter.
+        _blockDuration = 600;     // change trial length to 10 min 
+      }
+      endBlock();
+    }
+    
 }
 
 void Box::switchPump(int state) {
