@@ -119,7 +119,8 @@ class Box  {
     unsigned int _maxTrialNumber = 999;
     unsigned int _responseCriterion = 1;  // default to FR1
     int _pumpDuration = 400;    // 400 x 10 mSec = 4,000 mSec = 4 seconds;
-    int _THPumpTimeArray[13] = {316, 316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};
+    // int _THPumpTimeArray[13] = {316, 316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};
+    int _THPumpTimeArray[13] = {100, 100, 50, 40, 30, 20, 10, 9, 8, 7, 5, 3, 2};    // !!!!
     int _pumpTimer = 0;
     int _timeOutTimer = 0;
     int _timeOutDuration = 400;  // default to 4 sec
@@ -280,7 +281,7 @@ void Box::endTimeOut() {
     else {
       if (_schedTH == true) {
         _maxTrialNumber = 999;    // _maxTrialNumber is 4 for block 1 and 999 thereafter.
-        _blockDuration = 600;     // change trial length to 10 min 
+        _blockDuration = 60;     // change trial length to 10 min       // 600 -> 60 = 1 min !!!!
       }
       endBlock();
     }
