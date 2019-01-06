@@ -251,7 +251,7 @@ class GuiClass(object):
         label1 = ttk.Label(self.ControlFrame, text="Feather M0")
         label1.grid(column = 0, row = 0,pady=5, padx=5)       
 
-        portEntry = ttk.Entry(self.ControlFrame, width=6,textvariable = self.portString)
+        portEntry = ttk.Entry(self.ControlFrame, width=8,textvariable = self.portString)
         portEntry.grid(column = 1, row = 0)
         
         connectButton = ttk.Button(self.ControlFrame,text="Connect",\
@@ -1147,15 +1147,20 @@ class GuiClass(object):
                 
         elif(os.name == "nt"):
             self.OS_String.set("OS = Windows")
-            self.nt_portList = []
-            for i in range(256):
-               try:
-                   s = serial.Serial(i)
-                   self.nt_portList.append(s.portstr)
-                   s.close()
-               except serial.SerialException:
-                   pass
-            print("nt_portList =",self.nt_portList)
+            print("Found Windows OS")
+            ports = ['COM%s' % (i + 1) for i in range(256)]
+            # The above generate a list ['COM1', 'COM2', 'COM3', 'COM4'...]
+            # The it tests which has a connection
+            portList = []
+            for port in ports:
+                try:
+                    s = serial.Serial(port)
+                    s.close()
+                    self.nt_portList.append(port)
+                except (OSError, serial.SerialException):
+                    pass
+            print("Possible COM ports:",self.nt_portList)
+            print("COM port from INI file: ",self.portString.get())
             self.arduino0.connect(self.portString.get())
             
         if self.arduino0.activeConnection == True:
