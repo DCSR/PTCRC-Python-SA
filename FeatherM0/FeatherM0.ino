@@ -119,8 +119,8 @@ class Box  {
     unsigned int _maxTrialNumber = 999;
     unsigned int _responseCriterion = 1;  // default to FR1
     int _pumpDuration = 400;    // 400 x 10 mSec = 4,000 mSec = 4 seconds;
-    int _THPumpTimeArray[13] = {316, 316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};
-    // int _THPumpTimeArray[13] = {100, 100, 50, 40, 30, 20, 10, 9, 8, 7, 5, 3, 2};    
+    // int _THPumpTimeArray[13] = {316, 316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};
+    int _THPumpTimeArray[13] = {100, 100, 50, 40, 30, 20, 10, 9, 8, 7, 5, 3, 2};    
     int _pumpTimer = 0;
     int _timeOutTimer = 0;
     int _timeOutDuration = 400;  // default to 4 sec
@@ -129,7 +129,15 @@ class Box  {
     unsigned long _startTime = 0;
     unsigned int _blockNumber = 0;
     unsigned int _trialNumber = 0;
-    unsigned int _trialResponses = 0;     
+    unsigned int _trialResponses = 0;
+    // used in debug protocol 7 
+    boolean _cycle_pump = false;
+    int _cycleCount = 0;
+    int _cycles;
+    int _pumpOnTime = 100;
+    int _pumpOffTime = 100;
+    int _pumpOnTicker = 0;
+    int _pumpOffTicker = 0;    
 };
 
 // **************  Box Class Procedures *************************************
@@ -143,8 +151,9 @@ void Box::begin() {
 
 void Box::startSession() { 
   // ******** set Protocol defaults here ********
-  // Python protocol list:  ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', 
-  //  '4: PR', '5: TH', '6: IntA: 5-25']
+  // Python protocol list:  
+  // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', 
+  // '4: PR', '5: TH', '6: IntA: 5-25', '7: Debug']
 
    _timeOutDuration = _pumpDuration;     // except in protocol 2
 
@@ -188,7 +197,17 @@ void Box::startSession() {
         _blockDuration = 300;            // 60 seconds * 5 min
         _IBILength = 1500;               // 25 * 60 sec = 1500 seconds
         _maxBlockNumber = 12;            // 12 blocks
-      }  
+      }
+      else if (_protocolNum == 7) {      // Debug
+        _schedPR = false;                // Sets up initially as an FR1 
+        _schedTH = false;
+        _responseCriterion = 1;
+        _maxTrialNumber = 999;
+        _cycles = 10;
+        _blockDuration = 21600;          // default to 6hr
+        _timeOutDuration = (_cycles*(_pumpOnTime + _pumpOffTime)) + 1000;
+        _cycle_pump = false;             // This is the thing that controls the cycle in tick()  
+      }   
       _startTime = millis();
       _blockNumber = 0;  
       _pumpTimer = 0; 
@@ -262,12 +281,20 @@ void Box::endIBI() {
      startBlock();
 }
 
-void Box::reinforce() {   
-    switchPump(HIGH);            // On
-    _pumpTimer = _pumpDuration;  // 400 = 4 seconds}   
+void Box::reinforce() {  
+    if (_protocolNum == 7) {
+      chip1.digitalWrite(_boxNum+8,HIGH);
+      _cycle_pump = true;
+      _cycleCount = _cycles;  
+      _pumpOnTicker = _pumpOnTime; 
+    }
+    else {
+      switchPump(HIGH);            // On
+      _pumpTimer = _pumpDuration;  // 400 = 4 seconds}  
+    }
 }
 
-void Box::startTimeOut() {   
+void Box::startTimeOut() {
     switchStim1(On); 
     _timeOutTimer = _timeOutDuration;       // _timeOutTimer counts down with each tick
     _boxPhase = 2;                  //timeOut    
@@ -281,11 +308,10 @@ void Box::endTimeOut() {
     else {
       if (_schedTH == true) {
         _maxTrialNumber = 999;    // _maxTrialNumber is 4 for block 1 and 999 thereafter.
-        _blockDuration = 600;     // Block duration in seconds; 60 = 1 min; 600 = 10 min
+        _blockDuration = 60;     // Block duration in seconds; 60 = 1 min; 600 = 10 min
       }
       endBlock();
-    }
-    
+    }  
 }
 
 void Box::switchPump(int state) {
@@ -359,7 +385,25 @@ void Box::moveLever2(int state) {          // boxNum 0..7  maps to pin 0..7 on c
     // Lever2 (inactive) CheckBox is index 1 
 }
 
-void Box::tick() { // do stuff every 10 mSec      
+void Box::tick() { // do stuff every 10 mSec 
+    if (_cycle_pump == true)  {
+        if (_pumpOnTicker > 0) {
+          _pumpOnTicker--;
+          if (_pumpOnTicker == 0) {
+             chip1.digitalWrite(_boxNum+8,LOW); 
+             _pumpOffTicker = _pumpOffTime;
+             _cycleCount++;
+             if (_cycleCount == _cycles) _cycle_pump == false;
+          }
+        }
+        else if (_pumpOffTicker > 0) {
+          _pumpOffTicker--;
+          if (_pumpOffTicker == 0) {
+             chip1.digitalWrite(_boxNum+8,HIGH);
+             _pumpOnTicker = 10;
+          }
+        }
+    }       
     if (_pumpTimer > 0) {  
       _pumpTimer--;
       if (_pumpTimer == 0) switchPump(LOW);  // Off
