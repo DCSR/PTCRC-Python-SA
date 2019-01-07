@@ -70,13 +70,7 @@ class GuiClass(object):
         self.selectedBox = IntVar(value = 0)
         self.OS_String = StringVar(value="OS = ?")
 
-        # ***** Pump Chaos ****
-        self.pumpChaosCheckVar = BooleanVar(value=False)
-        self.pumpChaosBoxNum = 0
-        self.pumpChaosState = False
-        self.pumpChaosDelay = 3
-        self.pumpChaosCount = 0
-        # *********************
+        self.debugCheckVar = BooleanVar(value=False)            # Not currently used
         
         self.showDataStreamCheckVar = BooleanVar(value=False)
         self.checkLeversCheckVar = BooleanVar(value=True)
@@ -661,9 +655,9 @@ class GuiClass(object):
         self.bottomTextbox.grid(column = 0, row = 1,sticky = (N))        
         self.bottomTextbox.insert('1.0',"Text Box\n")
 
-        pumpChaosCheckButton = Checkbutton(self.diagnosticFrame, text = "Pump Chaos - Extremely Dangerous", variable = self.pumpChaosCheckVar, \
+        debugCheckButton = Checkbutton(self.diagnosticFrame, text = "debug checkbox - not currently used", variable = self.debugCheckVar, \
                 onvalue = True, offvalue = False)       
-        pumpChaosCheckButton.grid(column = 0, row = 2)
+        debugCheckButton.grid(column = 0, row = 2)
 
         # ********************** Lists used to read and write to initialization file ******************
         self.IDStrList = [self.B1_IDStr, self.B2_IDStr, self.B3_IDStr, self.B4_IDStr, \
@@ -1307,23 +1301,7 @@ class GuiClass(object):
                     self.InfList[listIndex].set(self.InfList[listIndex].get()+1)                # update response label
                 elif (strCode == "E"):
                     self.boxes[listIndex].sessionEnded()
-        elif (boxNum == 9): self.writeToTextbox(strCode,0)
-
-
-    def pumpChaos(self):
-        self.pumpChaosCount = self.pumpChaosCount + 1
-        if self.pumpChaosCount >= self.pumpChaosDelay:
-            self.pumpChaosCount = 0
-            if self.pumpChaosState == True:
-                tempStr = "<P "+str(self.pumpChaosBoxNum)+">"
-            else:
-                tempStr = "<p "+str(self.pumpChaosBoxNum)+">"
-                #print(tempStr)
-            self.outputText(tempStr)
-            self.pumpChaosBoxNum = self.pumpChaosBoxNum + 1
-            if self.pumpChaosBoxNum > 7:
-                self.pumpChaosBoxNum = 0
-                self.pumpChaosState = not(self.pumpChaosState)       
+        elif (boxNum == 9): self.writeToTextbox(strCode,0)      
 
     def periodic_check(self):
         if self.arduino0.activeConnection == True:    
@@ -1331,8 +1309,6 @@ class GuiClass(object):
                 try:
                     inputLine = self.arduino0.getInput()
                     self.handleInput(inputLine)
-                    if self.pumpChaosCheckVar.get() == 1:
-                        self.pumpChaos()
                 except queue.Empty:
                     pass
         self.root.after(100, self.periodic_check)  # procedure reschedules its own reoccurance in 100 mSec
