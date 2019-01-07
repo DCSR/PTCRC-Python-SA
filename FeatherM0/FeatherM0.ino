@@ -1,4 +1,4 @@
-/*  
+/*  Jan 7, Noise debug
  *   Version 200.08
  *   
  *   BetaTH branch created Dec 13th.
@@ -91,6 +91,7 @@ class Box  {
     void switchStim2(int state);
     void moveLever1(int state);
     void moveLever2(int state);
+    void cyclePump();
     void tick();
     void handle_L1_Response();
     void handle_L2_Response();
@@ -131,11 +132,11 @@ class Box  {
     unsigned int _trialNumber = 0;
     unsigned int _trialResponses = 0;
     // used in debug protocol 7 
-    boolean _cycle_pump = false;
+    boolean _cyclePump = false;
     int _cycleCount = 0;
     int _cycles;
-    int _pumpOnTime = 100;
-    int _pumpOffTime = 100;
+    int _pumpOnTime;          // set in StartSession()
+    int _pumpOffTime = 20;    // default
     int _pumpOnTicker = 0;
     int _pumpOffTicker = 0;    
 };
@@ -203,10 +204,11 @@ void Box::startSession() {
         _schedTH = false;
         _responseCriterion = 1;
         _maxTrialNumber = 999;
-        _cycles = 10;
+        _cycles = _paramNum;
+        _pumpOnTime = _pumpDuration;
         _blockDuration = 21600;          // default to 6hr
-        _timeOutDuration = (_cycles*(_pumpOnTime + _pumpOffTime)) + 1000;
-        _cycle_pump = false;             // This is the thing that controls the cycle in tick()  
+        _timeOutDuration = ((_cycles+1)*(_pumpOnTime + _pumpOffTime));
+        _cyclePump = false;             // This is the thing that controls the cycle in tick()  
       }   
       _startTime = millis();
       _blockNumber = 0;  
@@ -222,6 +224,7 @@ void Box::startSession() {
 
 void Box::endSession () {   
  // endTrial(); the only thing this did was retract the lever, but see next line. 
+    _cyclePump = false;
     moveLever1(Retract);
     moveLever2(Retract);
     switchStim1(Off);
@@ -284,8 +287,8 @@ void Box::endIBI() {
 void Box::reinforce() {  
     if (_protocolNum == 7) {
       chip1.digitalWrite(_boxNum+8,HIGH);
-      _cycle_pump = true;
-      _cycleCount = _cycles;  
+      _cyclePump = true;
+      _cycleCount = 0;  
       _pumpOnTicker = _pumpOnTime; 
     }
     else {
@@ -385,25 +388,27 @@ void Box::moveLever2(int state) {          // boxNum 0..7  maps to pin 0..7 on c
     // Lever2 (inactive) CheckBox is index 1 
 }
 
+void Box::cyclePump(){
+    if (_pumpOnTicker > 0) {
+       _pumpOnTicker--;
+       if (_pumpOnTicker == 0) {
+          chip1.digitalWrite(_boxNum+8,LOW); 
+          _pumpOffTicker = _pumpOffTime;
+          _cycleCount++;
+          if (_cycleCount == _cycles) _cyclePump = false;
+       }
+    }
+    else if (_pumpOffTicker > 0) {
+        _pumpOffTicker--;
+        if (_pumpOffTicker == 0) {
+           chip1.digitalWrite(_boxNum+8,HIGH);
+           _pumpOnTicker = _pumpOnTime;
+        }
+    }
+}
+
 void Box::tick() { // do stuff every 10 mSec 
-    if (_cycle_pump == true)  {
-        if (_pumpOnTicker > 0) {
-          _pumpOnTicker--;
-          if (_pumpOnTicker == 0) {
-             chip1.digitalWrite(_boxNum+8,LOW); 
-             _pumpOffTicker = _pumpOffTime;
-             _cycleCount++;
-             if (_cycleCount == _cycles) _cycle_pump == false;
-          }
-        }
-        else if (_pumpOffTicker > 0) {
-          _pumpOffTicker--;
-          if (_pumpOffTicker == 0) {
-             chip1.digitalWrite(_boxNum+8,HIGH);
-             _pumpOnTicker = 10;
-          }
-        }
-    }       
+    if (_cyclePump == true) cyclePump();        
     if (_pumpTimer > 0) {  
       _pumpTimer--;
       if (_pumpTimer == 0) switchPump(LOW);  // Off
@@ -775,5 +780,3 @@ void loop() {
       tick();
    }
 }
-
-
