@@ -1,5 +1,5 @@
 """
-Oct 4th
+January 6, Addition of Debug protocol
 
 SA200.08
 
@@ -36,7 +36,7 @@ class GuiClass(object):
 
         self.version = "SA200.07"
         self.verbose = True
-        self.sched = ['0: Do not run', '1: FR(N)', '2:FR1 x 20', '3: FR1 x N', '4: PR(step N)', '5: TH', '6: IntA: 5-25']
+        self.sched = ['0: Do not run', '1: FR(N)', '2:FR1 x 20', '3: FR1 x N', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Debug']
         self.box1 = Box(1)    # note that boxes[0] is box1
         self.box2 = Box(2)
         self.box3 = Box(3)
