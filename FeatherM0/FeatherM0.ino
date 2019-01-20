@@ -1,7 +1,7 @@
-/*  Jan 7, Noise debug
+/*  Jan 20, Noise debug
  *   Version 200.08
  *   
- *   BetaTH branch created Dec 13th.
+ *   NoiseTest branch - Pumps moved from Chip1 to Chip3
  *   
  * This should handle eight boxes with or without an inactive lever.
  * 
@@ -11,12 +11,12 @@
  * Chip0, Port0:  8 active levers - retract/extend
  * Chip0, Port1:  8 active lever LEDs 
  * Chip1, Port0:  8 active lever inputs
- * Chip1, Port1:  8  pumps
+ * Chip1, Port1:  8 spare DIOs
  * ************* if Two Levers *************************
  * Chip2, Port0:  8 in active levers - retract/extend
  * Chip2, Port1:  8 in active lever LEDs 
  * Chip3, Port0:  8 active lever inputs
- * Chip3, Port1:  8 spare DIOs (alternate reinforcer?)
+ * Chip3, Port1:  8 pumps
  * 
  */
 
@@ -286,7 +286,7 @@ void Box::endIBI() {
 
 void Box::reinforce() {  
     if (_protocolNum == 7) {
-      chip1.digitalWrite(_boxNum+8,HIGH);
+      chip3.digitalWrite(_boxNum+8,HIGH);
       _cyclePump = true;
       _cycleCount = 0;  
       _pumpOnTicker = _pumpOnTime; 
@@ -318,8 +318,8 @@ void Box::endTimeOut() {
 }
 
 void Box::switchPump(int state) {
-    // boxNum 0..7 maps to pin 0..7 on chip1
-    chip1.digitalWrite(_boxNum+8,state);             // Ver 200.04
+    // boxNum 0..7 maps to pin 0..7 on chip3  --- changed Jan 20       
+    chip3.digitalWrite(_boxNum+8,state);
     // HIGH = On
     if (state) {
           TStamp tStamp = {_boxNum, 'P', millis() - _startTime, 1, 2};
@@ -392,7 +392,7 @@ void Box::cyclePump(){
     if (_pumpOnTicker > 0) {
        _pumpOnTicker--;
        if (_pumpOnTicker == 0) {
-          chip1.digitalWrite(_boxNum+8,LOW); 
+          chip3.digitalWrite(_boxNum+8,LOW); 
           _pumpOffTicker = _pumpOffTime;
           _cycleCount++;
           if (_cycleCount == _cycles) _cyclePump = false;
@@ -401,7 +401,7 @@ void Box::cyclePump(){
     else if (_pumpOffTicker > 0) {
         _pumpOffTicker--;
         if (_pumpOffTicker == 0) {
-           chip1.digitalWrite(_boxNum+8,HIGH);
+           chip3.digitalWrite(_boxNum+8,HIGH);
            _pumpOnTicker = _pumpOnTime;
         }
     }
@@ -539,9 +539,9 @@ void TC4_Handler()                                // Interrupt Service Routine (
 
 void turnStuffOff(){
   chip0.writePort(0xFFFF);
-  chip1.writePort(1,0x00);    // Ver 200.04
+  chip1.writePort(1,0x00);    // Off
   chip2.writePort(0xFFFF);
-  chip3.writePort(1,0x00);    // Ver 200.04  
+  chip3.writePort(1,0x00);    // Off  
 }
 
 void testOutputs() {
