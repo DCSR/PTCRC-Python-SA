@@ -1,7 +1,7 @@
-/*  Jan 20, Noise debug
- *   Version 200.08
+/*  Jan 21, Test Branch of NoiseTest
+ *  
  *   
- *   NoiseTest branch - Pumps moved from Chip1 to Chip3
+ *   Revision of checkLeverOne()
  *   
  * This should handle eight boxes with or without an inactive lever.
  * 
@@ -56,10 +56,15 @@ extern "C" char *sbrk(int i);   // used in FreeRam()
 byte portOneValue, portTwoValue;
 String instruction;
 
-int lastLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
-int newLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
+// int lastLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
+// int newLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
+boolean lastLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
+boolean newLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
+boolean newResponse[8] = {false,false,false,false,false,false,false,false};
+byte ticks[8] = {0,0,0,0,0,0,0,0};
 int lastLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 int newLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
+
 volatile boolean tickFlag = false;
 
 // program housekeeping varaibles
@@ -68,6 +73,8 @@ boolean sessionRunning = false;
 boolean echoInput = false;
 boolean twoLever = false;
 unsigned long maxDelta = 0;
+unsigned long maxCheckLeverTime = 0;
+unsigned long minCheckLeverTime = 1000;
 byte maxQueueRecs = 0;
 
 // ***************************  Box Class *************************************
@@ -590,6 +597,7 @@ void setup() {
   Serial.println("9 SA200.ino");
 }
 
+/*
 void checkLeverOne() {
    static byte oldPortOneValue = 255;       
     portOneValue = chip1.readPort(0);              // Ver 200.04
@@ -609,9 +617,59 @@ void checkLeverOne() {
          }    
     }           
 }
+*/
+
+void checkLeverOne() {
+    /*
+    unsigned long maxCheckLeverTime = 0;
+    reportMaxDelta() usurped to report maxCheckLeverTime 
+    The original took about 34 uSec minimum
+    85 uSec to handle response
+    139 uSec to handle response including a println()
+
+    No longer use oldPortOneValue 
+
+    */
+    unsigned long delta, micro1;
+    micro1 = micros();
+    static byte oldPortOneValue = 255;       
+    portOneValue = chip1.readPort(0);
+    // Serial.println (portOneValue,BIN);
+    for (byte i = 0; i < 8; i++) {
+        newLeverOneState[i] = bitRead(portOneValue,i);
+        if (newLeverOneState[i] != lastLeverOneState[i]) {     
+          if (lastLeverOneState[i] == 1) {
+             newResponse[i] = true;
+             ticks[i] = 1; 
+             // It doesn't do anything with the new response
+             // Instead it waist until the next cycle to response.
+          }
+          else {
+             newResponse[i] = false;
+             ticks[i] = 0;
+             // Serial.println(String(i)+" OFF");
+          }
+        }
+        else if ((newLeverOneState[i]==0) && (lastLeverOneState[i]==0)) {
+          if (newResponse[i] == true) {
+            if (ticks[i] >= 4) {
+              newResponse[i] = false;
+              boxArray[i].handle_L1_Response();
+              String tempStr = "9 L1_Response:pin_"+String(i); 
+              Serial.println(tempStr);
+            }
+            else ticks[i]++;
+          }
+        }
+        lastLeverOneState[i] = newLeverOneState[i]; 
+    }   
+    delta = micros() - micro1;
+    if (delta > maxCheckLeverTime) maxCheckLeverTime = delta;
+    if (delta < minCheckLeverTime) minCheckLeverTime = delta;           
+}
 
 void checkLeverTwo() {
-   static byte oldPortTwoValue = 255;       
+    static byte oldPortTwoValue = 255;      
     portTwoValue = chip3.readPort(0);
     if(portTwoValue != oldPortTwoValue) {
         oldPortTwoValue = portTwoValue;
@@ -718,8 +776,11 @@ int freeRam () {
 }
 
 void reportMaxDelta() {
-    Serial.println("9 maxDelta="+String(maxDelta));
-    maxDelta = 0;
+    // Serial.println("9 maxDelta="+String(maxDelta));
+    // maxDelta = 0;
+    Serial.print("min / max = "+String(minCheckLeverTime)+" / "+String(maxCheckLeverTime));
+    maxCheckLeverTime = 0;
+    minCheckLeverTime = 1000;
 }
 
 void reportDiagnostics() {
