@@ -1,4 +1,4 @@
-/*  Jan 21, Test Branch of NoiseTest
+/*  Jan 27, 2019
  *  
  *   
  *   Revision of checkLeverOne()
@@ -72,6 +72,7 @@ String inputString;
 boolean sessionRunning = false;
 boolean echoInput = false;
 boolean twoLever = false;
+boolean pumpsOnChip1 = true;             // true use chip1; false use chip3
 unsigned long maxDelta = 0;
 unsigned long maxCheckLeverTime = 0;
 unsigned long minCheckLeverTime = 1000;
@@ -293,7 +294,8 @@ void Box::endIBI() {
 
 void Box::reinforce() {  
     if (_protocolNum == 7) {
-      chip3.digitalWrite(_boxNum+8,HIGH);
+      if (pumpsOnChip1 == true) chip1.digitalWrite(_boxNum+8,HIGH);
+      else chip3.digitalWrite(_boxNum+8,HIGH);
       _cyclePump = true;
       _cycleCount = 0;  
       _pumpOnTicker = _pumpOnTime; 
@@ -325,8 +327,9 @@ void Box::endTimeOut() {
 }
 
 void Box::switchPump(int state) {
-    // boxNum 0..7 maps to pin 0..7 on chip3  --- changed Jan 20       
-    chip3.digitalWrite(_boxNum+8,state);
+    // boxNum 0..7 maps to pin 0..7 on chip1 or chip3 
+    if (pumpsOnChip1 == true) chip1.digitalWrite(_boxNum+8,state);
+    else chip3.digitalWrite(_boxNum+8,state);    
     // HIGH = On
     if (state) {
           TStamp tStamp = {_boxNum, 'P', millis() - _startTime, 1, 2};
@@ -399,7 +402,8 @@ void Box::cyclePump(){
     if (_pumpOnTicker > 0) {
        _pumpOnTicker--;
        if (_pumpOnTicker == 0) {
-          chip3.digitalWrite(_boxNum+8,LOW); 
+          if (pumpsOnChip1 == true) chip1.digitalWrite(_boxNum+8,LOW);
+          else chip3.digitalWrite(_boxNum+8,LOW);
           _pumpOffTicker = _pumpOffTime;
           _cycleCount++;
           if (_cycleCount == _cycles) _cyclePump = false;
@@ -408,8 +412,9 @@ void Box::cyclePump(){
     else if (_pumpOffTicker > 0) {
         _pumpOffTicker--;
         if (_pumpOffTicker == 0) {
-           chip3.digitalWrite(_boxNum+8,HIGH);
-           _pumpOnTicker = _pumpOnTime;
+          if (pumpsOnChip1 == true) chip1.digitalWrite(_boxNum+8,HIGH);
+          else chip3.digitalWrite(_boxNum+8,HIGH);
+          _pumpOnTicker = _pumpOnTime;
         }
     }
 }
