@@ -1,7 +1,9 @@
 /*  Jan 27, 2019
  *  
  *   
- *   Revision of checkLeverOne()
+ *   checkLeverOneBits substituted for checkLeverOne()
+ *   
+ *   Checks bits - input must go LOW for two ticks to trigger a response
  *   
  * This should handle eight boxes with or without an inactive lever.
  * 
@@ -624,7 +626,7 @@ void checkLeverOne() {
 }
 */
 
-void checkLeverOne() {
+void checkLeverOneBits() {
     /*
     unsigned long maxCheckLeverTime = 0;
     reportMaxDelta() usurped to report maxCheckLeverTime 
@@ -657,7 +659,7 @@ void checkLeverOne() {
         }
         else if ((newLeverOneState[i]==0) && (lastLeverOneState[i]==0)) {
           if (newResponse[i] == true) {
-            if (ticks[i] >= 4) {
+            if (ticks[i] >= 2) {
               newResponse[i] = false;
               boxArray[i].handle_L1_Response();
               String tempStr = "9 L1_Response:pin_"+String(i); 
@@ -829,7 +831,8 @@ void tick()    {
      boxArray[i].tick();
    }
    getInputString();
-   checkLeverOne();
+   // checkLeverOne();
+   checkLeverOneBits();
    if (twoLever) checkLeverTwo();
    sendOneTimeStamp();
    delta = micros() - micro1;
