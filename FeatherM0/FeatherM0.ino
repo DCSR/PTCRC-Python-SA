@@ -604,7 +604,6 @@ void setup() {
   Serial.println("9 SA200.ino");
 }
 
-/*
 void checkLeverOne() {
    static byte oldPortOneValue = 255;       
     portOneValue = chip1.readPort(0);              // Ver 200.04
@@ -624,7 +623,6 @@ void checkLeverOne() {
          }    
     }           
 }
-*/
 
 void checkLeverOneBits() {
     /*
@@ -762,7 +760,7 @@ void handleInputString()
      else if (stringCode == "C")     boxArray[num1].switchStim2(On);
      // else if (stringCode == "1")     boxArray[0].handle_L1_Response();
      // else if (stringCode == "2")     boxArray[1].handle_L2_Response();
-     else if (stringCode == "V")     Serial.println("9 200.08");
+     else if (stringCode == "V")     Serial.println("9 200.10");
      else if (stringCode == "T")     twoLever = true;
      else if (stringCode == "t")     twoLever = false;
      // debug stuff 
@@ -831,8 +829,8 @@ void tick()    {
      boxArray[i].tick();
    }
    getInputString();
-   // checkLeverOne();
-   checkLeverOneBits();
+   checkLeverOne();
+   // checkLeverOneBits();
    if (twoLever) checkLeverTwo();
    sendOneTimeStamp();
    delta = micros() - micro1;

@@ -1,9 +1,7 @@
 """
-January 6, Addition of Debug protocol
+January 28, NoiseTest
 
-SA200.08
-
-Changes to allow paramNum to be used for FR and PR-step
+SA200.10
 
 """
 
