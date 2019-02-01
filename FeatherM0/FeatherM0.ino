@@ -613,10 +613,14 @@ void checkLeverOne() {
     // **********  compareBits
     for (int i = 7; i > -1; i--) {
       if (bitRead(portOneValue,i) != (bitRead(oldPortOneValue,i))) diff++;
-    } 
-    // *********************** 
-    if (diff > 1) Serial.println("diff = "+String(diff));                  
-    if(portOneValue != oldPortOneValue) {
+    }  
+    if (diff > 1) {
+      Serial.println("9 diff_"+String(diff));
+      oldPortOneValue = 255;
+    }
+    // ***********************                
+    // if(portOneValue != oldPortOneValue) 
+    else if (diff == 1) {
          oldPortOneValue = portOneValue;
          // Serial.println (portOneValue,BIN);
          for (byte i = 0; i < 8; i++) {
