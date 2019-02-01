@@ -1,6 +1,6 @@
-/*  Jan 28, 2019
+/*  Jan 31, 2019
  *  
- *   Currently uses checkLeverOne()
+ *   Currently uses checkLeverOne() with bitCompare()
  *   
  *   Select either checkLeverOne or checkLeverOneBits() in tick() 
  *   
@@ -607,8 +607,15 @@ void setup() {
 }
 
 void checkLeverOne() {
-   static byte oldPortOneValue = 255;       
-    portOneValue = chip1.readPort(0);              // Ver 200.04
+    byte diff = 0;
+    static byte oldPortOneValue = 255;       
+    portOneValue = chip1.readPort(0);
+    // **********  compareBits
+    for (int i = 7; i > -1; i--) {
+      if (bitRead(portOneValue,i) != (bitRead(oldPortOneValue,i))) diff++;
+    } 
+    // *********************** 
+    if (diff > 1) Serial.println("diff = "+String(diff));                  
     if(portOneValue != oldPortOneValue) {
          oldPortOneValue = portOneValue;
          // Serial.println (portOneValue,BIN);
