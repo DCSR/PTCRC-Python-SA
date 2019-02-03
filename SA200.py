@@ -1,5 +1,7 @@
 """
-January 28, NoiseTest
+bitCheck
+
+Feb 2, 2019 
 
 SA200.10
 
@@ -32,7 +34,7 @@ def main(argv=None):
 class GuiClass(object):
     def __init__(self):
 
-        self.version = "SA200.07"
+        self.version = "SA200.10"
         self.verbose = True
         self.sched = ['0: Do not run', '1: FR(N)', '2:FR1 x 20', '3: FR1 x N', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Debug']
         self.box1 = Box(1)    # note that boxes[0] is box1
@@ -68,7 +70,11 @@ class GuiClass(object):
         self.selectedBox = IntVar(value = 0)
         self.OS_String = StringVar(value="OS = ?")
 
-        self.debugCheckVar = BooleanVar(value=False)            # Not currently used
+        self.debug1CheckVar = BooleanVar(value=False)            
+        self.debug2CheckVar = BooleanVar(value=False)            # Not currently used
+        self.debug3CheckVar = BooleanVar(value=False)            # Not currently used
+        self.debug4CheckVar = BooleanVar(value=False)            # Not currently used
+        self.debug5CheckVar = BooleanVar(value=False)            # Not currently used
         
         self.showDataStreamCheckVar = BooleanVar(value=False)
         self.checkLeversCheckVar = BooleanVar(value=True)
@@ -627,15 +633,30 @@ class GuiClass(object):
         checkLeversCheckButton.grid(column = 0, row = 0, sticky = (EW))
 
 
-        testButton = ttk.Button(self.diagnosticButtonFrame,text="MaxDelta", command=lambda: self.sendCode("<M>")).grid(column = 0, row = 9)
+        testButton = ttk.Button(self.diagnosticButtonFrame,text="MaxDelta", command=lambda: self.sendCode("<M>")).grid(column = 0, row = 1)
         
         testButton4 = ttk.Button(self.diagnosticButtonFrame,text="Block Time 0",command = self.testFunction4)
-        testButton4.grid(column = 0, row = 10)
+        testButton4.grid(column = 0, row = 2)
         testButton5 = ttk.Button(self.diagnosticButtonFrame,text="Block Time 1",command = self.testFunction5)
-        testButton5.grid(column = 0, row = 11)
+        testButton5.grid(column = 0, row = 3)
         testButton6 = ttk.Button(self.diagnosticButtonFrame,text="Diagnostics",command = self.testFunction6)
-        testButton6.grid(column = 0, row = 12)
-        
+        testButton6.grid(column = 0, row = 4)
+        debugCheckButton1 = Checkbutton(self.diagnosticButtonFrame, text = "debug1", variable = self.debug1CheckVar, \
+                onvalue = True, offvalue = False)       
+        debugCheckButton1.grid(column = 0, row = 5,sticky = (EW))
+        debugCheckButton2 = Checkbutton(self.diagnosticButtonFrame, text = "not used", variable = self.debug2CheckVar, \
+                onvalue = True, offvalue = False)       
+        debugCheckButton2.grid(column = 0, row = 6,sticky = (EW))
+        debugCheckButton3 = Checkbutton(self.diagnosticButtonFrame, text = "not used", variable = self.debug3CheckVar, \
+                onvalue = True, offvalue = False)       
+        debugCheckButton3.grid(column = 0, row = 7,sticky = (EW))
+        debugCheckButton4 = Checkbutton(self.diagnosticButtonFrame, text = "not used", variable = self.debug4CheckVar, \
+                onvalue = True, offvalue = False)       
+        debugCheckButton4.grid(column = 0, row = 8,sticky = (EW))
+        debugCheckButton5 = Checkbutton(self.diagnosticButtonFrame, text = "not used", variable = self.debug5CheckVar, \
+                onvalue = True, offvalue = False)       
+        debugCheckButton5.grid(column = 0, row = 9,sticky = (EW))
+               
         self.topTextFrame = ttk.Frame(self.diagnosticFrame,borderwidth=3, relief="sunken")
         self.topTextFrame.grid(column = 1, row = 1)
         showDataStreamCheckButton = Checkbutton(self.topTextFrame, text = "Show Data Steam", variable = self.showDataStreamCheckVar, \
@@ -653,9 +674,6 @@ class GuiClass(object):
         self.bottomTextbox.grid(column = 0, row = 1,sticky = (N))        
         self.bottomTextbox.insert('1.0',"Text Box\n")
 
-        debugCheckButton = Checkbutton(self.diagnosticFrame, text = "debug checkbox - not currently used", variable = self.debugCheckVar, \
-                onvalue = True, offvalue = False)       
-        debugCheckButton.grid(column = 0, row = 2)
 
         # ********************** Lists used to read and write to initialization file ******************
         self.IDStrList = [self.B1_IDStr, self.B2_IDStr, self.B3_IDStr, self.B4_IDStr, \
@@ -683,9 +701,12 @@ class GuiClass(object):
         self.B6_boolVarList = [self.B6_lever1CheckVar, self.B6_lever2CheckVar, self.B6_pumpCheckVar, self.B6_LED1CheckVar, self.B6_LED2CheckVar]
         self.B7_boolVarList = [self.B7_lever1CheckVar, self.B7_lever2CheckVar, self.B7_pumpCheckVar, self.B7_LED1CheckVar, self.B7_LED2CheckVar]
         self.B8_boolVarList = [self.B8_lever1CheckVar, self.B8_lever2CheckVar, self.B8_pumpCheckVar, self.B8_LED1CheckVar, self.B8_LED2CheckVar]
+
+        self.sysVarList = [self.debug1CheckVar, self.debug2CheckVar, self.debug3CheckVar, self.debug4CheckVar, self.debug5CheckVar]
         
-        self.boxesVarLists = [self.B1_boolVarList,self.B2_boolVarList,self.B3_boolVarList,self.B4_boolVarList, \
-                              self.B5_boolVarList,self.B6_boolVarList,self.B7_boolVarList,self.B8_boolVarList]
+        self.boolVarLists = [self.B1_boolVarList,self.B2_boolVarList,self.B3_boolVarList,self.B4_boolVarList, \
+                              self.B5_boolVarList,self.B6_boolVarList,self.B7_boolVarList,self.B8_boolVarList, \
+                              self.sysVarList]
         self.L1ResponsesList = [self.B1_L1Resp,self.B2_L1Resp,self.B3_L1Resp,self.B4_L1Resp, \
                               self.B5_L1Resp,self.B6_L1Resp,self.B7_L1Resp,self.B8_L1Resp]
         self.L2ResponsesList = [self.B1_L2Resp,self.B2_L2Resp,self.B3_L2Resp,self.B4_L2Resp, \
@@ -1290,7 +1311,7 @@ class GuiClass(object):
             else:                   # every other timestamp gets added to the datafile
                 self.boxes[listIndex].dataList.append([timeStamp, strCode])     # append timestamp to dataList - eventually datafile
                 if (boolVarListIndex >= 0):
-                    self.boxesVarLists[listIndex][boolVarListIndex].set(level)           # update checkbox                   
+                    self.boolVarLists[listIndex][boolVarListIndex].set(level)           # update checkbox                   
                 if (strCode == "L"):
                     self.L1ResponsesList[listIndex].set(self.L1ResponsesList[listIndex].get()+1)    # update response label
                 if (strCode == "J"):
@@ -1299,6 +1320,7 @@ class GuiClass(object):
                     self.InfList[listIndex].set(self.InfList[listIndex].get()+1)                # update response label
                 elif (strCode == "E"):
                     self.boxes[listIndex].sessionEnded()
+        elif (boxNum == 8): self.boolVarLists[8][boolVarListIndex].set(level)           # update checkbox 
         elif (boxNum == 9): self.writeToTextbox(strCode,0)      
 
     def periodic_check(self):
