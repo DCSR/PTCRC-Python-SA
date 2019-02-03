@@ -668,58 +668,6 @@ void checkLeverOneBits() {
 
 
 
-/*
-void checkLeverOneBits() {
-    
-    // unsigned long maxCheckLeverTime = 0;
-    // reportMaxDelta() usurped to report maxCheckLeverTime 
-    // The original took about 34 uSec minimum
-    // 85 uSec to handle response
-    // 139 uSec to handle response including a println()
-
-    // No longer use oldPortOneValue 
-
-    
-    unsigned long delta, micro1;
-    micro1 = micros();
-    static byte oldPortOneValue = 255;       
-    portOneValue = chip1.readPort(0);
-    // Serial.println (portOneValue,BIN);
-    for (byte i = 0; i < 8; i++) {                            // Read each bit one at a time
-        newLeverOneState[i] = bitRead(portOneValue,i);        // Get the bit current bit state
-        if (newLeverOneState[i] != lastLeverOneState[i]) {    // If different from last time it was read ... 
-          if (lastLeverOneState[i] == 1) {                    // If "1", the lever was pressed
-             newResponse[i] = true;                           // Since it is different, this must be a new response 
-             ticks[i] = 1;                                    // Keep track of ticks, this is the first one
-             // It doesn't do anything with the new response
-             // Instead it waits until the next cycle to response.
-          }
-          else {                                              // If "0", the lever was released 
-             newResponse[i] = false;                          // Reset the variable
-             ticks[i] = 0;                                    // Reset ticks
-                                                              // This is where HD - lever up would be handled
-             // Serial.println(String(i)+" OFF");
-          }
-        }
-        else if ((newLeverOneState[i]==0) && (lastLeverOneState[i]==0)) {     // Lever is still down
-          if (newResponse[i] == true) {                                       // If true, it hasn't been handled
-            if (ticks[i] >= 2) {                                              // If ticks >= 2, it must gone through one cycle to get here 
-                                                                              // - change to 3 to screen for responses > 20 mSec 
-              newResponse[i] = false;                                         // Reset newResponse to indicate it has been handled
-              boxArray[i].handle_L1_Response();                               // Handle the response in Box object
-              String tempStr = "9 L1_Response:pin_"+String(i);                
-              Serial.println(tempStr);                                        // Send a comment that to indicate response detected.
-            }
-            else ticks[i]++;                                                  // Keep waiting, count ticks
-          }
-        }
-        lastLeverOneState[i] = newLeverOneState[i];                           // Record lver state before exiting
-    }   
-    delta = micros() - micro1;                                                // Check the timing.
-    if (delta > maxCheckLeverTime) maxCheckLeverTime = delta;                 // This stuff should eventually be suppressed. 
-    if (delta < minCheckLeverTime) minCheckLeverTime = delta;           
-} */
-
 
 void checkLeverTwo() {
     static byte oldPortTwoValue = 255;      
@@ -740,20 +688,6 @@ void checkLeverTwo() {
          }    
     }           
 }
-
-/*
-void createTimeStamps(int num) {
-   int i;
-   for (i = 0 ; i < num ; i++) {
-      TStamp tStamp = {i, '*', millis(), 0, 2};
-      printQueue.push(&tStamp);
-      Serial.print("loading timestamp ");
-      Serial.print(printQueue.nbRecs());   
-      delay(10); 
-      Serial.println("9 freeRam="+String(freeRam()));
-  }
-}
-*/
 
 void getInputString() {
     while (Serial.available() > 0) {               // repeat while something in the buffer
