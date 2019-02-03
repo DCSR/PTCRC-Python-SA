@@ -1,10 +1,9 @@
-/*  Jan 31, 2019
+/*  Feb 3, 2019
  *  
- *   Currently uses checkLeverOne() with bitCompare()
+ *   Uses debugBoolVarlist[0] to switch from checkLeverOne() to checkLeverOneBits()
  *   
- *   Select either checkLeverOne or checkLeverOneBits() in tick() 
- *   
- *   checkLeverOneBits() requires input to go LOW for two ticks in order to trigger a response
+ *   Previous (commented out) checkLeverOneBits() requires input to go LOW for two ticks 
+ *   in order to trigger a response.
  *   In theory, this should filter out a brief spike (noise?) from triggering a response. 
  *   
  * This should handle eight boxes with or without an inactive lever.
@@ -616,6 +615,26 @@ void setDebugVar(int index, int level) {
 }
 
 void checkLeverOne() {
+    static byte oldPortOneValue = 255;       
+    portOneValue = chip1.readPort(0);                
+    if (portOneValue != oldPortOneValue) {
+         oldPortOneValue = portOneValue;
+         for (byte i = 0; i < 8; i++) {
+             newLeverOneState[i] = bitRead(portOneValue,i);
+             if (newLeverOneState[i] != lastLeverOneState[i]) {          
+                  lastLeverOneState[i] = newLeverOneState[i]; 
+                  if (newLeverOneState[i] == 0) {
+                     boxArray[i].handle_L1_Response();
+                     String tempStr = "9 L1_Response:pin_"+String(i); 
+                     Serial.println(tempStr);
+                  }
+             }
+         }    
+    }           
+}
+
+
+void checkLeverOneBits() {
     byte diff = 0;
     static byte oldPortOneValue = 255;       
     portOneValue = chip1.readPort(0);
@@ -646,17 +665,21 @@ void checkLeverOne() {
     }           
 }
 
+
+
+
+/*
 void checkLeverOneBits() {
-    /*
-    unsigned long maxCheckLeverTime = 0;
-    reportMaxDelta() usurped to report maxCheckLeverTime 
-    The original took about 34 uSec minimum
-    85 uSec to handle response
-    139 uSec to handle response including a println()
+    
+    // unsigned long maxCheckLeverTime = 0;
+    // reportMaxDelta() usurped to report maxCheckLeverTime 
+    // The original took about 34 uSec minimum
+    // 85 uSec to handle response
+    // 139 uSec to handle response including a println()
 
-    No longer use oldPortOneValue 
+    // No longer use oldPortOneValue 
 
-    */
+    
     unsigned long delta, micro1;
     micro1 = micros();
     static byte oldPortOneValue = 255;       
@@ -695,7 +718,8 @@ void checkLeverOneBits() {
     delta = micros() - micro1;                                                // Check the timing.
     if (delta > maxCheckLeverTime) maxCheckLeverTime = delta;                 // This stuff should eventually be suppressed. 
     if (delta < minCheckLeverTime) minCheckLeverTime = delta;           
-}
+} */
+
 
 void checkLeverTwo() {
     static byte oldPortTwoValue = 255;      
@@ -854,7 +878,8 @@ void tick()    {
      boxArray[i].tick();
    }
    getInputString();
-   checkLeverOne();                                   // Or use checkLeverOneBits();
+   if (debugBoolVarList[0] == 0) checkLeverOne();
+   else checkLeverOneBits();
    if (twoLever) checkLeverTwo();
    sendOneTimeStamp();
    delta = micros() - micro1;
