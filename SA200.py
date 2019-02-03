@@ -635,14 +635,14 @@ class GuiClass(object):
 
         testButton = ttk.Button(self.diagnosticButtonFrame,text="MaxDelta", command=lambda: self.sendCode("<M>")).grid(column = 0, row = 1)
         
-        testButton4 = ttk.Button(self.diagnosticButtonFrame,text="Block Time 0",command = self.testFunction4)
+        testButton4 = ttk.Button(self.diagnosticButtonFrame,text="<Debug 0 0>",command = self.testFunction4)
         testButton4.grid(column = 0, row = 2)
-        testButton5 = ttk.Button(self.diagnosticButtonFrame,text="Block Time 1",command = self.testFunction5)
+        testButton5 = ttk.Button(self.diagnosticButtonFrame,text="<Debug 0 1>",command = self.testFunction5)
         testButton5.grid(column = 0, row = 3)
         testButton6 = ttk.Button(self.diagnosticButtonFrame,text="Diagnostics",command = self.testFunction6)
         testButton6.grid(column = 0, row = 4)
-        debugCheckButton1 = Checkbutton(self.diagnosticButtonFrame, text = "debug1", variable = self.debug1CheckVar, \
-                onvalue = True, offvalue = False)       
+        debugCheckButton1 = Checkbutton(self.diagnosticButtonFrame, text = "debug1",variable = self.debug1CheckVar, \
+                             onvalue = True, offvalue = False, command=lambda: self.toggleDebugVar(0,self.debug1CheckVar.get()))
         debugCheckButton1.grid(column = 0, row = 5,sticky = (EW))
         debugCheckButton2 = Checkbutton(self.diagnosticButtonFrame, text = "not used", variable = self.debug2CheckVar, \
                 onvalue = True, offvalue = False)       
@@ -1043,11 +1043,15 @@ class GuiClass(object):
         if (checkLeversState): self.outputText("<CL>")
         else: self.outputText("<cl>")
 
+    def toggleDebugVar(self,index,level):
+        if (level): self.outputText("<Debug 0 1>")
+        else: self.outputText("<Debug 0 0>")
+
     def testFunction4(self):
-        self.outputText("<B 0>")    # get Block Time
+        self.outputText("<Debug 0 0>")
 
     def testFunction5(self):
-        self.outputText("<B 1>")
+        self.outputText("<Debug 0 1>")
 
     def testFunction6(self):        
         self.outputText("<D>")      # Get Diagnostics
