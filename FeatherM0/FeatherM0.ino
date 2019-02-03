@@ -69,6 +69,8 @@ byte ticks[8] = {0,0,0,0,0,0,0,0};
 int lastLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 int newLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 
+boolean debugBoolVarList[5] = {false,false,false,false,false};
+
 volatile boolean tickFlag = false;
 
 // program housekeeping varaibles
@@ -227,7 +229,7 @@ void Box::startSession() {
       _pumpTimer = 0; 
       _timeOutTimer = 0;
       // sessionRunning = true;     
-      TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9};
+      TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
       printQueue.push(&tStamp);
       startBlock();
       if (twoLever) moveLever2(Extend);
@@ -606,6 +608,13 @@ void setup() {
   Serial.println("9 SA200.ino");
 }
 
+void setDebugVar(int index, int level) {
+    if (level == 0) debugBoolVarList[index] = false;
+    else debugBoolVarList[index] = true;
+    TStamp tStamp = {8, 'X', millis(), level, 0};
+    printQueue.push(&tStamp);
+}
+
 void checkLeverOne() {
     byte diff = 0;
     static byte oldPortOneValue = 255;       
@@ -786,6 +795,7 @@ void handleInputString()
      else if (stringCode == "M")     reportMaxDelta();
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "B")     boxArray[num1].getBlockTime();
+     else if (stringCode == "Debug") setDebugVar(num1,num2);
      inputString = "";
    }
 }
