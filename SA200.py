@@ -641,7 +641,7 @@ class GuiClass(object):
         testButton5.grid(column = 0, row = 3)
         testButton6 = ttk.Button(self.diagnosticButtonFrame,text="Diagnostics",command = self.testFunction6)
         testButton6.grid(column = 0, row = 4)
-        debugCheckButton1 = Checkbutton(self.diagnosticButtonFrame, text = "debug1",variable = self.debug1CheckVar, \
+        debugCheckButton1 = Checkbutton(self.diagnosticButtonFrame, text = "Use bitCheck",variable = self.debug1CheckVar, \
                              onvalue = True, offvalue = False, command=lambda: self.toggleDebugVar(0,self.debug1CheckVar.get()))
         debugCheckButton1.grid(column = 0, row = 5,sticky = (EW))
         debugCheckButton2 = Checkbutton(self.diagnosticButtonFrame, text = "not used", variable = self.debug2CheckVar, \
@@ -1324,7 +1324,7 @@ class GuiClass(object):
                     self.InfList[listIndex].set(self.InfList[listIndex].get()+1)                # update response label
                 elif (strCode == "E"):
                     self.boxes[listIndex].sessionEnded()
-        elif (boxNum == 8): self.boolVarLists[8][boolVarListIndex].set(level)           # update checkbox 
+        elif (boxNum == 8): self.boolVarLists[8][boolVarListIndex].set(level)           # update debug checkbox 
         elif (boxNum == 9): self.writeToTextbox(strCode,0)      
 
     def periodic_check(self):
