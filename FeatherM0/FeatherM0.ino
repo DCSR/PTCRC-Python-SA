@@ -79,9 +79,8 @@ boolean echoInput = false;
 boolean twoLever = false;
 boolean pumpsOnChip1 = true;             // true use chip1; false use chip3
 unsigned long maxDelta = 0;
-unsigned long maxCheckLeverTime = 0;
-unsigned long minCheckLeverTime = 1000;
 byte maxQueueRecs = 0;
+int phantomResp = 0;
 
 // ***************************  Box Class *************************************
 class Box  {
@@ -645,9 +644,8 @@ void checkLeverOneBits() {
     if (diff > 1) {
       Serial.println("9 diff_"+String(diff));
       oldPortOneValue = 255;
+      phantomResp++;
     }
-    // ***********************                
-    // if(portOneValue != oldPortOneValue) 
     else if (diff == 1) {
          oldPortOneValue = portOneValue;
          // Serial.println (portOneValue,BIN);
@@ -742,7 +740,7 @@ void handleInputString()
      else if (stringCode == "C")     boxArray[num1].switchStim2(On);
      // else if (stringCode == "1")     boxArray[0].handle_L1_Response();
      // else if (stringCode == "2")     boxArray[1].handle_L2_Response();
-     else if (stringCode == "V")     Serial.println("9 200.10");
+     else if (stringCode == "V")     Serial.println("9 Ver200.10");
      else if (stringCode == "T")     twoLever = true;
      else if (stringCode == "t")     twoLever = false;
      // debug stuff 
@@ -750,7 +748,6 @@ void handleInputString()
      else if (stringCode == "off")   turnStuffOff();
      else if (stringCode == "i")     timeUSB();
      else if (stringCode == "E")     echoInput = !echoInput;
-     else if (stringCode == "M")     reportMaxDelta();
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "B")     boxArray[num1].getBlockTime();
      else if (stringCode == "Debug") setDebugVar(num1,num2);
@@ -763,18 +760,13 @@ int freeRam () {
   return &stack_dummy - sbrk(0);
 }
 
-void reportMaxDelta() {
-    // Serial.println("9 maxDelta="+String(maxDelta));
-    // maxDelta = 0;
-    Serial.print("min / max = "+String(minCheckLeverTime)+" / "+String(maxCheckLeverTime));
-    maxCheckLeverTime = 0;
-    minCheckLeverTime = 1000;
-}
-
 void reportDiagnostics() {
-   reportMaxDelta();
+   Serial.println("9 maxDelta="+String(maxDelta));
+   maxDelta = 0;
    Serial.println("9 maxQueueRecs="+String(maxQueueRecs));
-   Serial.println("9 freeRam="+String(freeRam()));   
+   Serial.println("9 freeRam="+String(freeRam()));
+   Serial.println("9 phantomResp="+String(phantomResp));
+   phantomResp = 0;   
 }
 
 void timeUSB() {
