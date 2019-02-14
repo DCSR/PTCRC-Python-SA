@@ -1,4 +1,4 @@
-/*  Feb 3, 2019
+/*  Feb 14, 2019
  *  
  *   Uses debugBoolVarlist[0] to switch from checkLeverOne() to checkLeverOneBits()
  *   
@@ -68,7 +68,7 @@ byte ticks[8] = {0,0,0,0,0,0,0,0};
 int lastLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 int newLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 
-boolean debugBoolVarList[5] = {false,false,false,false,false};
+boolean debugBoolVarList[5] = {true,false,false,false,false};      // will use checkLeverOneBits() by default
 
 volatile boolean tickFlag = false;
 
@@ -81,6 +81,7 @@ boolean pumpsOnChip1 = true;             // true use chip1; false use chip3
 unsigned long maxDelta = 0;
 byte maxQueueRecs = 0;
 int phantomResp = 0;
+byte diffCriteria = 1;
 
 // ***************************  Box Class *************************************
 class Box  {
@@ -641,9 +642,10 @@ void checkLeverOneBits() {
     for (int i = 7; i > -1; i--) {
       if (bitRead(portOneValue,i) != (bitRead(oldPortOneValue,i))) diff++;
     }  
-    if (diff > 1) {
+    if (diff > diffCriteria) {
       Serial.println("9 diff_"+String(diff));
-      oldPortOneValue = 255;
+      Serial.println("9 "+String(portOneValue));
+      oldPortOneValue = portOneValue;
       phantomResp++;
     }
     else if (diff == 1) {
