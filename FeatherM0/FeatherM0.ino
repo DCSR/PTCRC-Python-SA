@@ -379,7 +379,7 @@ void Box::moveLever1(int state) {          // boxNum 0..7  maps to pin 0..7 on c
     chip0.digitalWrite(_boxNum,state);
     // HIGH = Retract; LOW = extend
     if (state) {
-           TStamp tStamp = {_boxNum, '-', millis() - _startTime, 0, 0};
+           TStamp tStamp = {_boxNum, '.', millis() - _startTime, 0, 0};
            printQueue.push(&tStamp); 
     }
     else {
