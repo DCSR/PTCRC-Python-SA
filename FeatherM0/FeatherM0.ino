@@ -32,8 +32,11 @@ const uint8_t chipSelect = 10;  // All four chips use the same SPI chipSelect
 MCP23S17 chip0(chipSelect, 0);  // Instantiate 16 pin Port Expander chip at address 0
 MCP23S17 chip1(chipSelect, 1);  
 MCP23S17 chip2(chipSelect, 2);    
-MCP23S17 chip3(chipSelect, 3);   
+MCP23S17 chip3(chipSelect, 3); 
 
+boolean pumpOnHigh = true; 
+#define pumpOn HIGH
+#define pumpOff LOW  
 #define On LOW
 #define Off HIGH
 #define Extend LOW
@@ -75,7 +78,6 @@ String inputString;
 boolean sessionRunning = false;
 boolean echoInput = false;
 boolean twoLever = false;
-boolean pumpsOnChip1 = true;             // true use chip1; false use chip3
 unsigned long maxDelta = 0;
 byte maxQueueRecs = 0;
 int phantomResp = 0;
@@ -97,7 +99,7 @@ class Box  {
     void reinforce();
     void startTimeOut();
     void endTimeOut();
-    void switchPump(int state);
+    void switchPump(boolean state);
     void switchStim1(int state);
     void switchStim2(int state);
     void moveLever1(int state);
@@ -239,7 +241,7 @@ void Box::endSession () {
     moveLever1(Retract);
     moveLever2(Retract);
     switchStim1(Off);
-    switchPump(LOW);
+    switchPump(pumpOff);
     _pumpTimer = 0;
     _timeOutTimer = 0;
     _boxPhase = 4;    
@@ -297,14 +299,14 @@ void Box::endIBI() {
 
 void Box::reinforce() {  
     if (_protocolNum == 7) {
-      if (pumpsOnChip1 == true) chip1.digitalWrite(_boxNum+8,HIGH);
-      else chip3.digitalWrite(_boxNum+8,HIGH);
+      if (pumpOnHigh) chip1.digitalWrite(_boxNum+8,HIGH);
+      else chip1.digitalWrite(_boxNum+8,LOW);
       _cyclePump = true;
       _cycleCount = 0;  
       _pumpOnTicker = _pumpOnTime; 
     }
     else {
-      switchPump(HIGH);            // On
+      switchPump(pumpOn);            // On
       _pumpTimer = _pumpDuration;  // 400 = 4 seconds}  
     }
 }
@@ -329,11 +331,10 @@ void Box::endTimeOut() {
     }  
 }
 
-void Box::switchPump(int state) {
+void Box::switchPump(boolean state) {
     // boxNum 0..7 maps to pin 0..7 on chip1 or chip3 
-    if (pumpsOnChip1 == true) chip1.digitalWrite(_boxNum+8,state);
-    else chip3.digitalWrite(_boxNum+8,state);    
-    // HIGH = On
+    if (pumpOnHigh) chip1.digitalWrite(_boxNum+8,state);   // pumpOn = HIGH
+    else chip1.digitalWrite(_boxNum+8,!state);
     if (state) {
           TStamp tStamp = {_boxNum, 'P', millis() - _startTime, 1, 2};
           printQueue.push(&tStamp);
@@ -405,8 +406,8 @@ void Box::cyclePump(){
     if (_pumpOnTicker > 0) {
        _pumpOnTicker--;
        if (_pumpOnTicker == 0) {
-          if (pumpsOnChip1 == true) chip1.digitalWrite(_boxNum+8,LOW);
-          else chip3.digitalWrite(_boxNum+8,LOW);
+           if (pumpOnHigh) chip1.digitalWrite(_boxNum+8,LOW);
+           else chip1.digitalWrite(_boxNum+8,HIGH);
           _pumpOffTicker = _pumpOffTime;
           _cycleCount++;
           if (_cycleCount == _cycles) _cyclePump = false;
@@ -415,8 +416,8 @@ void Box::cyclePump(){
     else if (_pumpOffTicker > 0) {
         _pumpOffTicker--;
         if (_pumpOffTicker == 0) {
-          if (pumpsOnChip1 == true) chip1.digitalWrite(_boxNum+8,HIGH);
-          else chip3.digitalWrite(_boxNum+8,HIGH);
+           if (pumpOnHigh) chip1.digitalWrite(_boxNum+8,HIGH);
+           else chip1.digitalWrite(_boxNum+8,LOW);
           _pumpOnTicker = _pumpOnTime;
         }
     }
@@ -426,7 +427,7 @@ void Box::tick() { // do stuff every 10 mSec
     if (_cyclePump == true) cyclePump();        
     if (_pumpTimer > 0) {  
       _pumpTimer--;
-      if (_pumpTimer == 0) switchPump(LOW);  // Off
+      if (_pumpTimer == 0) switchPump(pumpOff);  // Off
     }
     if (_timeOutTimer > 0)  { 
       _timeOutTimer--;
@@ -554,7 +555,8 @@ void TC4_Handler()                                // Interrupt Service Routine (
 
 void turnStuffOff(){
   chip0.writePort(0xFFFF);
-  chip1.writePort(1,0x00);    // Off
+  if (pumpOnHigh) chip1.writePort(1,0x00);    // Off
+  else chip1.writePort(1,0xFF);
   chip2.writePort(0xFFFF);
   chip3.writePort(1,0x00);    // Off  
 }
@@ -602,7 +604,7 @@ void setup() {
   
   delay(500); 
   init_10_mSec_Timer(); 
-  Serial.println("9 SA200.ino");
+  Serial.println("9 Ver200.11Beta");
 }
 
 void setDebugVar(int index, int level) {
@@ -723,8 +725,8 @@ void handleInputString()
      if (stringCode == "chip0") chip0.digitalWrite(num1,num2); 
      else if (stringCode == "G")     boxArray[num1].startSession();
      else if (stringCode == "Q")     boxArray[num1].endSession(); 
-     else if (stringCode == "P")     boxArray[num1].switchPump(HIGH);
-     else if (stringCode == "p")     boxArray[num1].switchPump(LOW);
+     else if (stringCode == "P")     boxArray[num1].switchPump(pumpOn);
+     else if (stringCode == "p")     boxArray[num1].switchPump(pumpOff);
      else if (stringCode == "SCHED") boxArray[num1].setProtocolNum(num2);
      else if (stringCode == "PUMP")  boxArray[num1].setPumpDuration(num2); 
      else if (stringCode == "RATIO") boxArray[num1].setParamNum(num2);
@@ -740,7 +742,7 @@ void handleInputString()
      else if (stringCode == "C")     boxArray[num1].switchStim2(On);
      // else if (stringCode == "1")     boxArray[0].handle_L1_Response();
      // else if (stringCode == "2")     boxArray[1].handle_L2_Response();
-     else if (stringCode == "V")     Serial.println("9 Ver200.10");
+     else if (stringCode == "V")     Serial.println("9 Ver200.11Beta");
      else if (stringCode == "T")     twoLever = true;
      else if (stringCode == "t")     twoLever = false;
      // debug stuff 
