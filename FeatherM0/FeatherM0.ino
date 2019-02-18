@@ -1,4 +1,4 @@
-/*  Feb 14, 2019
+/*  Feb 17th, 2019
  *  
  *   Uses debugBoolVarlist[0] to switch from checkLeverOne() to checkLeverOneBits()
  *   
@@ -11,15 +11,15 @@
  * Two MCP23S17 port expanders are controled by the MCP23S17 library 
  * which was forked from from: github.com/MajenkoLibraries/MCP23S17
  * 
- * Chip0, Port0:  8 active levers - retract/extend
- * Chip0, Port1:  8 active lever LEDs 
- * Chip1, Port0:  8 active lever inputs
- * Chip1, Port1:  8 spare DIOs
+ * Chip0, Port0:  8 L1 levers - retract/extend
+ * Chip0, Port1:  8 L1 lever LEDs 
+ * Chip1, Port0:  8 L1 inputs
+ * Chip1, Port1:  8 Pumps
  * ************* if Two Levers *************************
- * Chip2, Port0:  8 in active levers - retract/extend
- * Chip2, Port1:  8 in active lever LEDs 
- * Chip3, Port0:  8 active lever inputs
- * Chip3, Port1:  8 pumps
+ * Chip2, Port0:  8 L2 levers - retract/extend
+ * Chip2, Port1:  8 L2 lever LEDs 
+ * Chip3, Port0:  8 L2 inputs
+ * Chip3, Port1:  8 spare DIOs
  * 
  */
 
@@ -59,8 +59,6 @@ extern "C" char *sbrk(int i);   // used in FreeRam()
 byte portOneValue, portTwoValue;
 String instruction;
 
-// int lastLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
-// int newLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 boolean lastLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 boolean newLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 boolean newResponse[8] = {false,false,false,false,false,false,false,false};
