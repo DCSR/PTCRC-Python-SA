@@ -1,5 +1,24 @@
-/*  Feb 17th, 2019
- *  
+/*  March 3rd, 2019
+ *   
+ *   Box::tick() - will be drastically changed
+ *   
+ *   int _boxPhase = 0;  // 0 = preStart; 1 = timeIn; 2 = timeOut; 3 = IBI; 4 = finished
+ *   replaced with:
+ *   enum  states { PRESTART, TIMEIN, TIMEOUT, IBI, FINISHED };
+ *   
+ *   Changes: 
+ *   _pumpTime++ until equals pumpDuration
+ *   _blockTime++ until equals _blockDuration
+ *   
+ *   
+ *   _IBILength changed to _IBIDuration
+ *   _pumpTimer changed to _pumpTime
+ *   states _boxState = PRESTART; 
+ *   
+ *   _blockTime was used for IBI as well - created _IBITime
+ *   
+ *   Check varTime and varDuration
+ *   
  *   Uses debugBoolVarlist[0] to switch from checkLeverOne() to checkLeverOneBits()
  *   
  *   Previous (commented out) checkLeverOneBits() requires input to go LOW for two ticks 
@@ -27,6 +46,9 @@
 #include <cppQueue.h>
 #include <SPI.h>        // Arduino Library SPI.h
 #include "MCP23S17.h"   // Forked from Majenko MCP23S17 library
+#include "Device.h"
+
+Device pump1(1);
 
 const uint8_t chipSelect = 10;  // All four chips use the same SPI chipSelect
 MCP23S17 chip0(chipSelect, 0);  // Instantiate 16 pin Port Expander chip at address 0
@@ -34,7 +56,7 @@ MCP23S17 chip1(chipSelect, 1);
 MCP23S17 chip2(chipSelect, 2);    
 MCP23S17 chip3(chipSelect, 3); 
 
-boolean pumpOnHigh = true; 
+boolean pumpOnHigh = false; 
 #define pumpOn HIGH
 #define pumpOff LOW  
 #define On LOW
@@ -84,6 +106,9 @@ int phantomResp = 0;
 byte diffCriteria = 1;
 
 // ***************************  Box Class *************************************
+
+enum  states { PRESTART, TIMEIN, TIMEOUT, IBI, FINISHED };
+
 class Box  {
   public:
     Box(int boxNum);
@@ -126,24 +151,28 @@ class Box  {
     int _protocolNum = 1;  // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25']
     int _paramNum = 1;
     int _PRstepNum = 1;   
-    int _boxPhase = 0;                   // 0 = preStart; 1 = timeIn; 2 = timeOut; 3 = IBI; 4 = finished
+    states _boxState = PRESTART;
+    // Block
     unsigned long _blockDuration = 21600;  // 60 * 60 * 6 = 21600 seconds = 6 hrs;
-    unsigned long _IBILength = 0;
-    unsigned int _maxBlockNumber = 1;
-    unsigned int _maxTrialNumber = 999;
+    unsigned long _blockTime = 0;    // unsigned int would only allow 65,535 seconds = 18.2 hours
+    unsigned int _blockNumber = 0;
+    unsigned int _maxBlockNumber = 1;  
+    // Trial (TIMEIN)
     unsigned int _responseCriterion = 1;  // default to FR1
+    unsigned int _trialNumber = 0;
+    unsigned int _maxTrialNumber = 999;
+    unsigned int _trialResponses = 0;
+    // Reinforce (TIMEOUT)
     int _pumpDuration = 400;    // 400 x 10 mSec = 4,000 mSec = 4 seconds;
+    int _pumpTime = 0;    
     int _THPumpTimeArray[13] = {316, 316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};
     // int _THPumpTimeArray[13] = {100, 100, 50, 40, 30, 20, 10, 9, 8, 7, 5, 3, 2};    
-    int _pumpTimer = 0;
     int _timeOutTimer = 0;
-    int _timeOutDuration = 400;  // default to 4 sec
-    unsigned long _blockTime = 0;    // unsigned int would only allow 65,535 seconds = 18.2 hours 
-    //these class members can only be used from within the class,     
+    int _timeOutDuration = 400;  // default to 4 sec    
+    // IBI     
+    unsigned long _IBIDuration = 0;
+    unsigned long _IBITime = 0;    
     unsigned long _startTime = 0;
-    unsigned int _blockNumber = 0;
-    unsigned int _trialNumber = 0;
-    unsigned int _trialResponses = 0;
     // used in debug protocol 7 
     boolean _cyclePump = false;
     int _cycleCount = 0;
@@ -171,7 +200,10 @@ void Box::startSession() {
 
    _timeOutDuration = _pumpDuration;     // except in protocol 2
 
-  if (_protocolNum == 0) _boxPhase = 4;  // if "do not run" then boxPhase = "finished"
+  if (_protocolNum == 0) {  // if "do not run" then boxPhase = "finished"
+    _boxState = FINISHED; 
+    // Why not endSession? And set neopixel there  
+  }
   else  {  
       if (_protocolNum == 1) {           // FR(N)
         _schedPR = false;
@@ -202,14 +234,14 @@ void Box::startSession() {
         _schedTH = true;
         _maxTrialNumber = 4;
         _blockDuration = 21600;          // 60 * 60 * 6 = 21600 seconds = 6 hrs; This changes in Block 2
-        _IBILength = 0;                  // no IBI
+        _IBIDuration = 0;                  // no IBI
         _maxBlockNumber = 13;            // 13 blocks
       }
       else if (_protocolNum == 6) {      // IntA 5-25 6h
         _schedPR = false;
         _schedTH = false;
         _blockDuration = 300;            // 60 seconds * 5 min
-        _IBILength = 1500;               // 25 * 60 sec = 1500 seconds
+        _IBIDuration = 1500;               // 25 * 60 sec = 1500 seconds
         _maxBlockNumber = 12;            // 12 blocks
       }
       else if (_protocolNum == 7) {      // Debug
@@ -225,7 +257,7 @@ void Box::startSession() {
       }   
       _startTime = millis();
       _blockNumber = 0;  
-      _pumpTimer = 0; 
+      _pumpTime = 0; 
       _timeOutTimer = 0;
       // sessionRunning = true;     
       TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
@@ -242,9 +274,9 @@ void Box::endSession () {
     moveLever2(Retract);
     switchStim1(Off);
     switchPump(pumpOff);
-    _pumpTimer = 0;
+    _pumpTime = 0;
     _timeOutTimer = 0;
-    _boxPhase = 4;    
+    _boxState = FINISHED;    
     TStamp tStamp = {_boxNum, 'E', millis() - _startTime, 0, 9};
     printQueue.push(&tStamp);
 }
@@ -274,8 +306,8 @@ void Box::startTrial() {
     _trialNumber++;
     if (_schedPR == true) _responseCriterion = round((5 * exp(0.2 * _PRstepNum)) - 5);    // Sched = PR
     _PRstepNum++;
-    moveLever1(Extend);             // extend lever
-    _boxPhase = 1;                // 0 = preStart; 1 = timeIn; 2 = timeOut; 3 = IBI; 4 = finished  
+    moveLever1(Extend);     // extend lever
+    _boxState = TIMEIN;      
     TStamp tStamp = {_boxNum, 'T', millis() - _startTime, 0, 9};
     printQueue.push(&tStamp);
 }
@@ -285,11 +317,13 @@ void Box::endTrial() {
 }
 
 void Box::startIBI() {   
-    if (_IBILength == 0) startBlock();
+    if (_IBIDuration == 0) startBlock();
     else
     {   moveLever1(Retract);
-        _blockTime = 0;    // tick will handle when to end IBI 
-        _boxPhase = 3;     // IBI
+        _IBITime = 0;    // tick will handle when to end IBI 
+        _boxState = IBI;      // IBI
+        // pixel.setPixelColor(_boxNum, TURQUOISE);
+        // pixel.show();
     }    
 }
 
@@ -306,17 +340,19 @@ void Box::reinforce() {
       _pumpOnTicker = _pumpOnTime; 
     }
     else {
-      switchPump(pumpOn);            // On
-      _pumpTimer = _pumpDuration;  // 400 = 4 seconds}  
+      _pumpTime = 0;
+      switchPump(pumpOn);
     }
 }
 
 void Box::startTimeOut() {
     switchStim1(On); 
     _timeOutTimer = _timeOutDuration;       // _timeOutTimer counts down with each tick
-    _boxPhase = 2;                  //timeOut    
+    _boxState = TIMEOUT;                  //timeOut    
     TStamp tStamp = {_boxNum, 't', millis() - _startTime, 0, 9};
     printQueue.push(&tStamp);
+    // pixel.setPixelColor(_boxNum, YELLOW);
+    // pixel.show(); 
 }
 
 void Box::endTimeOut() {   
@@ -424,34 +460,67 @@ void Box::cyclePump(){
 }
 
 void Box::tick() { // do stuff every 10 mSec 
+    /*
+    Decisions: 
+        MISMATCH: 
+        _timeOutTimer has always been in mSec
+        minor:  change to _timeOutTime
+        Sometimes timeout is the pumpDuration - in mSec
+        Other times it is 20 sec.             - in Sec
+        
+        switchPumpOff: if timeOutDuration <> endTimeOut()
+      2. Many counters have counted down and when == 0 do something. 
+        Should all "Time" counts up and when Time == Duration do something?
+
+     Seems inefficent to send block time from all three states.
+        
+    */
+     
     if (_cyclePump == true) cyclePump();        
-    if (_pumpTimer > 0) {  
-      _pumpTimer--;
-      if (_pumpTimer == 0) switchPump(pumpOff);  // Off
+
+    // Do this every tick:
+    if (_boxState == TIMEOUT) {
+      _tickCounts++; 
+      if (_pumpTime == _pumpDuration) {
+         switchPump(pumpOff); 
+         // if (_timeOutDuration == 0)   // default to pumpOff           
+         endTimeOut(); 
+         // otherwise let _timeOutTime and _timeOutDuration control things. 
+      }  
     }
-    if (_timeOutTimer > 0)  { 
-      _timeOutTimer--;
-      if (_timeOutTimer == 0) endTimeOut();
-    }   
-    _tickCounts++;
+    _tickCounts++; 
     if (_tickCounts == 100)    {         // every second
-       _tickCounts = 0;        
-       if (_boxPhase > 0 && _boxPhase < 4)   {   // boxPhase 1,2 or 3: started and not finished 
-           _blockTime++; 
-           TStamp tStamp = {_boxNum, '*', _blockTime, 0, 9};
-           printQueue.push(&tStamp);                 
-           if (_boxPhase == 1 || _boxPhase == 2)  {         // timeIn or TimeOut in a block          
-               if (_blockTime >= _blockDuration) endBlock(); 
-           }    
-           else {
-               if (_blockTime >= _IBILength) endIBI();     
-           }
-        } 
-    }
-}   
+       _tickCounts = 0; 
+       switch (_boxState) {  // PRESTART, TIMEIN, TIMEOUT, IBI, FINISHED 
+          case TIMEIN:
+            _blockTime++;
+            // TStamp tStamp = {_boxNum, '*', _blockTime, 0, 9};
+            // printQueue.push(&tStamp); 
+            if (_blockTime >+ _blockDuration) endBlock();
+            break;
+          case TIMEOUT:
+            _blockTime++;
+            // TStamp tStamp = {_boxNum, '*', _blockTime, 0, 9};
+            // printQueue.push(&tStamp); 
+            if (_blockTime >+ _blockDuration) endBlock();
+            break;
+          case IBI:
+            _blockTime++;
+            // TStamp tStamp = {_boxNum, '*', _blockTime, 0, 9};
+            // printQueue.push(&tStamp); 
+            _IBITime++;
+            if (_IBITime >= _IBIDuration) endIBI(); 
+            break;
+          case FINISHED:
+            // 
+            break;         
+       }    
+  }
+
+}
 
 void Box::handle_L1_Response() { 
-  if (_boxPhase == 1) {  
+  if (_boxState == TIMEIN) {  
        TStamp tStamp = {_boxNum, 'L', millis() - _startTime, 0, 9};
        printQueue.push(&tStamp);
        _trialResponses++;
