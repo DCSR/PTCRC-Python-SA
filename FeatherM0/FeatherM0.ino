@@ -1,6 +1,9 @@
-/*  March 3rd, 2019
+/*  March 6th, 2019
  *   
  *   Box::tick() - will be drastically changed
+ *   
+ *   This compiles - but no idea if it works
+ *   
  *   
  *   int _boxPhase = 0;  // 0 = preStart; 1 = timeIn; 2 = timeOut; 3 = IBI; 4 = finished
  *   replaced with:
@@ -9,15 +12,13 @@
  *   Changes: 
  *   _pumpTime++ until equals pumpDuration
  *   _blockTime++ until equals _blockDuration
- *   
- *   
  *   _IBILength changed to _IBIDuration
  *   _pumpTimer changed to _pumpTime
  *   states _boxState = PRESTART; 
  *   
  *   _blockTime was used for IBI as well - created _IBITime
  *   
- *   Check varTime and varDuration
+ *  Start to split Box and Lever classes
  *   
  *   Uses debugBoolVarlist[0] to switch from checkLeverOne() to checkLeverOneBits()
  *   
@@ -109,12 +110,18 @@ byte diffCriteria = 1;
 
 enum  states { PRESTART, TIMEIN, TIMEOUT, IBI, FINISHED };
 
-class Box  {
+class Lever {
   public:
-    Box(int boxNum);
-    void begin();
+    Lever(int boxNUm);
+    void tick();
     void startSession();
     void endSession();
+    void setProtocolNum(int protocalNum);  // set with lever1._protocolNum = protocolNum
+    void setPumpDuration(int pumpDuration);
+    void setParamNum(int paramNum);
+    void setBlockDuration(int blockDuration); 
+    void handleResponse();
+  private:
     void startBlock();
     void endBlock();
     void startTrial();
@@ -127,23 +134,9 @@ class Box  {
     void switchPump(boolean state);
     void switchStim1(int state);
     void switchStim2(int state);
-    void moveLever1(int state);
-    void moveLever2(int state);
-    void cyclePump();
-    void tick();
-    void handle_L1_Response();
-    void handle_L2_Response();
-    void setProtocolNum(int protocalNum);
-    void setPumpDuration(int pumpDuration);
-    void setParamNum(int paramNum);
-    void setBlockDuration(int blockDuration);    
-    void reportParameters();
-    void getBlockTime();
-    
-    //************
-  private:
-    int _boxNum;
-    int _tickCounts = 0; 
+    void moveLever(int state);
+    // void moveLever2(int state);
+    int _boxNum;                      
     boolean _verbose = false;
     boolean _schedPR = false;
     boolean _schedTH = false;
@@ -173,6 +166,33 @@ class Box  {
     unsigned long _IBIDuration = 0;
     unsigned long _IBITime = 0;    
     unsigned long _startTime = 0;
+  
+};
+
+
+
+class Box  {
+  public:
+    Lever lever1;  
+    Box(int boxNum) : lever1(1) {
+        _boxNum = boxNum; 
+    }
+    void startSession();
+    void endSession();
+    // void cyclePump();
+    void tick();
+    void handle_L1_Response();
+    void setProtocolNum(int protocalNum);  // set with lever1._protocolNum = protocolNum
+    void setPumpDuration(int pumpDuration);
+    void setParamNum(int paramNum);
+    void setBlockDuration(int blockDuration);    
+    void reportParameters();
+    void getBlockTime();
+    
+    //************
+  private:
+    int _boxNum;
+    int _tickCounts = 0;   // used to count to 100 = 1 second
     // used in debug protocol 7 
     boolean _cyclePump = false;
     int _cycleCount = 0;
@@ -183,16 +203,42 @@ class Box  {
     int _pumpOffTicker = 0;    
 };
 
-// **************  Box Class Procedures *************************************
-Box::Box(int boxNum) {    //this is the constructor
-  _boxNum = boxNum; 
+// ************* Lever Class Procedures *************************************
+
+Lever::Lever(int boxNum) {
+  _boxNum = boxNum;
 }
 
-void Box::begin() {
-  _protocolNum = 1;
+void Lever::setProtocolNum(int protocolNum) {
+  _protocolNum = protocolNum;
 }
 
-void Box::startSession() { 
+void Lever::setPumpDuration(int pumpDuration) {
+  _pumpDuration = pumpDuration;
+}
+
+void Lever::setParamNum(int paramNum) {
+  _paramNum = paramNum;
+}
+
+void Lever::setBlockDuration(int blockDuration) {
+  _blockDuration = blockDuration;
+}
+
+void Lever::handleResponse() { 
+  if (_boxState == TIMEIN) {  
+       TStamp tStamp = {_boxNum, 'L', millis() - _startTime, 0, 9};
+       printQueue.push(&tStamp);
+       _trialResponses++;
+       if (_trialResponses >= _responseCriterion) {
+               reinforce();
+               endTrial();
+               startTimeOut();
+       }
+    }
+}
+
+void Lever::startSession() { 
   // ******** set Protocol defaults here ********
   // Python protocol list:  
   // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', 
@@ -244,6 +290,7 @@ void Box::startSession() {
         _IBIDuration = 1500;               // 25 * 60 sec = 1500 seconds
         _maxBlockNumber = 12;            // 12 blocks
       }
+      /*
       else if (_protocolNum == 7) {      // Debug
         _schedPR = false;                // Sets up initially as an FR1 
         _schedTH = false;
@@ -254,7 +301,8 @@ void Box::startSession() {
         _blockDuration = 21600;          // default to 6hr
         _timeOutDuration = ((_cycles+1)*(_pumpOnTime + _pumpOffTime));
         _cyclePump = false;             // This is the thing that controls the cycle in tick()  
-      }   
+      } 
+      */  
       _startTime = millis();
       _blockNumber = 0;  
       _pumpTime = 0; 
@@ -263,15 +311,15 @@ void Box::startSession() {
       TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
       printQueue.push(&tStamp);
       startBlock();
-      if (twoLever) moveLever2(Extend);
+      // if (twoLever) moveLever2(Extend);
   }
 }
 
-void Box::endSession () {   
+void Lever::endSession () {   
  // endTrial(); the only thing this did was retract the lever, but see next line. 
-    _cyclePump = false;
-    moveLever1(Retract);
-    moveLever2(Retract);
+    // _cyclePump = false;
+    moveLever(Retract);         // was moveLever1
+    // moveLever2(Retract);
     switchStim1(Off);
     switchPump(pumpOff);
     _pumpTime = 0;
@@ -281,7 +329,7 @@ void Box::endSession () {
     printQueue.push(&tStamp);
 }
 
-void Box::startBlock() {
+void Lever::startBlock() {
   _blockTime = 0;
   _trialNumber = 0;
   _blockNumber++;
@@ -294,32 +342,32 @@ void Box::startBlock() {
   startTrial();
 }
 
-void Box::endBlock() {    
+void Lever::endBlock() {    
      TStamp tStamp = {_boxNum, 'b', millis() - _startTime, 0, 9};
      printQueue.push(&tStamp);
      if (_blockNumber < _maxBlockNumber) startIBI();
      else endSession();
 }
 
-void Box::startTrial() {   
+void Lever::startTrial() {   
     _trialResponses = 0;
     _trialNumber++;
     if (_schedPR == true) _responseCriterion = round((5 * exp(0.2 * _PRstepNum)) - 5);    // Sched = PR
     _PRstepNum++;
-    moveLever1(Extend);     // extend lever
+    moveLever(Extend);     // extend lever
     _boxState = TIMEIN;      
     TStamp tStamp = {_boxNum, 'T', millis() - _startTime, 0, 9};
     printQueue.push(&tStamp);
 }
 
-void Box::endTrial() { 
-  if (_protocolNum != 5) moveLever1(Retract);       // if not TH then retract lever
+void Lever::endTrial() { 
+  if (_protocolNum != 5) moveLever(Retract);       // if not TH then retract lever
 }
 
-void Box::startIBI() {   
+void Lever::startIBI() {   
     if (_IBIDuration == 0) startBlock();
     else
-    {   moveLever1(Retract);
+    {   moveLever(Retract);
         _IBITime = 0;    // tick will handle when to end IBI 
         _boxState = IBI;      // IBI
         // pixel.setPixelColor(_boxNum, TURQUOISE);
@@ -327,11 +375,12 @@ void Box::startIBI() {
     }    
 }
 
-void Box::endIBI() {
+void Lever::endIBI() {
      startBlock();
 }
 
-void Box::reinforce() {  
+void Lever::reinforce() { 
+    /* 
     if (_protocolNum == 7) {
       if (pumpOnHigh) chip1.digitalWrite(_boxNum+8,HIGH);
       else chip1.digitalWrite(_boxNum+8,LOW);
@@ -339,13 +388,12 @@ void Box::reinforce() {
       _cycleCount = 0;  
       _pumpOnTicker = _pumpOnTime; 
     }
-    else {
-      _pumpTime = 0;
-      switchPump(pumpOn);
-    }
+    else { */
+    _pumpTime = 0;
+    switchPump(pumpOn);
 }
 
-void Box::startTimeOut() {
+void Lever::startTimeOut() {
     switchStim1(On); 
     _timeOutTimer = _timeOutDuration;       // _timeOutTimer counts down with each tick
     _boxState = TIMEOUT;                  //timeOut    
@@ -355,7 +403,7 @@ void Box::startTimeOut() {
     // pixel.show(); 
 }
 
-void Box::endTimeOut() {   
+void Lever::endTimeOut() {   
     switchStim1(Off);
     if (_trialNumber < _maxTrialNumber) startTrial(); 
     else {
@@ -367,7 +415,7 @@ void Box::endTimeOut() {
     }  
 }
 
-void Box::switchPump(boolean state) {
+void Lever::switchPump(boolean state) {
     // boxNum 0..7 maps to pin 0..7 on chip1 or chip3 
     if (pumpOnHigh) chip1.digitalWrite(_boxNum+8,state);   // pumpOn = HIGH
     else chip1.digitalWrite(_boxNum+8,!state);
@@ -382,7 +430,7 @@ void Box::switchPump(boolean state) {
     // The Pump CheckBox is index 2 
 }
 
-void Box::switchStim1(int state) {   
+void Lever::switchStim1(int state) {   
     chip0.digitalWrite(_boxNum+8,state);   // boxNum 0..7 maps to pin 8..15 on chip0
     // HIGH = OFF
     if (state) {
@@ -396,7 +444,7 @@ void Box::switchStim1(int state) {
     // StimCheckBox is index 3     
 }
 
-void Box::switchStim2(int state) {   
+void Lever::switchStim2(int state) {   
     chip2.digitalWrite(_boxNum+8,state);   // boxNum 0..7  maps to pin 8..15 on chip2
     // HIGH = OFF
     if (state) {
@@ -410,7 +458,7 @@ void Box::switchStim2(int state) {
     // StimCheckBox is index 4     
 }
 
-void Box::moveLever1(int state) {          // boxNum 0..7  maps to pin 0..7 on chip0
+void Lever::moveLever(int state) {          // boxNum 0..7  maps to pin 0..7 on chip0
     chip0.digitalWrite(_boxNum,state);
     // HIGH = Retract; LOW = extend
     if (state) {
@@ -424,6 +472,7 @@ void Box::moveLever1(int state) {          // boxNum 0..7  maps to pin 0..7 on c
     // Lever1 (active) CheckBox is index 0 
 }
 
+/*
 void Box::moveLever2(int state) {          // boxNum 0..7  maps to pin 0..7 on chip2
     chip2.digitalWrite(_boxNum,state);
     // HIGH = Retract
@@ -437,7 +486,25 @@ void Box::moveLever2(int state) {          // boxNum 0..7  maps to pin 0..7 on c
     }
     // Lever2 (inactive) CheckBox is index 1 
 }
+*/
 
+
+// **************  Box Class Procedures *************************************
+
+// void Box::begin() {
+//   _protocolNum = 1;
+// }
+
+
+void Box::startSession() {
+  lever1.startSession();
+}
+
+void Box::endSession() {
+  lever1.endSession();
+}
+
+/*
 void Box::cyclePump(){
     if (_pumpOnTicker > 0) {
        _pumpOnTicker--;
@@ -458,6 +525,7 @@ void Box::cyclePump(){
         }
     }
 }
+*/
 
 void Box::tick() { // do stuff every 10 mSec 
     /*
@@ -474,7 +542,6 @@ void Box::tick() { // do stuff every 10 mSec
 
      Seems inefficent to send block time from all three states.
         
-    */
      
     if (_cyclePump == true) cyclePump();        
 
@@ -514,54 +581,53 @@ void Box::tick() { // do stuff every 10 mSec
           case FINISHED:
             // 
             break;         
-       }    
+       }  
   }
-
+*/
 }
 
 void Box::handle_L1_Response() { 
-  if (_boxState == TIMEIN) {  
-       TStamp tStamp = {_boxNum, 'L', millis() - _startTime, 0, 9};
-       printQueue.push(&tStamp);
-       _trialResponses++;
-       if (_trialResponses >= _responseCriterion) {
-               reinforce();
-               endTrial();
-               startTimeOut();
-       }
-    }
+  lever1.handleResponse();
 }
 
+/*
 void Box::handle_L2_Response() {           // Inactive lever press
   TStamp tStamp = {_boxNum, 'J', millis() - _startTime, 0, 9};
   printQueue.push(&tStamp);
 }
+*/
 
 void Box::setProtocolNum(int protocolNum) {
-  _protocolNum = protocolNum;
+  // _protocolNum = protocolNum;
+  lever1.setProtocolNum(protocolNum);
 }
 
 void Box::setPumpDuration(int pumpDuration) {
-  _pumpDuration = pumpDuration;
+  // _pumpDuration = pumpDuration;
+  lever1.setPumpDuration(pumpDuration);
 }
 
 void Box::setParamNum(int paramNum) {
-  _paramNum = paramNum;
+  // _paramNum = paramNum;
+  lever1.setParamNum(paramNum);
 }
 
 void Box::setBlockDuration(int blockDuration) {
-  _blockDuration = blockDuration;
+  // _blockDuration = blockDuration;
+  lever1.setBlockDuration(blockDuration);
 }
 
 void Box::reportParameters() { 
+  /*
   Serial.print("9 "+String(_boxNum)+":"+String(_protocolNum)+":");
   Serial.print(String(_responseCriterion)+":"+String(_blockDuration)+":");
   Serial.print(String(_pumpDuration)+":"+String(_timeOutDuration));
   Serial.println("-"+String(_maxTrialNumber));
+  */
 } 
 
 void Box::getBlockTime() {
-  Serial.println("9 "+String(_boxNum)+" BTime: "+ String(_blockTime));
+  // Serial.println("9 "+String(_boxNum)+" BTime: "+ String(_blockTime));
   // TStamp tStamp = {_boxNum, '9', millis() - _startTime, 0, 9};
   // printQueue.push(&tStamp);
 }
@@ -662,6 +728,7 @@ void setup() {
   portTwoValue = chip3.readPort(0);          // Ver 200.04
   // Serial.println(portOneValue,BIN);
 
+/*
   boxArray[0].begin();
   boxArray[1].begin();
   boxArray[2].begin();
@@ -670,6 +737,7 @@ void setup() {
   boxArray[5].begin();
   boxArray[6].begin();
   boxArray[7].begin();
+*/
   
   delay(500); 
   init_10_mSec_Timer(); 
@@ -734,10 +802,7 @@ void checkLeverOneBits() {
     }           
 }
 
-
-
-
-
+/*
 void checkLeverTwo() {
     static byte oldPortTwoValue = 255;      
     portTwoValue = chip3.readPort(0);
@@ -757,6 +822,7 @@ void checkLeverTwo() {
          }    
     }           
 }
+*/
 
 void getInputString() {
     while (Serial.available() > 0) {               // repeat while something in the buffer
@@ -794,6 +860,7 @@ void handleInputString()
      if (stringCode == "chip0") chip0.digitalWrite(num1,num2); 
      else if (stringCode == "G")     boxArray[num1].startSession();
      else if (stringCode == "Q")     boxArray[num1].endSession(); 
+     /*
      else if (stringCode == "P")     boxArray[num1].switchPump(pumpOn);
      else if (stringCode == "p")     boxArray[num1].switchPump(pumpOff);
      else if (stringCode == "SCHED") boxArray[num1].setProtocolNum(num2);
@@ -801,10 +868,10 @@ void handleInputString()
      else if (stringCode == "RATIO") boxArray[num1].setParamNum(num2);
      else if (stringCode == "TIME")  boxArray[num1].setBlockDuration(num2);
      else if (stringCode == "R")     boxArray[num1].reportParameters();
-     else if (stringCode == "=")     boxArray[num1].moveLever1(Extend);   // extend lever1
-     else if (stringCode == "-")     boxArray[num1].moveLever1(Retract);    // retract lever1
-     else if (stringCode == "~")     boxArray[num1].moveLever2(Extend);   // extend lever2  
-     else if (stringCode == ",")     boxArray[num1].moveLever2(Retract);    // retract lever2
+     else if (stringCode == "=")     boxArray[num1].moveLever(Extend);   // extend lever1
+     else if (stringCode == "-")     boxArray[num1].moveLever(Retract);    // retract lever1
+     // else if (stringCode == "~")     boxArray[num1].moveLever2(Extend);   // extend lever2  
+     // else if (stringCode == ",")     boxArray[num1].moveLever2(Retract);    // retract lever2
      else if (stringCode == "s")     boxArray[num1].switchStim1(Off);
      else if (stringCode == "S")     boxArray[num1].switchStim1(On);
      else if (stringCode == "c")     boxArray[num1].switchStim2(Off);
@@ -822,6 +889,7 @@ void handleInputString()
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "B")     boxArray[num1].getBlockTime();
      else if (stringCode == "Debug") setDebugVar(num1,num2);
+     */
      inputString = "";
    }
 }
@@ -875,9 +943,9 @@ void tick()    {
      boxArray[i].tick();
    }
    getInputString();
-   if (debugBoolVarList[0] == 0) checkLeverOne();
-   else checkLeverOneBits();
-   if (twoLever) checkLeverTwo();
+   // if (debugBoolVarList[0] == 0) checkLeverOne();
+   checkLeverOneBits();
+   // if (twoLever) checkLeverTwo();
    sendOneTimeStamp();
    delta = micros() - micro1;
    if (delta > maxDelta) maxDelta = delta;   
