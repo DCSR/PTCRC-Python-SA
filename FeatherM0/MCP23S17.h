@@ -1,9 +1,7 @@
 /*
  * MCP23S17.h - Library for controllong MCP23S17 Port Expanders
  * 
- * This Library was forked from https://github.com/MajenkoLibraries/MCP23S17
- * 
- * 
+ * Forked from Majenko MCP23S17 library: https://github.com/MajenkoLibraries/MCP23S17
  * 
  */
 
