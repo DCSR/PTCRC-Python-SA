@@ -1,13 +1,23 @@
-/*  March 6th, 2019
+/*  March 8th, 2019
  *   
- *   Box::tick() - will be drastically changed
- *   
+ *   Lever and Box classes separated - a way found to embed Lever within Box.
  *   This compiles - but no idea if it works
  *   
+ *   To do:
+ *   Get at least one box to run an FR1 by default.
+ *   Reinforce() changes _timeOut = true which is checked in tick() each 10 mSec. 
  *   
- *   int _boxPhase = 0;  // 0 = preStart; 1 = timeIn; 2 = timeOut; 3 = IBI; 4 = finished
- *   replaced with:
- *   enum  states { PRESTART, TIMEIN, TIMEOUT, IBI, FINISHED };
+ *   Note that all timestamps come from Lever.
+ *   The lever could own the Queue and Box could pull from it. 
+ *   If Box needs to send a message, just use Serial.println()
+ *   
+ *   Implications:
+ *   Timestamp codes will have to be instantiated differently for lever1 and lever2 
+ *   
+ *   TIMEOUT and LED = timeOutDuration
+ *   pumpDuration may be shorter
+ *   
+ *   Eventually change the Pump and LED to devices.
  *   
  *   Changes: 
  *   _pumpTime++ until equals pumpDuration
@@ -17,8 +27,6 @@
  *   states _boxState = PRESTART; 
  *   
  *   _blockTime was used for IBI as well - created _IBITime
- *   
- *  Start to split Box and Lever classes
  *   
  *   Uses debugBoolVarlist[0] to switch from checkLeverOne() to checkLeverOneBits()
  *   
@@ -43,10 +51,9 @@
  * 
  */
 
-
 #include <cppQueue.h>
 #include <SPI.h>        // Arduino Library SPI.h
-#include "MCP23S17.h"   // Forked from Majenko MCP23S17 library
+#include "MCP23S17.h"   
 #include "Device.h"
 
 Device pump1(1);
@@ -108,7 +115,7 @@ byte diffCriteria = 1;
 
 // ***************************  Box Class *************************************
 
-enum  states { PRESTART, TIMEIN, TIMEOUT, IBI, FINISHED };
+enum  states { PRESTART, BLOCK, IBI, FINISHED };
 
 class Lever {
   public:
@@ -136,8 +143,9 @@ class Lever {
     void switchStim2(int state);
     void moveLever(int state);
     // void moveLever2(int state);
-    int _boxNum;                      
-    boolean _verbose = false;
+    int _boxNum; 
+    boolean _timeOut = false;                     
+    boolean _verbose = true;
     boolean _schedPR = false;
     boolean _schedTH = false;
     // defaults to a 6h FR1 session 
@@ -150,17 +158,17 @@ class Lever {
     unsigned long _blockTime = 0;    // unsigned int would only allow 65,535 seconds = 18.2 hours
     unsigned int _blockNumber = 0;
     unsigned int _maxBlockNumber = 1;  
-    // Trial (TIMEIN)
+    // Trial 
     unsigned int _responseCriterion = 1;  // default to FR1
     unsigned int _trialNumber = 0;
     unsigned int _maxTrialNumber = 999;
     unsigned int _trialResponses = 0;
-    // Reinforce (TIMEOUT)
+    // Reinforce 
     int _pumpDuration = 400;    // 400 x 10 mSec = 4,000 mSec = 4 seconds;
     int _pumpTime = 0;    
     int _THPumpTimeArray[13] = {316, 316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};
     // int _THPumpTimeArray[13] = {100, 100, 50, 40, 30, 20, 10, 9, 8, 7, 5, 3, 2};    
-    int _timeOutTimer = 0;
+    int _timeOutTime = 0;
     int _timeOutDuration = 400;  // default to 4 sec    
     // IBI     
     unsigned long _IBIDuration = 0;
@@ -168,8 +176,6 @@ class Lever {
     unsigned long _startTime = 0;
   
 };
-
-
 
 class Box  {
   public:
@@ -182,7 +188,7 @@ class Box  {
     // void cyclePump();
     void tick();
     void handle_L1_Response();
-    void setProtocolNum(int protocalNum);  // set with lever1._protocolNum = protocolNum
+    void setProtocolNum(int protocalNum);
     void setPumpDuration(int pumpDuration);
     void setParamNum(int paramNum);
     void setBlockDuration(int blockDuration);    
@@ -192,7 +198,6 @@ class Box  {
     //************
   private:
     int _boxNum;
-    int _tickCounts = 0;   // used to count to 100 = 1 second
     // used in debug protocol 7 
     boolean _cyclePump = false;
     int _cycleCount = 0;
@@ -209,60 +214,63 @@ Lever::Lever(int boxNum) {
   _boxNum = boxNum;
 }
 
-void Lever::setProtocolNum(int protocolNum) {
-  _protocolNum = protocolNum;
-}
-
-void Lever::setPumpDuration(int pumpDuration) {
-  _pumpDuration = pumpDuration;
-}
-
-void Lever::setParamNum(int paramNum) {
-  _paramNum = paramNum;
-}
-
-void Lever::setBlockDuration(int blockDuration) {
-  _blockDuration = blockDuration;
-}
-
-void Lever::handleResponse() { 
-  if (_boxState == TIMEIN) {  
-       TStamp tStamp = {_boxNum, 'L', millis() - _startTime, 0, 9};
-       printQueue.push(&tStamp);
-       _trialResponses++;
-       if (_trialResponses >= _responseCriterion) {
-               reinforce();
-               endTrial();
-               startTimeOut();
-       }
+void Lever::tick(){ 
+    static int tickCounts = 0;      
+    if (_timeOut) {
+      _pumpTime++;
+      if (_pumpTime == _pumpDuration) switchPump(pumpOff);  // change to pump.update() 
+      _timeOutTime++;
+      if (_timeOutTime == _timeOutDuration) endTimeOut();     
     }
+    tickCounts++; 
+    if (tickCounts == 100)    {         // do this every second
+       tickCounts = 0;
+       //switch (_boxState) {  // PRESTART, BLOCK, IBI, FINISHED 
+       //   case BLOCK:
+       if (_boxState == BLOCK) {
+            _blockTime++;
+            TStamp tStamp = {_boxNum, '*', _blockTime, 0, 9};
+            printQueue.push(&tStamp);
+            if (_blockTime >+ _blockDuration) endBlock();
+            }
+        else if (_boxState == IBI) {
+            _IBITime++;
+            TStamp tStamp = {_boxNum, '*', _IBITime, 0, 9};
+            printQueue.push(&tStamp);
+            if (_IBITime >= _IBIDuration) endIBI(); 
+            }      
+       }  
 }
 
 void Lever::startSession() { 
-  // ******** set Protocol defaults here ********
+  // Set Protocol defaults here
   // Python protocol list:  
   // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', 
   // '4: PR', '5: TH', '6: IntA: 5-25', '7: Debug']
 
+  if (_verbose) Serial.println(String(_boxNum)+" startSession()");
+
    _timeOutDuration = _pumpDuration;     // except in protocol 2
 
-  if (_protocolNum == 0) {  // if "do not run" then boxPhase = "finished"
-    _boxState = FINISHED; 
-    // Why not endSession? And set neopixel there  
-  }
+  if (_protocolNum == 0) endSession();
   else  {  
       if (_protocolNum == 1) {           // FR(N)
         _schedPR = false;
         _schedTH = false;
-        _maxTrialNumber = 999;           // different from SelfAdmin201.ino
-        _responseCriterion = _paramNum;
+        _maxTrialNumber = 999;           
+        //_responseCriterion = _paramNum;
+        _responseCriterion = 2;         // for debug
+        _blockDuration = 60;
+        _IBIDuration = 10;                  // no IBI
+        _maxBlockNumber = 2;
+        Serial.println(String(_boxNum)+" started");
       }
       else if (_protocolNum == 2) {      // FR1 x 20
         _schedPR = false;
         _schedTH = false;
         _maxTrialNumber = 20;
         _responseCriterion = 1;
-        _timeOutDuration = 2000;         // 20 sec
+        _timeOutDuration = 2000;         // 10 mSec x 2000 = 20 sec
       }
       else if (_protocolNum == 3) {      // FR x N
         _schedPR = false;
@@ -306,7 +314,7 @@ void Lever::startSession() {
       _startTime = millis();
       _blockNumber = 0;  
       _pumpTime = 0; 
-      _timeOutTimer = 0;
+      _timeOutTime = 0;
       // sessionRunning = true;     
       TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
       printQueue.push(&tStamp);
@@ -316,23 +324,56 @@ void Lever::startSession() {
 }
 
 void Lever::endSession () {   
- // endTrial(); the only thing this did was retract the lever, but see next line. 
+    // endTrial(); the only thing this did was retract the lever, but see next line. 
     // _cyclePump = false;
+    if (_verbose) Serial.println(String(_boxNum)+" endSession()");
     moveLever(Retract);         // was moveLever1
     // moveLever2(Retract);
     switchStim1(Off);
     switchPump(pumpOff);
     _pumpTime = 0;
-    _timeOutTimer = 0;
+    _timeOutTime = 0;
     _boxState = FINISHED;    
     TStamp tStamp = {_boxNum, 'E', millis() - _startTime, 0, 9};
     printQueue.push(&tStamp);
 }
 
+void Lever::setProtocolNum(int protocolNum) {
+  _protocolNum = protocolNum;
+}
+
+void Lever::setPumpDuration(int pumpDuration) {
+  _pumpDuration = pumpDuration;
+}
+
+void Lever::setParamNum(int paramNum) {
+  _paramNum = paramNum;
+}
+
+void Lever::setBlockDuration(int blockDuration) {
+  _blockDuration = blockDuration;
+}
+
+void Lever::handleResponse() { 
+  if (_timeOut == false) {  
+       TStamp tStamp = {_boxNum, 'L', millis() - _startTime, 0, 9};
+       printQueue.push(&tStamp);
+       _trialResponses++;
+       if (_trialResponses >= _responseCriterion) {
+               endTrial();
+               reinforce();
+               startTimeOut();
+       }
+    }
+}
+
+
 void Lever::startBlock() {
+  if (_verbose) Serial.println(String(_boxNum)+" startBlock()");
   _blockTime = 0;
   _trialNumber = 0;
   _blockNumber++;
+  _boxState = BLOCK;
   TStamp tStamp = {_boxNum, 'B', millis() - _startTime, 0, 9};
   printQueue.push(&tStamp);  
   if (_schedTH == true){                                    // TH
@@ -342,41 +383,46 @@ void Lever::startBlock() {
   startTrial();
 }
 
-void Lever::endBlock() {    
-     TStamp tStamp = {_boxNum, 'b', millis() - _startTime, 0, 9};
-     printQueue.push(&tStamp);
-     if (_blockNumber < _maxBlockNumber) startIBI();
-     else endSession();
+void Lever::endBlock() { 
+   if (_verbose) Serial.println(String(_boxNum)+" endBlock()");   
+   TStamp tStamp = {_boxNum, 'b', millis() - _startTime, 0, 9};
+   printQueue.push(&tStamp);
+   if (_blockNumber < _maxBlockNumber) startIBI();
+   else endSession();
 }
 
-void Lever::startTrial() {   
-    _trialResponses = 0;
-    _trialNumber++;
-    if (_schedPR == true) _responseCriterion = round((5 * exp(0.2 * _PRstepNum)) - 5);    // Sched = PR
-    _PRstepNum++;
-    moveLever(Extend);     // extend lever
-    _boxState = TIMEIN;      
-    TStamp tStamp = {_boxNum, 'T', millis() - _startTime, 0, 9};
-    printQueue.push(&tStamp);
+void Lever::startTrial() {
+   if (_verbose) Serial.println(String(_boxNum)+" startTrial()");   
+   _trialResponses = 0;
+   _trialNumber++;
+   if (_schedPR == true) _responseCriterion = round((5 * exp(0.2 * _PRstepNum)) - 5);    // Sched = PR
+   _PRstepNum++;
+   moveLever(Extend);     // extend lever
+   _timeOut = false;      
+   TStamp tStamp = {_boxNum, 'T', millis() - _startTime, 0, 9};
+   printQueue.push(&tStamp);
 }
 
-void Lever::endTrial() { 
-  if (_protocolNum != 5) moveLever(Retract);       // if not TH then retract lever
+void Lever::endTrial() {
+   if (_verbose) Serial.println(String(_boxNum)+" endTrial()"); 
+   if (_protocolNum != 5) moveLever(Retract);       // if not TH then retract lever
 }
 
-void Lever::startIBI() {   
-    if (_IBIDuration == 0) startBlock();
-    else
-    {   moveLever(Retract);
+void Lever::startIBI() { 
+   if (_verbose) Serial.println(String(_boxNum)+" startIBI()");  
+   if (_IBIDuration == 0) startBlock();
+   else
+   {   moveLever(Retract);
         _IBITime = 0;    // tick will handle when to end IBI 
         _boxState = IBI;      // IBI
         // pixel.setPixelColor(_boxNum, TURQUOISE);
         // pixel.show();
-    }    
+   }    
 }
 
 void Lever::endIBI() {
-     startBlock();
+   if (_verbose) Serial.println(String(_boxNum)+" endIBI()");
+   startBlock();
 }
 
 void Lever::reinforce() { 
@@ -394,16 +440,17 @@ void Lever::reinforce() {
 }
 
 void Lever::startTimeOut() {
+  if (_verbose) Serial.println(String(_boxNum)+" startTimeOut()");
     switchStim1(On); 
-    _timeOutTimer = _timeOutDuration;       // _timeOutTimer counts down with each tick
-    _boxState = TIMEOUT;                  //timeOut    
+    _timeOutTime = 0;       // _timeOutTimer counts down with each tick
+    _timeOut = true;                  //timeOut    
     TStamp tStamp = {_boxNum, 't', millis() - _startTime, 0, 9};
     printQueue.push(&tStamp);
-    // pixel.setPixelColor(_boxNum, YELLOW);
-    // pixel.show(); 
 }
 
-void Lever::endTimeOut() {   
+void Lever::endTimeOut() {
+    if (_verbose) Serial.println(String(_boxNum)+" endTimeOut()"); 
+    _timeOut = false;  
     switchStim1(Off);
     if (_trialNumber < _maxTrialNumber) startTrial(); 
     else {
@@ -416,6 +463,7 @@ void Lever::endTimeOut() {
 }
 
 void Lever::switchPump(boolean state) {
+    if (_verbose) Serial.println(String(_boxNum)+" switching pump");
     // boxNum 0..7 maps to pin 0..7 on chip1 or chip3 
     if (pumpOnHigh) chip1.digitalWrite(_boxNum+8,state);   // pumpOn = HIGH
     else chip1.digitalWrite(_boxNum+8,!state);
@@ -430,7 +478,8 @@ void Lever::switchPump(boolean state) {
     // The Pump CheckBox is index 2 
 }
 
-void Lever::switchStim1(int state) {   
+void Lever::switchStim1(int state) {
+    if (_verbose) Serial.println(String(_boxNum)+" switching LED");   
     chip0.digitalWrite(_boxNum+8,state);   // boxNum 0..7 maps to pin 8..15 on chip0
     // HIGH = OFF
     if (state) {
@@ -491,10 +540,6 @@ void Box::moveLever2(int state) {          // boxNum 0..7  maps to pin 0..7 on c
 
 // **************  Box Class Procedures *************************************
 
-// void Box::begin() {
-//   _protocolNum = 1;
-// }
-
 
 void Box::startSession() {
   lever1.startSession();
@@ -528,62 +573,13 @@ void Box::cyclePump(){
 */
 
 void Box::tick() { // do stuff every 10 mSec 
-    /*
-    Decisions: 
-        MISMATCH: 
-        _timeOutTimer has always been in mSec
-        minor:  change to _timeOutTime
-        Sometimes timeout is the pumpDuration - in mSec
-        Other times it is 20 sec.             - in Sec
-        
-        switchPumpOff: if timeOutDuration <> endTimeOut()
-      2. Many counters have counted down and when == 0 do something. 
-        Should all "Time" counts up and when Time == Duration do something?
-
-     Seems inefficent to send block time from all three states.
-        
-     
-    if (_cyclePump == true) cyclePump();        
-
-    // Do this every tick:
-    if (_boxState == TIMEOUT) {
-      _tickCounts++; 
-      if (_pumpTime == _pumpDuration) {
-         switchPump(pumpOff); 
-         // if (_timeOutDuration == 0)   // default to pumpOff           
-         endTimeOut(); 
-         // otherwise let _timeOutTime and _timeOutDuration control things. 
-      }  
-    }
-    _tickCounts++; 
-    if (_tickCounts == 100)    {         // every second
-       _tickCounts = 0; 
-       switch (_boxState) {  // PRESTART, TIMEIN, TIMEOUT, IBI, FINISHED 
-          case TIMEIN:
-            _blockTime++;
-            // TStamp tStamp = {_boxNum, '*', _blockTime, 0, 9};
-            // printQueue.push(&tStamp); 
-            if (_blockTime >+ _blockDuration) endBlock();
-            break;
-          case TIMEOUT:
-            _blockTime++;
-            // TStamp tStamp = {_boxNum, '*', _blockTime, 0, 9};
-            // printQueue.push(&tStamp); 
-            if (_blockTime >+ _blockDuration) endBlock();
-            break;
-          case IBI:
-            _blockTime++;
-            // TStamp tStamp = {_boxNum, '*', _blockTime, 0, 9};
-            // printQueue.push(&tStamp); 
-            _IBITime++;
-            if (_IBITime >= _IBIDuration) endIBI(); 
-            break;
-          case FINISHED:
-            // 
-            break;         
-       }  
+  static int boxTickCounts = 0;  // used for flashing LED and printTime
+  boxTickCounts++;
+  if (boxTickCounts == 100) {
+    boxTickCounts = 0;
+    // Serial.println(millis());
   }
-*/
+  lever1.tick();
 }
 
 void Box::handle_L1_Response() { 
@@ -858,8 +854,9 @@ void handleInputString()
      }
      if (echoInput) Serial.println("9 <"+stringCode+":"+num1+":"+num2+">"); 
      if (stringCode == "chip0") chip0.digitalWrite(num1,num2); 
-     else if (stringCode == "G")     boxArray[num1].startSession();
-     else if (stringCode == "Q")     boxArray[num1].endSession(); 
+     else if (stringCode == "G")     boxArray[0].startSession();
+     else if (stringCode == "Q")     boxArray[0].endSession();
+     else if (stringCode == "L")    boxArray[0].lever1.handleResponse(); 
      /*
      else if (stringCode == "P")     boxArray[num1].switchPump(pumpOn);
      else if (stringCode == "p")     boxArray[num1].switchPump(pumpOff);
@@ -939,9 +936,12 @@ void tick()    {
    unsigned long delta, micro1;
    micro1 = micros();
    tickCounts++;
-   for (uint8_t i = 0; i < 8; i++)  {
-     boxArray[i].tick();
+   if (tickCounts == 100) {
+       digitalWrite(ledPin, !digitalRead(ledPin));
+       tickCounts = 0;
    }
+   // for (uint8_t i = 0; i < 8; i++)
+   boxArray[0].tick();
    getInputString();
    // if (debugBoolVarList[0] == 0) checkLeverOne();
    checkLeverOneBits();
@@ -949,10 +949,6 @@ void tick()    {
    sendOneTimeStamp();
    delta = micros() - micro1;
    if (delta > maxDelta) maxDelta = delta;   
-   if (tickCounts == 100) {
-       digitalWrite(ledPin, !digitalRead(ledPin));
-       tickCounts = 0;
-   }
 }
 
 void loop() {
