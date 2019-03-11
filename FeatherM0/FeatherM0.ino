@@ -1,10 +1,11 @@
-/*  March 8th, 2019
+/*  March 9th, 2019
  *   
  *   Lever and Box classes separated - a way found to embed Lever within Box.
  *   This compiles - but no idea if it works
  *   
  *   To do:
- *   Get at least one box to run an FR1 by default.
+ *   1. Test 20 sec TO
+ *   2. 
  *   Reinforce() changes _timeOut = true which is checked in tick() each 10 mSec. 
  *   
  *   Note that all timestamps come from Lever.
@@ -128,6 +129,11 @@ class Lever {
     void setParamNum(int paramNum);
     void setBlockDuration(int blockDuration); 
     void handleResponse();
+    void switchPump(boolean state);
+    void switchStim1(int state);
+    void switchStim2(int state);
+    void moveLever(int state);
+    
   private:
     void startBlock();
     void endBlock();
@@ -138,10 +144,7 @@ class Lever {
     void reinforce();
     void startTimeOut();
     void endTimeOut();
-    void switchPump(boolean state);
-    void switchStim1(int state);
-    void switchStim2(int state);
-    void moveLever(int state);
+
     // void moveLever2(int state);
     int _boxNum; 
     boolean _timeOut = false;                     
@@ -413,10 +416,8 @@ void Lever::startIBI() {
    if (_IBIDuration == 0) startBlock();
    else
    {   moveLever(Retract);
-        _IBITime = 0;    // tick will handle when to end IBI 
-        _boxState = IBI;      // IBI
-        // pixel.setPixelColor(_boxNum, TURQUOISE);
-        // pixel.show();
+       _IBITime = 0;    // tick will handle when to end IBI 
+       _boxState = IBI;      // IBI
    }    
 }
 
@@ -854,38 +855,40 @@ void handleInputString()
      }
      if (echoInput) Serial.println("9 <"+stringCode+":"+num1+":"+num2+">"); 
      if (stringCode == "chip0") chip0.digitalWrite(num1,num2); 
-     else if (stringCode == "G")     boxArray[0].startSession();
-     else if (stringCode == "Q")     boxArray[0].endSession();
-     else if (stringCode == "L")    boxArray[0].lever1.handleResponse(); 
-     /*
-     else if (stringCode == "P")     boxArray[num1].switchPump(pumpOn);
-     else if (stringCode == "p")     boxArray[num1].switchPump(pumpOff);
-     else if (stringCode == "SCHED") boxArray[num1].setProtocolNum(num2);
-     else if (stringCode == "PUMP")  boxArray[num1].setPumpDuration(num2); 
-     else if (stringCode == "RATIO") boxArray[num1].setParamNum(num2);
-     else if (stringCode == "TIME")  boxArray[num1].setBlockDuration(num2);
+     else if (stringCode == "G")     boxArray[num1].startSession();
+     else if (stringCode == "Q")     boxArray[num1].endSession();
+     else if (stringCode == "L")     boxArray[num1].lever1.handleResponse(); 
+     else if (stringCode == "P")     boxArray[num1].lever1.switchPump(pumpOn);
+     else if (stringCode == "p")     boxArray[num1].lever1.switchPump(pumpOff);
+     else if (stringCode == "SCHED") boxArray[num1].lever1.setProtocolNum(num2);
+     else if (stringCode == "PUMP")  boxArray[num1].lever1.setPumpDuration(num2); 
+     else if (stringCode == "RATIO") boxArray[num1].lever1.setParamNum(num2);
+     else if (stringCode == "TIME")  boxArray[num1].lever1.setBlockDuration(num2);
      else if (stringCode == "R")     boxArray[num1].reportParameters();
-     else if (stringCode == "=")     boxArray[num1].moveLever(Extend);   // extend lever1
-     else if (stringCode == "-")     boxArray[num1].moveLever(Retract);    // retract lever1
-     // else if (stringCode == "~")     boxArray[num1].moveLever2(Extend);   // extend lever2  
-     // else if (stringCode == ",")     boxArray[num1].moveLever2(Retract);    // retract lever2
-     else if (stringCode == "s")     boxArray[num1].switchStim1(Off);
-     else if (stringCode == "S")     boxArray[num1].switchStim1(On);
-     else if (stringCode == "c")     boxArray[num1].switchStim2(Off);
-     else if (stringCode == "C")     boxArray[num1].switchStim2(On);
-     // else if (stringCode == "1")     boxArray[0].handle_L1_Response();
-     // else if (stringCode == "2")     boxArray[1].handle_L2_Response();
-     else if (stringCode == "V")     Serial.println("9 Ver200.11Beta");
+     else if (stringCode == "=")     boxArray[num1].lever1.moveLever(Extend);   // extend lever1
+     else if (stringCode == "-")     boxArray[num1].lever1.moveLever(Retract);    // retract lever1
+     else if (stringCode == "s")     boxArray[num1].lever1.switchStim1(Off);
+     else if (stringCode == "S")     boxArray[num1].lever1.switchStim1(On);
+     else if (stringCode == "c")     boxArray[num1].lever1.switchStim2(Off);
+     else if (stringCode == "C")     boxArray[num1].lever1.switchStim2(On);
+     else if (stringCode == "V")     Serial.println("9 StateBeta");
      else if (stringCode == "T")     twoLever = true;
      else if (stringCode == "t")     twoLever = false;
+     else if (stringCode == "D")     reportDiagnostics(); 
+     
+     /*
      // debug stuff 
      else if (stringCode == "L1")    boxArray[num1].handle_L1_Response();
      else if (stringCode == "off")   turnStuffOff();
      else if (stringCode == "i")     timeUSB();
      else if (stringCode == "E")     echoInput = !echoInput;
-     else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "B")     boxArray[num1].getBlockTime();
      else if (stringCode == "Debug") setDebugVar(num1,num2);
+     ****** Deprecated - check Python for codes being sent
+     // else if (stringCode == "1")     boxArray[0].handleResponse();
+     // else if (stringCode == "2")     boxArray[1].handleResponse();
+     // else if (stringCode == "~")     boxArray[num1].moveLever2(Extend);   // extend lever2  
+     // else if (stringCode == ",")     boxArray[num1].moveLever2(Retract);    // retract lever2
      */
      inputString = "";
    }
