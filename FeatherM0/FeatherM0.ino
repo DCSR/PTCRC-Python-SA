@@ -139,6 +139,7 @@ class Lever {
     int _boxNum;
     
   // private:
+    int _tickCounts = 0;
     void startBlock();
     void endBlock();
     void startTrial();
@@ -183,54 +184,22 @@ class Lever {
     unsigned long _startTime = 0;
 };
 
-class Box  {
-  public:
-    Lever lever1;  
-    Box(int boxNum) : lever1(boxNum) {
-        _boxNum = boxNum; 
-    }
-    void startSession();
-    void endSession();
-    // void cyclePump();
-    void tick();
-    void handle_L1_Response();
-    void setProtocolNum(int protocalNum);
-    void setPumpDuration(int pumpDuration);
-    void setParamNum(int paramNum);
-    void setBlockDuration(int blockDuration);    
-    void reportParameters();
-    void getBlockTime();
-    
-    //************
-  private:
-    int _boxNum;
-    // used in debug protocol 7 
-    boolean _cyclePump = false;
-    int _cycleCount = 0;
-    int _cycles;
-    int _pumpOnTime;          // set in StartSession()
-    int _pumpOffTime = 20;    // default
-    int _pumpOnTicker = 0;
-    int _pumpOffTicker = 0;    
-};
-
 // ************* Lever Class Procedures *************************************
 
 Lever::Lever(int boxNum) {
   _boxNum = boxNum;
 }
 
-void Lever::tick(){ 
-    static int tickCounts = 0;      
+void Lever::tick(){       
     if (_timeOut) {
       _pumpTime++;
       if (_pumpTime == _pumpDuration) switchPump(pumpOff);  // change to pump.update() 
       _timeOutTime++;
       if (_timeOutTime == _timeOutDuration) endTimeOut();     
     }
-    tickCounts++; 
-    if (tickCounts == 100)    {         // do this every second
-       tickCounts = 0;
+    _tickCounts++; 
+    if (_tickCounts == 100)    {         // do this every second
+       _tickCounts = 0;
        //switch (_boxState) {  // PRESTART, BLOCK, IBI, FINISHED 
        //   case BLOCK:
        if (_boxState == BLOCK) {
@@ -548,6 +517,37 @@ void Box::moveLever2(int state) {          // boxNum 0..7  maps to pin 0..7 on c
 
 // **************  Box Class Procedures *************************************
 
+class Box  {
+  public:
+    Lever lever1;  
+    Box(int boxNum) : lever1(boxNum) {
+        _boxNum = boxNum; 
+    }
+    void startSession();
+    void endSession();
+    // void cyclePump();
+    void tick();
+    void handle_L1_Response();
+    void setProtocolNum(int protocalNum);
+    void setPumpDuration(int pumpDuration);
+    void setParamNum(int paramNum);
+    void setBlockDuration(int blockDuration);    
+    void reportParameters();
+    void getBlockTime();
+    
+    //************
+  private:
+    int _boxTicks = 0;  // used for flashing LED and printTime
+    int _boxNum;
+    // used in debug protocol 7 
+    boolean _cyclePump = false;
+    int _cycleCount = 0;
+    int _cycles;
+    int _pumpOnTime;          // set in StartSession()
+    int _pumpOffTime = 20;    // default
+    int _pumpOnTicker = 0;
+    int _pumpOffTicker = 0;    
+};
 
 void Box::startSession() {
   lever1.startSession();
@@ -581,11 +581,10 @@ void Box::cyclePump(){
 */
 
 void Box::tick() { // do stuff every 10 mSec 
-  static int boxTickCounts = 0;  // used for flashing LED and printTime
-  boxTickCounts++;
-  if (boxTickCounts == 100) {
-    boxTickCounts = 0;
-    // Serial.println(millis());
+  _boxTicks++;
+  if (_boxTicks == 100) {
+    _boxTicks = 0;
+    // Probabaly no need for boxTicks
   }
   lever1.tick();
 }
