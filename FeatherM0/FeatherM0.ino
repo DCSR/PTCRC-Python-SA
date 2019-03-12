@@ -133,6 +133,7 @@ class Lever {
     void switchStim1(int state);
     void switchStim2(int state);
     void moveLever(int state);
+    int _boxNum;
     
   private:
     void startBlock();
@@ -146,9 +147,9 @@ class Lever {
     void endTimeOut();
 
     // void moveLever2(int state);
-    int _boxNum; 
+ 
     boolean _timeOut = false;                     
-    boolean _verbose = true;
+    boolean _verbose = false;
     boolean _schedPR = false;
     boolean _schedTH = false;
     // defaults to a 6h FR1 session 
@@ -183,7 +184,7 @@ class Lever {
 class Box  {
   public:
     Lever lever1;  
-    Box(int boxNum) : lever1(1) {
+    Box(int boxNum) : lever1(boxNum) {
         _boxNum = boxNum; 
     }
     void startSession();
@@ -725,20 +726,11 @@ void setup() {
   portTwoValue = chip3.readPort(0);          // Ver 200.04
   // Serial.println(portOneValue,BIN);
 
-/*
-  boxArray[0].begin();
-  boxArray[1].begin();
-  boxArray[2].begin();
-  boxArray[3].begin();
-  boxArray[4].begin();
-  boxArray[5].begin();
-  boxArray[6].begin();
-  boxArray[7].begin();
-*/
-  
-  delay(500); 
+  delay(2000); 
   init_10_mSec_Timer(); 
   Serial.println("9 Ver200.11Beta");
+  for (uint8_t i = 0; i < 8; i++) Serial.println(boxArray[i].lever1._boxNum);
+  
 }
 
 void setDebugVar(int index, int level) {
@@ -943,8 +935,7 @@ void tick()    {
        digitalWrite(ledPin, !digitalRead(ledPin));
        tickCounts = 0;
    }
-   // for (uint8_t i = 0; i < 8; i++)
-   boxArray[0].tick();
+   for (uint8_t i = 0; i < 8; i++) boxArray[i].tick();
    getInputString();
    // if (debugBoolVarList[0] == 0) checkLeverOne();
    checkLeverOneBits();
