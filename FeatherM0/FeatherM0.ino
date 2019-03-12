@@ -1,11 +1,14 @@
-/*  March 9th, 2019
+/*  March 11th, 2019
  *   
  *   Lever and Box classes separated - a way found to embed Lever within Box.
  *   This compiles - but no idea if it works
  *   
  *   To do:
- *   1. Test 20 sec TO
- *   2. 
+ *   Top Priority: Get timing fixed. Presently not timestamping _blockTime 
+ *   Only 3 and 7 send _blockTime
+ *    
+ *   2. Test 20 sec TO
+ *    
  *   Reinforce() changes _timeOut = true which is checked in tick() each 10 mSec. 
  *   
  *   Note that all timestamps come from Lever.
@@ -120,7 +123,7 @@ enum  states { PRESTART, BLOCK, IBI, FINISHED };
 
 class Lever {
   public:
-    Lever(int boxNUm);
+    Lever(int boxNum);
     void tick();
     void startSession();
     void endSession();
@@ -135,7 +138,7 @@ class Lever {
     void moveLever(int state);
     int _boxNum;
     
-  private:
+  // private:
     void startBlock();
     void endBlock();
     void startTrial();
@@ -178,7 +181,6 @@ class Lever {
     unsigned long _IBIDuration = 0;
     unsigned long _IBITime = 0;    
     unsigned long _startTime = 0;
-  
 };
 
 class Box  {
@@ -262,12 +264,14 @@ void Lever::startSession() {
         _schedPR = false;
         _schedTH = false;
         _maxTrialNumber = 999;           
-        //_responseCriterion = _paramNum;
+        _responseCriterion = _paramNum;
+        /*
         _responseCriterion = 2;         // for debug
         _blockDuration = 60;
         _IBIDuration = 10;                  // no IBI
         _maxBlockNumber = 2;
         Serial.println(String(_boxNum)+" started");
+        */
       }
       else if (_protocolNum == 2) {      // FR1 x 20
         _schedPR = false;
@@ -325,6 +329,7 @@ void Lever::startSession() {
       startBlock();
       // if (twoLever) moveLever2(Extend);
   }
+  Serial.println("9 "+String(_boxNum)+"_"+String(_responseCriterion)+"_"+String(_protocolNum)); 
 }
 
 void Lever::endSession () {   
@@ -352,6 +357,7 @@ void Lever::setPumpDuration(int pumpDuration) {
 
 void Lever::setParamNum(int paramNum) {
   _paramNum = paramNum;
+  // Serial.println("Setting Lever _paramNum to "+String(_paramNum));
 }
 
 void Lever::setBlockDuration(int blockDuration) {
@@ -607,6 +613,7 @@ void Box::setPumpDuration(int pumpDuration) {
 
 void Box::setParamNum(int paramNum) {
   // _paramNum = paramNum;
+  // Serial.println("Setting Box paramNum to "+String(paramNum));
   lever1.setParamNum(paramNum);
 }
 
@@ -616,12 +623,10 @@ void Box::setBlockDuration(int blockDuration) {
 }
 
 void Box::reportParameters() { 
-  /*
-  Serial.print("9 "+String(_boxNum)+":"+String(_protocolNum)+":");
-  Serial.print(String(_responseCriterion)+":"+String(_blockDuration)+":");
-  Serial.print(String(_pumpDuration)+":"+String(_timeOutDuration));
-  Serial.println("-"+String(_maxTrialNumber));
-  */
+  Serial.print("9 "+String(lever1._boxNum)+":"+String(lever1._protocolNum)+":");
+  Serial.print(String(lever1._responseCriterion)+":"+String(lever1._blockDuration)+":");
+  Serial.print(String(lever1._pumpDuration)+":"+String(lever1._timeOutDuration));
+  Serial.println("-"+String(lever1._maxTrialNumber));
 } 
 
 void Box::getBlockTime() {
@@ -726,11 +731,9 @@ void setup() {
   portTwoValue = chip3.readPort(0);          // Ver 200.04
   // Serial.println(portOneValue,BIN);
 
-  delay(2000); 
+  delay(500); 
   init_10_mSec_Timer(); 
-  Serial.println("9 Ver200.11Beta");
-  for (uint8_t i = 0; i < 8; i++) Serial.println(boxArray[i].lever1._boxNum);
-  
+  Serial.println("9 StateBeta");
 }
 
 void setDebugVar(int index, int level) {
@@ -849,12 +852,12 @@ void handleInputString()
      if (stringCode == "chip0") chip0.digitalWrite(num1,num2); 
      else if (stringCode == "G")     boxArray[num1].startSession();
      else if (stringCode == "Q")     boxArray[num1].endSession();
-     else if (stringCode == "L")     boxArray[num1].lever1.handleResponse(); 
+     else if (stringCode == "L1")    boxArray[num1].lever1.handleResponse(); 
      else if (stringCode == "P")     boxArray[num1].lever1.switchPump(pumpOn);
      else if (stringCode == "p")     boxArray[num1].lever1.switchPump(pumpOff);
      else if (stringCode == "SCHED") boxArray[num1].lever1.setProtocolNum(num2);
      else if (stringCode == "PUMP")  boxArray[num1].lever1.setPumpDuration(num2); 
-     else if (stringCode == "RATIO") boxArray[num1].lever1.setParamNum(num2);
+     else if (stringCode == "RATIO") boxArray[num1].setParamNum(num2);
      else if (stringCode == "TIME")  boxArray[num1].lever1.setBlockDuration(num2);
      else if (stringCode == "R")     boxArray[num1].reportParameters();
      else if (stringCode == "=")     boxArray[num1].lever1.moveLever(Extend);   // extend lever1
@@ -938,7 +941,8 @@ void tick()    {
    for (uint8_t i = 0; i < 8; i++) boxArray[i].tick();
    getInputString();
    // if (debugBoolVarList[0] == 0) checkLeverOne();
-   checkLeverOneBits();
+   
+   // checkLeverOneBits();
    // if (twoLever) checkLeverTwo();
    sendOneTimeStamp();
    delta = micros() - micro1;
