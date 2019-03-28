@@ -1,4 +1,6 @@
-/*  March 11th, 2019
+/*  March 28th, 2019
+ *   
+ *   
  *   
  *   Lever and Box classes separated - a way found to embed Lever within Box.
  *   This compiles - but no idea if it works
@@ -153,7 +155,6 @@ class Lever {
     // void moveLever2(int state);
  
     boolean _timeOut = false;                     
-    boolean _verbose = false;
     boolean _schedPR = false;
     boolean _schedTH = false;
     // defaults to a 6h FR1 session 
@@ -222,8 +223,6 @@ void Lever::startSession() {
   // Python protocol list:  
   // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', 
   // '4: PR', '5: TH', '6: IntA: 5-25', '7: Debug']
-
-  if (_verbose) Serial.println(String(_boxNum)+" startSession()");
 
    _timeOutDuration = _pumpDuration;     // except in protocol 2
 
@@ -304,7 +303,6 @@ void Lever::startSession() {
 void Lever::endSession () {   
     // endTrial(); the only thing this did was retract the lever, but see next line. 
     // _cyclePump = false;
-    if (_verbose) Serial.println(String(_boxNum)+" endSession()");
     moveLever(Retract);         // was moveLever1
     // moveLever2(Retract);
     switchStim1(Off);
@@ -348,7 +346,6 @@ void Lever::handleResponse() {
 
 
 void Lever::startBlock() {
-  if (_verbose) Serial.println(String(_boxNum)+" startBlock()");
   _blockTime = 0;
   _trialNumber = 0;
   _blockNumber++;
@@ -362,16 +359,14 @@ void Lever::startBlock() {
   startTrial();
 }
 
-void Lever::endBlock() { 
-   if (_verbose) Serial.println(String(_boxNum)+" endBlock()");   
+void Lever::endBlock() {   
    TStamp tStamp = {_boxNum, 'b', millis() - _startTime, 0, 9};
    printQueue.push(&tStamp);
    if (_blockNumber < _maxBlockNumber) startIBI();
    else endSession();
 }
 
-void Lever::startTrial() {
-   if (_verbose) Serial.println(String(_boxNum)+" startTrial()");   
+void Lever::startTrial() {   
    _trialResponses = 0;
    _trialNumber++;
    if (_schedPR == true) _responseCriterion = round((5 * exp(0.2 * _PRstepNum)) - 5);    // Sched = PR
@@ -383,12 +378,10 @@ void Lever::startTrial() {
 }
 
 void Lever::endTrial() {
-   if (_verbose) Serial.println(String(_boxNum)+" endTrial()"); 
    if (_protocolNum != 5) moveLever(Retract);       // if not TH then retract lever
 }
 
-void Lever::startIBI() { 
-   if (_verbose) Serial.println(String(_boxNum)+" startIBI()");  
+void Lever::startIBI() {  
    if (_IBIDuration == 0) startBlock();
    else
    {   moveLever(Retract);
@@ -398,7 +391,6 @@ void Lever::startIBI() {
 }
 
 void Lever::endIBI() {
-   if (_verbose) Serial.println(String(_boxNum)+" endIBI()");
    startBlock();
 }
 
@@ -417,7 +409,6 @@ void Lever::reinforce() {
 }
 
 void Lever::startTimeOut() {
-  if (_verbose) Serial.println(String(_boxNum)+" startTimeOut()");
     switchStim1(On); 
     _timeOutTime = 0;       // _timeOutTimer counts down with each tick
     _timeOut = true;                  //timeOut    
@@ -426,7 +417,6 @@ void Lever::startTimeOut() {
 }
 
 void Lever::endTimeOut() {
-    if (_verbose) Serial.println(String(_boxNum)+" endTimeOut()"); 
     _timeOut = false;  
     switchStim1(Off);
     if (_trialNumber < _maxTrialNumber) startTrial(); 
@@ -440,7 +430,6 @@ void Lever::endTimeOut() {
 }
 
 void Lever::switchPump(boolean state) {
-    if (_verbose) Serial.println(String(_boxNum)+" switching pump");
     // boxNum 0..7 maps to pin 0..7 on chip1 or chip3 
     if (pumpOnHigh) chip1.digitalWrite(_boxNum+8,state);   // pumpOn = HIGH
     else chip1.digitalWrite(_boxNum+8,!state);
@@ -455,8 +444,7 @@ void Lever::switchPump(boolean state) {
     // The Pump CheckBox is index 2 
 }
 
-void Lever::switchStim1(int state) {
-    if (_verbose) Serial.println(String(_boxNum)+" switching LED");   
+void Lever::switchStim1(int state) { 
     chip0.digitalWrite(_boxNum+8,state);   // boxNum 0..7 maps to pin 8..15 on chip0
     // HIGH = OFF
     if (state) {
