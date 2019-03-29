@@ -1,7 +1,7 @@
 """
 bitCheck
 
-Feb 2, 2019 
+Mar 29, 2019 
 
 SA200.10
 
@@ -68,6 +68,7 @@ class GuiClass(object):
 
         self.selectMax_x_Scale = IntVar(value = 180)
         self.selectedBox = IntVar(value = 0)
+        self.selectedReinforcer = IntVar(value = 0)
         self.OS_String = StringVar(value="OS = ?")
 
         self.debug1CheckVar = BooleanVar(value=False)            
@@ -657,6 +658,13 @@ class GuiClass(object):
         debugCheckButton5 = Checkbutton(self.diagnosticButtonFrame, text = "not used", variable = self.debug5CheckVar, \
                 onvalue = True, offvalue = False)       
         debugCheckButton5.grid(column = 0, row = 9,sticky = (EW))
+                               
+        reinforcerlabel = ttk.Label(self.diagnosticButtonFrame, text="Reinforcer")
+        reinforcerlabel.grid(column = 0, row = 10,pady=5, padx=5)
+        drugRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="Drug", variable=self.selectedReinforcer, value=0)
+        drugRadiobutton.grid(column = 0, row = 11)
+        foodRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="Food", variable=self.selectedReinforcer, value=1)
+        foodRadiobutton.grid(column = 0, row = 12)
                
         self.topTextFrame = ttk.Frame(self.diagnosticFrame,borderwidth=3, relief="sunken")
         self.topTextFrame.grid(column = 1, row = 1)
@@ -896,6 +904,9 @@ class GuiClass(object):
         aLine = iniFile.readline().rstrip("\n")   # read next line
         tokens = aLine.split()
         self.TwoLeverCheckVar.set(tokens[0])
+        aLine = iniFile.readline().rstrip("\n")   # read next line
+        tokens = aLine.split()
+        self.selectedReinforcer.set(tokens[0])
         iniFile.close()
 
     def writeToINIFile(self):
@@ -925,6 +936,10 @@ class GuiClass(object):
             iniFile.write("1"+'\n')
         else:
             iniFile.write("0"+'\n')
+        if (self.selectedReinforcer.get() == 0):
+            iniFile.write("0"+'\n')
+        else:
+            iniFile.write("1"+'\n')
         iniFile.close()
         
     def readExampleFiles(self):
