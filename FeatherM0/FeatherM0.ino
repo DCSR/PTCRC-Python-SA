@@ -1,11 +1,65 @@
 /*  March 28th, 2019
  *   
+ *   Done: 
+ *   Python has a RadioButton to select Drug or Food
+ *   <Reward boxNum Type> is passed to each box when the session starts. 
+ *   Lever::setRewardType() added - print comment only, so far
  *   
  *   
- *   Lever and Box classes separated - a way found to embed Lever within Box.
- *   This compiles - but no idea if it works
+ *   Test: 
+ *   Programm was changed from decrementing a timer value to incrementing.
+ *   Why? It seems more intuitive to count down.
+ *   if (_pumpTime > 0) {
+ *      _pumpTime--;
+ *      if (_pumpTime == 0) switchOff
+ *   }
  *   
- *   To do:
+ *   Check:
+ *   - The Python time should reflect _blockTime or _IBITime
+ *   - How should IBI be indicated?
+ *      
+ *   To Do:
+ *   Delete TestOutputs()
+ *   
+ *   
+ *   Think about (low priority): 
+ *   
+ *   Four chips are initiaized by the program
+ *   
+ *   Each bank of levers is associated with 2 (16 bit) ports. 
+ *   And, for example, port1.read() and port0.write are using 16 bit addresses. The
+ *   MCP23S17 class allows addressing using 8 bit addresses (so don't have to add 8).
+ *   It would be more transparent if individual ports were assigned to the lever.  
+ *   Also, right now the input and reinforcer output is on the same chip. Need to be  
+ *   able to choose chip and port _inputAddr(0,0)
+ *   
+ *   void Lever::switchPump(boolean state) {
+        chip1.digitalWrite(_boxNum+8,!state);
+ *   
+ *   Default:  
+ *    _lowChip = chip0;
+ *    _highChip = chip1; 
+ *   
+ *   lever.setPorts(inputPort, outputPort).
+ *      _inputPort = inputPort;
+ *   
+ *   Then: 
+ *   MCP23S17 inputPort = chip0;
+ *   
+ *   
+ *   The lever shouldn't care whether it is a pump or hopper it is switching.
+ *   It will only have one device.
+ *   
+ *   But it does need to know which Port to switch.
+ *   
+ *   
+ *   Set _drugReward initially in debug protocol then as a value sent from Python
+ *   
+ *   lever.setDrugReward(boolean value)
+ *      _drugReward = value etc..
+ *    
+ *   
+ *   
  *   Top Priority: Get timing fixed. Presently not timestamping _blockTime 
  *   Only 3 and 7 send _blockTime
  *    
@@ -127,6 +181,7 @@ class Lever {
   public:
     Lever(int boxNum);
     void tick();
+    void setRewardType(int type);
     void startSession();
     void endSession();
     void setProtocolNum(int protocalNum);  // set with lever1._protocolNum = protocolNum
@@ -142,6 +197,7 @@ class Lever {
     
   // private:
     int _tickCounts = 0;
+    int _rewardType = 0;
     void startBlock();
     void endBlock();
     void startTrial();
@@ -216,6 +272,12 @@ void Lever::tick(){
             if (_IBITime >= _IBIDuration) endIBI(); 
             }      
        }  
+}
+
+void Lever::setRewardType(int type) {
+  _rewardType = type;
+  if (_rewardType == 0) Serial.println("9 Box_"+String(_boxNum)+"_drug_reward");
+  else Serial.println("9 Box_"+String(_boxNum)+"_food_reward");
 }
 
 void Lever::startSession() { 
@@ -686,6 +748,7 @@ void turnStuffOff(){
   chip3.writePort(1,0x00);    // Off  
 }
 
+/*
 void testOutputs() {
   static byte pin = 15;
   chip0.digitalWrite(pin,HIGH);   // turn something OFF
@@ -693,6 +756,7 @@ void testOutputs() {
   if (pin > 15) pin = 0;
   chip0.digitalWrite(pin,LOW);   // turn something ON
 }
+*/
 
 void setup() {
   Serial.begin(115200);
@@ -803,6 +867,10 @@ void checkLeverTwo() {
 }
 */
 
+void setRewardType(int type) {
+  
+}
+
 void getInputString() {
     while (Serial.available() > 0) {               // repeat while something in the buffer
       char aChar = Serial.read();                  // get the next character
@@ -857,6 +925,7 @@ void handleInputString()
      else if (stringCode == "T")     twoLever = true;
      else if (stringCode == "t")     twoLever = false;
      else if (stringCode == "D")     reportDiagnostics(); 
+     else if (stringCode == "REWARD") boxArray[num1].lever1.setRewardType(num2); 
      
      /*
      // debug stuff 

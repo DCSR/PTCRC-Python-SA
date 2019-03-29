@@ -1211,6 +1211,11 @@ class GuiClass(object):
                      
     def startSession(self,boxIndex):
         if self.arduino0.activeConnection == True:
+            if self.selectedReinforcer.get() == 0:
+                self.outputText("<REWARD "+str(boxIndex)+" 0>")
+            else:
+                self.outputText("<REWARD "+str(boxIndex)+" 1>")
+                
             if self.TwoLeverCheckVar.get() == True:
                 self.outputText("<T>")
             else:
