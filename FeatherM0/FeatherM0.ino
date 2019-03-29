@@ -3,8 +3,7 @@
  *   Done: 
  *   Python has a RadioButton to select Drug or Food
  *   <Reward boxNum Type> is passed to each box when the session starts. 
- *   Lever::setRewardType() added - print comment only, so far
- *   
+ *   Lever::setRewardType() initializes _rewardType for each box.
  *   
  *   Test: 
  *   Programm was changed from decrementing a timer value to incrementing.
@@ -17,10 +16,6 @@
  *   Check:
  *   - The Python time should reflect _blockTime or _IBITime
  *   - How should IBI be indicated?
- *      
- *   To Do:
- *   Delete TestOutputs()
- *   
  *   
  *   Think about (low priority): 
  *   
@@ -747,16 +742,6 @@ void turnStuffOff(){
   chip2.writePort(0xFFFF);
   chip3.writePort(1,0x00);    // Off  
 }
-
-/*
-void testOutputs() {
-  static byte pin = 15;
-  chip0.digitalWrite(pin,HIGH);   // turn something OFF
-  pin++;
-  if (pin > 15) pin = 0;
-  chip0.digitalWrite(pin,LOW);   // turn something ON
-}
-*/
 
 void setup() {
   Serial.begin(115200);
