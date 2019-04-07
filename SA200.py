@@ -1,7 +1,7 @@
 """
 bitCheck
 
-Mar 29, 2019 
+April 6th - on the road, 2019 
 
 SA200.10
 
@@ -71,11 +71,14 @@ class GuiClass(object):
         self.selectedReinforcer = IntVar(value = 0)
         self.OS_String = StringVar(value="OS = ?")
 
-        self.debug1CheckVar = BooleanVar(value=False)            
-        self.debug2CheckVar = BooleanVar(value=False)            # Not currently used
-        self.debug3CheckVar = BooleanVar(value=False)            # Not currently used
-        self.debug4CheckVar = BooleanVar(value=False)            # Not currently used
-        self.debug5CheckVar = BooleanVar(value=False)            # Not currently used
+        self.sys0CheckVar = BooleanVar(value=False)            
+        self.sys1CheckVar = BooleanVar(value=False)            
+        self.sys2CheckVar = BooleanVar(value=False)            
+        self.sys3CheckVar = BooleanVar(value=False)            
+        self.sys4CheckVar = BooleanVar(value=False)
+        self.sys5CheckVar = BooleanVar(value=False)            
+        self.sys6CheckVar = BooleanVar(value=False)            
+        self.sys7CheckVar = BooleanVar(value=False) 
         
         self.showDataStreamCheckVar = BooleanVar(value=False)
         self.checkLeversCheckVar = BooleanVar(value=True)
@@ -627,44 +630,97 @@ class GuiClass(object):
                 command=lambda boxIndex = 7: self.stopSession(boxIndex)).grid(column = 1, row = 7) 
 
         self.diagnosticButtonFrame = ttk.Frame(self.diagnosticFrame,borderwidth=3, relief="sunken")
-        self.diagnosticButtonFrame.grid(column = 0, row = 1)
+        self.diagnosticButtonFrame.grid(column = 0, row = 1, sticky = (N))
         
+        testButton1 = ttk.Button(self.diagnosticButtonFrame,text="testFunction1", command = self.testFunction1)
+        testButton1.grid(column = 0, row = 1, columnspan = 3)
+        testButton2 = ttk.Button(self.diagnosticButtonFrame,text="testFunction2",command = self.testFunction2)
+        testButton2.grid(column = 0, row = 2, columnspan = 3)
+        testButton3 = ttk.Button(self.diagnosticButtonFrame,text="testFunction3",command = self.testFunction3)
+        testButton3.grid(column = 0, row = 3, columnspan = 3)
+        diagnosticsButton = ttk.Button(self.diagnosticButtonFrame,text="Diagnostics",command = self.diagnostics)
+        diagnosticsButton.grid(column = 0, row = 4, columnspan = 3)
+
+        # ******************************* Aril 4th ***************************
+        # Check how and whether "Check Levers", "Use bitCheck" and "selectedReinforcer are used.
+
+        # debugVarlist is part of sysVarList - is that important?        
+        """
         checkLeversCheckButton = Checkbutton(self.diagnosticButtonFrame, text = "Check Levers", variable = self.checkLeversCheckVar, \
                     onvalue = True, offvalue = False, command=lambda: self.toggleCheckLevers(self.checkLeversCheckVar.get()))       
         checkLeversCheckButton.grid(column = 0, row = 0, sticky = (EW))
-
-
-        testButton1 = ttk.Button(self.diagnosticButtonFrame,text="testFunction1", command = self.testFunction1)
-        testButton1.grid(column = 0, row = 1)
-        testButton2 = ttk.Button(self.diagnosticButtonFrame,text="testFunction2",command = self.testFunction2)
-        testButton2.grid(column = 0, row = 2)
-        testButton3 = ttk.Button(self.diagnosticButtonFrame,text="testFunction3",command = self.testFunction3)
-        testButton3.grid(column = 0, row = 3)
-        diagnosticsButton = ttk.Button(self.diagnosticButtonFrame,text="Diagnostics",command = self.diagnostics)
-        diagnosticsButton.grid(column = 0, row = 4)
         
         debugCheckButton1 = Checkbutton(self.diagnosticButtonFrame, text = "Use bitCheck",variable = self.debug1CheckVar, \
                              onvalue = True, offvalue = False, command=lambda: self.toggleDebugVar(0,self.debug1CheckVar.get()))
         debugCheckButton1.grid(column = 0, row = 5,sticky = (EW))
-        debugCheckButton2 = Checkbutton(self.diagnosticButtonFrame, text = "not used", variable = self.debug2CheckVar, \
-                onvalue = True, offvalue = False)       
-        debugCheckButton2.grid(column = 0, row = 6,sticky = (EW))
-        debugCheckButton3 = Checkbutton(self.diagnosticButtonFrame, text = "not used", variable = self.debug3CheckVar, \
-                onvalue = True, offvalue = False)       
-        debugCheckButton3.grid(column = 0, row = 7,sticky = (EW))
-        debugCheckButton4 = Checkbutton(self.diagnosticButtonFrame, text = "not used", variable = self.debug4CheckVar, \
-                onvalue = True, offvalue = False)       
-        debugCheckButton4.grid(column = 0, row = 8,sticky = (EW))
-        debugCheckButton5 = Checkbutton(self.diagnosticButtonFrame, text = "not used", variable = self.debug5CheckVar, \
-                onvalue = True, offvalue = False)       
-        debugCheckButton5.grid(column = 0, row = 9,sticky = (EW))
-                               
-        reinforcerlabel = ttk.Label(self.diagnosticButtonFrame, text="Reinforcer")
-        reinforcerlabel.grid(column = 0, row = 10,pady=5, padx=5)
+
+        # reinforcerlabel = ttk.Label(self.diagnosticButtonFrame, text="Reinforcer")
+        # reinforcerlabel.grid(column = 0, row = 10,pady=5, padx=5)
         drugRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="Drug", variable=self.selectedReinforcer, value=0)
         drugRadiobutton.grid(column = 0, row = 11)
         foodRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="Food", variable=self.selectedReinforcer, value=1)
-        foodRadiobutton.grid(column = 0, row = 12)
+        foodRadiobutton.grid(column = 1, row = 11)
+        
+        """
+        # Eight tkinter boolean vars widgets
+
+        sys0label = ttk.Label(self.diagnosticButtonFrame, text="Label0")
+        sys0label.grid(column = 0, row = 5, sticky = (W))
+        sys0FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys0CheckVar, value=0)
+        sys0FalseRadiobutton.grid(column = 1, row = 5, sticky = (W))
+        sys0TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys0CheckVar, value=1)
+        sys0TrueRadiobutton.grid(column = 2, row = 5, sticky = (W))
+
+        sys1label = ttk.Label(self.diagnosticButtonFrame, text="Label1")
+        sys1label.grid(column = 0, row = 6, sticky = (W))
+        sys1FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys1CheckVar, value=0)
+        sys1FalseRadiobutton.grid(column = 1, row = 6, sticky = (W))
+        sys1TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys1CheckVar, value=1)
+        sys1TrueRadiobutton.grid(column = 2, row = 6, sticky = (W))
+
+        sys2label = ttk.Label(self.diagnosticButtonFrame, text="Label2")
+        sys2label.grid(column = 0, row = 7, sticky = (W))
+        sys2FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys2CheckVar, value=0)
+        sys2FalseRadiobutton.grid(column = 1, row = 7, sticky = (W))
+        sys2TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys2CheckVar, value=1)
+        sys2TrueRadiobutton.grid(column = 2, row = 7, sticky = (W))
+
+        sys3label = ttk.Label(self.diagnosticButtonFrame, text="Label3")
+        sys3label.grid(column = 0, row = 8, sticky = (W))
+        sys3FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys3CheckVar, value=0)
+        sys3FalseRadiobutton.grid(column = 1, row = 8, sticky = (W))
+        sys3TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys3CheckVar, value=1)
+        sys3TrueRadiobutton.grid(column = 2, row = 8, sticky = (W))
+
+        sys4label = ttk.Label(self.diagnosticButtonFrame, text="Label4")
+        sys4label.grid(column = 0, row = 9, sticky = (W))
+        sys4FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys4CheckVar, value=0)
+        sys4FalseRadiobutton.grid(column = 1, row = 9, sticky = (W))
+        sys4TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys4CheckVar, value=1)
+        sys4TrueRadiobutton.grid(column = 2, row = 9, sticky = (W))
+
+        sys5label = ttk.Label(self.diagnosticButtonFrame, text="Label5")
+        sys5label.grid(column = 0, row = 10, sticky = (W))
+        sys5FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys5CheckVar, value=0)
+        sys5FalseRadiobutton.grid(column = 1, row = 10, sticky = (W))
+        sys5TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys5CheckVar, value=1)
+        sys5TrueRadiobutton.grid(column = 2, row = 10, sticky = (W))
+
+        sys6label = ttk.Label(self.diagnosticButtonFrame, text="Label6")
+        sys6label.grid(column = 0, row = 11, sticky = (W))
+        sys6FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys6CheckVar, value=0)
+        sys6FalseRadiobutton.grid(column = 1, row = 11, sticky = (W))
+        sys6TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys6CheckVar, value=1)
+        sys6TrueRadiobutton.grid(column = 2, row = 11, sticky = (W))
+
+        sys7label = ttk.Label(self.diagnosticButtonFrame, text="Label7")
+        sys7label.grid(column = 0, row = 12, sticky = (W))
+        sys7FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys7CheckVar, value=0)
+        sys7FalseRadiobutton.grid(column = 1, row = 12, sticky = (W))
+        sys7TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys7CheckVar, value=1)
+        sys7TrueRadiobutton.grid(column = 2, row = 12, sticky = (W))
+
+        # ***************************************************************************************
                
         self.topTextFrame = ttk.Frame(self.diagnosticFrame,borderwidth=3, relief="sunken")
         self.topTextFrame.grid(column = 1, row = 1)
@@ -711,7 +767,8 @@ class GuiClass(object):
         self.B7_boolVarList = [self.B7_lever1CheckVar, self.B7_lever2CheckVar, self.B7_pumpCheckVar, self.B7_LED1CheckVar, self.B7_LED2CheckVar]
         self.B8_boolVarList = [self.B8_lever1CheckVar, self.B8_lever2CheckVar, self.B8_pumpCheckVar, self.B8_LED1CheckVar, self.B8_LED2CheckVar]
 
-        self.sysVarList = [self.debug1CheckVar, self.debug2CheckVar, self.debug3CheckVar, self.debug4CheckVar, self.debug5CheckVar]
+        self.sysVarList = [self.sys0CheckVar, self.sys1CheckVar, self.sys2CheckVar, self.sys3CheckVar, \
+                           self.sys4CheckVar, self.sys5CheckVar, self.sys6CheckVar, self.sys7CheckVar]
         
         self.boolVarLists = [self.B1_boolVarList,self.B2_boolVarList,self.B3_boolVarList,self.B4_boolVarList, \
                               self.B5_boolVarList,self.B6_boolVarList,self.B7_boolVarList,self.B8_boolVarList, \
@@ -901,12 +958,16 @@ class GuiClass(object):
             self.calcPumpTimeList[i].set(tokens[6])
         aString = iniFile.readline().rstrip("\n")      # COM number (done differently on a Mac)
         self.portString.set(aString)
-        aLine = iniFile.readline().rstrip("\n")   # read next line
-        tokens = aLine.split()
-        self.TwoLeverCheckVar.set(tokens[0])
-        aLine = iniFile.readline().rstrip("\n")   # read next line
-        tokens = aLine.split()
-        self.selectedReinforcer.set(tokens[0])
+        print("portString = "+aString)
+        aString = iniFile.readline().rstrip("\n")   # read next line
+        tokens = aString.split()
+        varCode = int(tokens[0])
+        print("varCode =",varCode,format(varCode,'08b'))       
+        for bit in range(8):
+            mask = (2**bit)     # mask (eg. 00001000)
+            # Uses AND and mask to determine whether to set bit
+            if (varCode & mask > 0): self.sysVarList[bit].set(True)
+            else: self.sysVarList[bit].set(False)
         iniFile.close()
 
     def writeToINIFile(self):
@@ -932,14 +993,20 @@ class GuiClass(object):
                 print(tempStr)
             iniFile.write(tempStr+'\n')
         iniFile.write(self.portString.get()+'\n')
-        if (self.TwoLeverCheckVar.get() == True):
-            iniFile.write("1"+'\n')
-        else:
-            iniFile.write("0"+'\n')
-        if (self.selectedReinforcer.get() == 0):
-            iniFile.write("0"+'\n')
-        else:
-            iniFile.write("1"+'\n')
+        varCode = 0
+        for bit in range(8):
+            # print(self.sysVarList[bit].get())
+            if (self.sysVarList[bit].get() == False):               
+                # Set bit to 0 if False
+                # uses AND and a mask (eg. 11110111)
+                varCode = varCode & (255 - (2**bit))           
+            else:
+                print("T")
+                # Set bit to 1 if True
+                # uses OR and a number (eg. 1,2,4,8 etc)
+                varCode = varCode | (2**bit)
+        print("varCode =",varCode,format(varCode,'08b')) 
+        iniFile.write(str(varCode)+'\n')       
         iniFile.close()
         
     def readExampleFiles(self):
