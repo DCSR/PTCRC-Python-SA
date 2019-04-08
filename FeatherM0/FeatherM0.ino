@@ -1,9 +1,33 @@
-/*  March 28th, 2019
+/*  
+ *   <SYSVARS num> and DecodeSySVars(num) sets eight sysVars
  *   
- *   Done: 
- *   Python has a RadioButton to select Drug or Food
- *   <Reward boxNum Type> is passed to each box when the session starts. 
- *   Lever::setRewardType() initializes _rewardType for each box.
+ *   To Do:
+ *   Incorporate Device??
+ *   If not: 
+ *   -  rename switchPump to switchDevice
+ *   -  use rewardType to determine port
+ *   -  rename _pumpTime, _pumpDuration etc. to _deviceTime
+ *   -  also _pumpOn
+ *   
+ *   Change labels for sysVars0-2 in Python
+ *   
+ *   Done on April 7th
+ *   Defined an array of eight boolena variables.
+ *   twoLever removed
+ *   debugBoolVarList removed
+ *   setRewardType removed
+ *   rewardType defined globally  Drug = 0, Food = 1
+ *   logicOnHigh (sysVar2) substituted for pumpOnHigh
+ *   
+ *   check on 
+ *   1, how _rewardTpye triggers which port
+ *   2. Does Python still have a RadioButton to select Drug or Food
+ *        <REWARD box type>
+ *   
+ *   Document how the timing is done and relate it to the PowerPoint slide.
+ *    Reinforce() changes _timeOut = true which is checked in tick() each 10 mSec.
+ *   - use only one _rewardTimer
+ *   - _timeOut can be different and longer than pump
  *   
  *   Test: 
  *   Programm was changed from decrementing a timer value to incrementing.
@@ -13,12 +37,11 @@
  *      if (_pumpTime == 0) switchOff
  *   }
  *   
- *   Check:
+ *   Test:
  *   - The Python time should reflect _blockTime or _IBITime
  *   - How should IBI be indicated?
  *   
- *   Think about (low priority): 
- *   
+ *   ************************************************************
  *   Four chips are initiaized by the program
  *   
  *   Each bank of levers is associated with 2 (16 bit) ports. 
@@ -37,31 +60,18 @@
  *   
  *   lever.setPorts(inputPort, outputPort).
  *      _inputPort = inputPort;
+ *   *************************************************************
  *   
- *   Then: 
- *   MCP23S17 inputPort = chip0;
+ *   rewardType is now a global variable that determines Drug or Food
  *   
+ *   1. The lever shouldn't care whether it is a pump 
+ *   or hopper is switched. It could be coupled to only one device and the way the
+ *   port is selected would determine what is switched.
  *   
- *   The lever shouldn't care whether it is a pump or hopper it is switching.
- *   It will only have one device.
+ *   2. The lever has two options and which reward is used is software selectable. 
  *   
- *   But it does need to know which Port to switch.
- *   
- *   
- *   Set _drugReward initially in debug protocol then as a value sent from Python
- *   
- *   lever.setDrugReward(boolean value)
- *      _drugReward = value etc..
- *    
- *   
- *   
- *   Top Priority: Get timing fixed. Presently not timestamping _blockTime 
- *   Only 3 and 7 send _blockTime
- *    
- *   2. Test 20 sec TO
- *    
- *   Reinforce() changes _timeOut = true which is checked in tick() each 10 mSec. 
- *   
+ *   Option two is quicker. 
+ *     
  *   Note that all timestamps come from Lever.
  *   The lever could own the Queue and Box could pull from it. 
  *   If Box needs to send a message, just use Serial.println()
@@ -82,8 +92,6 @@
  *   states _boxState = PRESTART; 
  *   
  *   _blockTime was used for IBI as well - created _IBITime
- *   
- *   Uses debugBoolVarlist[0] to switch from checkLeverOne() to checkLeverOneBits()
  *   
  *   Previous (commented out) checkLeverOneBits() requires input to go LOW for two ticks 
  *   in order to trigger a response.
@@ -111,7 +119,7 @@
 #include "MCP23S17.h"   
 #include "Device.h"
 
-Device pump1(1);
+// Device pump1(1);
 
 const uint8_t chipSelect = 10;  // All four chips use the same SPI chipSelect
 MCP23S17 chip0(chipSelect, 0);  // Instantiate 16 pin Port Expander chip at address 0
@@ -119,7 +127,17 @@ MCP23S17 chip1(chipSelect, 1);
 MCP23S17 chip2(chipSelect, 2);    
 MCP23S17 chip3(chipSelect, 3); 
 
-boolean pumpOnHigh = false; 
+boolean rewardType = false;    // Used to select Drug = 0 or Food = 1  
+boolean logicOnHigh = false;   // logicOnHigh 
+boolean sysVar2 = false; 
+boolean sysVar3 = false;
+boolean sysVar4 = false;
+boolean sysVar5 = false;
+boolean sysVar6 = false;
+boolean sysVar7 = false;
+
+boolean sysVarArray[8] = {rewardType,logicOnHigh,sysVar2,sysVar3,sysVar4,sysVar5,sysVar6,sysVar7};
+
 #define pumpOn HIGH
 #define pumpOff LOW  
 #define On LOW
@@ -154,15 +172,12 @@ byte ticks[8] = {0,0,0,0,0,0,0,0};
 int lastLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 int newLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 
-boolean debugBoolVarList[5] = {true,false,false,false,false};      // will use checkLeverOneBits() by default
-
 volatile boolean tickFlag = false;
 
 // program housekeeping varaibles
 String inputString;
 boolean sessionRunning = false;
 boolean echoInput = false;
-boolean twoLever = false;
 unsigned long maxDelta = 0;
 byte maxQueueRecs = 0;
 int phantomResp = 0;
@@ -176,7 +191,6 @@ class Lever {
   public:
     Lever(int boxNum);
     void tick();
-    void setRewardType(int type);
     void startSession();
     void endSession();
     void setProtocolNum(int protocalNum);  // set with lever1._protocolNum = protocolNum
@@ -192,7 +206,6 @@ class Lever {
     
   // private:
     int _tickCounts = 0;
-    int _rewardType = 0;
     void startBlock();
     void endBlock();
     void startTrial();
@@ -267,12 +280,6 @@ void Lever::tick(){
             if (_IBITime >= _IBIDuration) endIBI(); 
             }      
        }  
-}
-
-void Lever::setRewardType(int type) {
-  _rewardType = type;
-  if (_rewardType == 0) Serial.println("9 Box_"+String(_boxNum)+"_drug_reward");
-  else Serial.println("9 Box_"+String(_boxNum)+"_food_reward");
 }
 
 void Lever::startSession() { 
@@ -352,7 +359,6 @@ void Lever::startSession() {
       TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
       printQueue.push(&tStamp);
       startBlock();
-      // if (twoLever) moveLever2(Extend);
   }
   Serial.println("9 "+String(_boxNum)+"_"+String(_responseCriterion)+"_"+String(_protocolNum)); 
 }
@@ -454,7 +460,7 @@ void Lever::endIBI() {
 void Lever::reinforce() { 
     /* 
     if (_protocolNum == 7) {
-      if (pumpOnHigh) chip1.digitalWrite(_boxNum+8,HIGH);
+      if (logicOnHigh) chip1.digitalWrite(_boxNum+8,HIGH);
       else chip1.digitalWrite(_boxNum+8,LOW);
       _cyclePump = true;
       _cycleCount = 0;  
@@ -487,8 +493,11 @@ void Lever::endTimeOut() {
 }
 
 void Lever::switchPump(boolean state) {
+
+    //   rename switchPump to switchDevice and use rewardType to determine port
+    
     // boxNum 0..7 maps to pin 0..7 on chip1 or chip3 
-    if (pumpOnHigh) chip1.digitalWrite(_boxNum+8,state);   // pumpOn = HIGH
+    if (logicOnHigh) chip1.digitalWrite(_boxNum+8,state);   // pumpOn = HIGH
     else chip1.digitalWrite(_boxNum+8,!state);
     if (state) {
           TStamp tStamp = {_boxNum, 'P', millis() - _startTime, 1, 2};
@@ -607,7 +616,7 @@ void Box::cyclePump(){
     if (_pumpOnTicker > 0) {
        _pumpOnTicker--;
        if (_pumpOnTicker == 0) {
-           if (pumpOnHigh) chip1.digitalWrite(_boxNum+8,LOW);
+           if (logicOnHigh) chip1.digitalWrite(_boxNum+8,LOW);
            else chip1.digitalWrite(_boxNum+8,HIGH);
           _pumpOffTicker = _pumpOffTime;
           _cycleCount++;
@@ -617,7 +626,7 @@ void Box::cyclePump(){
     else if (_pumpOffTicker > 0) {
         _pumpOffTicker--;
         if (_pumpOffTicker == 0) {
-           if (pumpOnHigh) chip1.digitalWrite(_boxNum+8,HIGH);
+           if (logicOnHigh) chip1.digitalWrite(_boxNum+8,HIGH);
            else chip1.digitalWrite(_boxNum+8,LOW);
           _pumpOnTicker = _pumpOnTime;
         }
@@ -737,7 +746,7 @@ void TC4_Handler()                                // Interrupt Service Routine (
 
 void turnStuffOff(){
   chip0.writePort(0xFFFF);
-  if (pumpOnHigh) chip1.writePort(1,0x00);    // Off
+  if (logicOnHigh) chip1.writePort(1,0x00);    // Off
   else chip1.writePort(1,0xFF);
   chip2.writePort(0xFFFF);
   chip3.writePort(1,0x00);    // Off  
@@ -770,13 +779,6 @@ void setup() {
   delay(500); 
   init_10_mSec_Timer(); 
   Serial.println("9 StateBeta");
-}
-
-void setDebugVar(int index, int level) {
-    if (level == 0) debugBoolVarList[index] = false;
-    else debugBoolVarList[index] = true;
-    TStamp tStamp = {8, 'X', millis(), level, 0};
-    printQueue.push(&tStamp);
 }
 
 void checkLeverOne() {
@@ -852,8 +854,21 @@ void checkLeverTwo() {
 }
 */
 
-void setRewardType(int type) {
-  
+void decodeSysVars(byte varCode) {
+  byte mask;
+  byte result; 
+  Serial.println("9 varCode = "+String(varCode));
+  for (byte i = 0; i < 8; i++) {    
+     mask = pow(2,i);           // mask (eg. 00001000)
+     // Serial.println("mask = "+String(mask));
+     result = varCode & mask;    // Uses AND and mask to determine whether to set bit
+     // Serial.println("result = "+String(result));
+     if ( result > 0) sysVarArray[i] = true;
+     else sysVarArray[i] = false;
+  }
+  for (byte i = 0; i < 8; i++) {
+    Serial.print(sysVarArray[i]);
+    }
 }
 
 void getInputString() {
@@ -907,11 +922,8 @@ void handleInputString()
      else if (stringCode == "c")     boxArray[num1].lever1.switchStim2(Off);
      else if (stringCode == "C")     boxArray[num1].lever1.switchStim2(On);
      else if (stringCode == "V")     Serial.println("9 StateBeta");
-     else if (stringCode == "T")     twoLever = true;
-     else if (stringCode == "t")     twoLever = false;
      else if (stringCode == "D")     reportDiagnostics(); 
-     else if (stringCode == "REWARD") boxArray[num1].lever1.setRewardType(num2); 
-     
+     else if (stringCode == "SYSVARS") decodeSysVars(num1); 
      /*
      // debug stuff 
      else if (stringCode == "L1")    boxArray[num1].handle_L1_Response();
@@ -919,7 +931,6 @@ void handleInputString()
      else if (stringCode == "i")     timeUSB();
      else if (stringCode == "E")     echoInput = !echoInput;
      else if (stringCode == "B")     boxArray[num1].getBlockTime();
-     else if (stringCode == "Debug") setDebugVar(num1,num2);
      ****** Deprecated - check Python for codes being sent
      // else if (stringCode == "1")     boxArray[0].handleResponse();
      // else if (stringCode == "2")     boxArray[1].handleResponse();
@@ -981,10 +992,7 @@ void tick()    {
    }
    for (uint8_t i = 0; i < 8; i++) boxArray[i].tick();
    getInputString();
-   // if (debugBoolVarList[0] == 0) checkLeverOne();
-   
-   // checkLeverOneBits();
-   // if (twoLever) checkLeverTwo();
+   checkLeverOneBits();
    sendOneTimeStamp();
    delta = micros() - micro1;
    if (delta > maxDelta) maxDelta = delta;   
