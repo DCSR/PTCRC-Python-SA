@@ -17,7 +17,7 @@
  *   debugBoolVarList removed
  *   setRewardType removed
  *   rewardType defined globally  Drug = 0, Food = 1
- *   logicOnHigh (sysVar2) substituted for pumpOnHigh
+ *   logicOnLow (sysVar2) substituted for pumpOnHigh
  *   
  *   check on 
  *   1, how _rewardTpye triggers which port
@@ -128,7 +128,7 @@ MCP23S17 chip2(chipSelect, 2);
 MCP23S17 chip3(chipSelect, 3); 
 
 boolean rewardType = false;    // Used to select Drug = 0 or Food = 1  
-boolean logicOnHigh = false;   // logicOnHigh 
+boolean logicOnLow = false;    // For pumps, default to ON High - supply 5VDC to PowerSwitch Tails 
 boolean sysVar2 = false; 
 boolean sysVar3 = false;
 boolean sysVar4 = false;
@@ -136,10 +136,10 @@ boolean sysVar5 = false;
 boolean sysVar6 = false;
 boolean sysVar7 = false;
 
-boolean sysVarArray[8] = {rewardType,logicOnHigh,sysVar2,sysVar3,sysVar4,sysVar5,sysVar6,sysVar7};
+boolean sysVarArray[8] = {rewardType,logicOnLow,sysVar2,sysVar3,sysVar4,sysVar5,sysVar6,sysVar7};
 
-#define pumpOn HIGH
-#define pumpOff LOW  
+#define pumpOn true
+#define pumpOff false  
 #define On LOW
 #define Off HIGH
 #define Extend LOW
@@ -460,7 +460,7 @@ void Lever::endIBI() {
 void Lever::reinforce() { 
     /* 
     if (_protocolNum == 7) {
-      if (logicOnHigh) chip1.digitalWrite(_boxNum+8,HIGH);
+      if (logicOnLow) chip1.digitalWrite(_boxNum+8,HIGH);
       else chip1.digitalWrite(_boxNum+8,LOW);
       _cyclePump = true;
       _cycleCount = 0;  
@@ -494,16 +494,24 @@ void Lever::endTimeOut() {
 
 void Lever::switchPump(boolean state) {
 
-    //   rename switchPump to switchDevice and use rewardType to determine port
-    
+    // rename switchPump to switchDevice and use rewardType to determine port   
     // boxNum 0..7 maps to pin 0..7 on chip1 or chip3 
-    if (logicOnHigh) chip1.digitalWrite(_boxNum+8,state);   // pumpOn = HIGH
-    else chip1.digitalWrite(_boxNum+8,!state);
-    if (state) {
+    // Normally: pumpOn (true) switches the bit to HIGH
+    //       and pumpOff (false) switches the bit to LOW
+    // BUT if logicOnLow == true - then the reverse
+   
+    boolean level;
+    if (logicOnLow) level = !state;
+    else level = state; 
+ 
+    chip1.digitalWrite(_boxNum+8,level);   
+    if (state) {              // pumpOn == true 
+      
           TStamp tStamp = {_boxNum, 'P', millis() - _startTime, 1, 2};
           printQueue.push(&tStamp);
     }
     else {
+      
           TStamp tStamp = {_boxNum, 'p', millis() - _startTime, 0, 2};
           printQueue.push(&tStamp);
     }
@@ -616,7 +624,7 @@ void Box::cyclePump(){
     if (_pumpOnTicker > 0) {
        _pumpOnTicker--;
        if (_pumpOnTicker == 0) {
-           if (logicOnHigh) chip1.digitalWrite(_boxNum+8,LOW);
+           if (logicOnLow) chip1.digitalWrite(_boxNum+8,LOW);
            else chip1.digitalWrite(_boxNum+8,HIGH);
           _pumpOffTicker = _pumpOffTime;
           _cycleCount++;
@@ -626,7 +634,7 @@ void Box::cyclePump(){
     else if (_pumpOffTicker > 0) {
         _pumpOffTicker--;
         if (_pumpOffTicker == 0) {
-           if (logicOnHigh) chip1.digitalWrite(_boxNum+8,HIGH);
+           if (logicOnLow) chip1.digitalWrite(_boxNum+8,HIGH);
            else chip1.digitalWrite(_boxNum+8,LOW);
           _pumpOnTicker = _pumpOnTime;
         }
@@ -746,8 +754,8 @@ void TC4_Handler()                                // Interrupt Service Routine (
 
 void turnStuffOff(){
   chip0.writePort(0xFFFF);
-  if (logicOnHigh) chip1.writePort(1,0x00);    // Off
-  else chip1.writePort(1,0xFF);
+  if (logicOnLow) chip1.writePort(1,0xFF);    // Pumps or hoppers on chip1 Off
+  else chip1.writePort(1,0x00);
   chip2.writePort(0xFFFF);
   chip3.writePort(1,0x00);    // Off  
 }
