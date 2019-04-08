@@ -35,6 +35,7 @@ class GuiClass(object):
     def __init__(self):
 
         self.version = "SA200.10"
+        self.varCode = 0
         self.verbose = True
         self.sched = ['0: Do not run', '1: FR(N)', '2:FR1 x 20', '3: FR1 x N', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Debug']
         self.box1 = Box(1)    # note that boxes[0] is box1
@@ -244,8 +245,6 @@ class GuiClass(object):
         self.root.config(menu=menubar)
 
         # ****************   ControlFrame - top Row ****************
-
-        self.TwoLeverCheckVar = BooleanVar(value=False) 
                                                 
         self.ControlFrame = ttk.Frame(self.root, borderwidth=3, relief="sunken")
         self.ControlFrame.grid(column = 0, row = 0, columnspan=4, sticky = (EW))
@@ -265,12 +264,8 @@ class GuiClass(object):
         connectLabel = ttk.Label(self.ControlFrame, textvariable = self.connectLabelText)
         connectLabel.grid(column = 3, row = 0,pady=5, padx=5)
 
-        #label3 = ttk.Label(self.ControlFrame, text="_________________________")
-        #label3.grid(column = 4, row = 0,pady=5, padx=5) 
-
-        twoLeverCheckButton = Checkbutton(self.ControlFrame, text = "Two Lever", variable = self.TwoLeverCheckVar, \
-             onvalue = True, offvalue = False)
-        twoLeverCheckButton.grid(column = 5, row = 0, padx = 100)
+        label3 = ttk.Label(self.ControlFrame, text="_________________________")
+        label3.grid(column = 4, row = 0,pady=5, padx=5) 
 
         startAllBoxesButton = ttk.Button(self.ControlFrame,text="Start Boxes 1-8", \
                                              command = self.startAllBoxes)
@@ -664,18 +659,18 @@ class GuiClass(object):
         """
         # Eight tkinter boolean vars widgets
 
-        sys0label = ttk.Label(self.diagnosticButtonFrame, text="Label0")
+        sys0label = ttk.Label(self.diagnosticButtonFrame, text="Reward Type")
         sys0label.grid(column = 0, row = 5, sticky = (W))
-        sys0FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys0CheckVar, value=0)
+        sys0FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="Drug", variable=self.sys0CheckVar, value=0)
         sys0FalseRadiobutton.grid(column = 1, row = 5, sticky = (W))
-        sys0TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys0CheckVar, value=1)
+        sys0TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="Food", variable=self.sys0CheckVar, value=1)
         sys0TrueRadiobutton.grid(column = 2, row = 5, sticky = (W))
 
-        sys1label = ttk.Label(self.diagnosticButtonFrame, text="Label1")
+        sys1label = ttk.Label(self.diagnosticButtonFrame, text="Logic type")
         sys1label.grid(column = 0, row = 6, sticky = (W))
-        sys1FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys1CheckVar, value=0)
+        sys1FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="GND On", variable=self.sys1CheckVar, value=0)
         sys1FalseRadiobutton.grid(column = 1, row = 6, sticky = (W))
-        sys1TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys1CheckVar, value=1)
+        sys1TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="5VDC On", variable=self.sys1CheckVar, value=1)
         sys1TrueRadiobutton.grid(column = 2, row = 6, sticky = (W))
 
         sys2label = ttk.Label(self.diagnosticButtonFrame, text="Label2")
@@ -961,12 +956,12 @@ class GuiClass(object):
         print("portString = "+aString)
         aString = iniFile.readline().rstrip("\n")   # read next line
         tokens = aString.split()
-        varCode = int(tokens[0])
-        print("varCode =",varCode,format(varCode,'08b'))       
+        self.varCode = int(tokens[0])
+        print("self.varCode =",self.varCode,format(self.varCode,'08b'))       
         for bit in range(8):
             mask = (2**bit)     # mask (eg. 00001000)
             # Uses AND and mask to determine whether to set bit
-            if (varCode & mask > 0): self.sysVarList[bit].set(True)
+            if (self.varCode & mask > 0): self.sysVarList[bit].set(True)
             else: self.sysVarList[bit].set(False)
         iniFile.close()
 
@@ -993,20 +988,19 @@ class GuiClass(object):
                 print(tempStr)
             iniFile.write(tempStr+'\n')
         iniFile.write(self.portString.get()+'\n')
-        varCode = 0
+        self.varCode = 0
         for bit in range(8):
             # print(self.sysVarList[bit].get())
             if (self.sysVarList[bit].get() == False):               
                 # Set bit to 0 if False
                 # uses AND and a mask (eg. 11110111)
-                varCode = varCode & (255 - (2**bit))           
+                self.varCode = self.varCode & (255 - (2**bit))           
             else:
-                print("T")
                 # Set bit to 1 if True
                 # uses OR and a number (eg. 1,2,4,8 etc)
-                varCode = varCode | (2**bit)
-        print("varCode =",varCode,format(varCode,'08b')) 
-        iniFile.write(str(varCode)+'\n')       
+                self.varCode = self.varCode | (2**bit)
+        print("self.varCode =",self.varCode,format(self.varCode,'08b')) 
+        iniFile.write(str(self.varCode)+'\n')       
         iniFile.close()
         
     def readExampleFiles(self):
@@ -1278,15 +1272,6 @@ class GuiClass(object):
                      
     def startSession(self,boxIndex):
         if self.arduino0.activeConnection == True:
-            if self.selectedReinforcer.get() == 0:
-                self.outputText("<REWARD "+str(boxIndex)+" 0>")
-            else:
-                self.outputText("<REWARD "+str(boxIndex)+" 1>")
-                
-            if self.TwoLeverCheckVar.get() == True:
-                self.outputText("<T>")
-            else:
-                self.outputText("<t>")
             listIndex = boxIndex
             # initialize the box
             self.boxes[listIndex].initialize(self.IDStrList[listIndex].get(),self.WeightList[listIndex].get(),self.schedList[listIndex].get(),1.5)
@@ -1313,6 +1298,7 @@ class GuiClass(object):
 
     def startAllBoxes(self):
         self.writeToINIFile()
+        self.outputText("<SYSVARS "+str(self.varCode)+">")
         for i in range(8):
             self.startSession(i)
             sleep(0.1) # Time in seconds.           
