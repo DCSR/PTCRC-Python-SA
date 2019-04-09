@@ -1,7 +1,6 @@
 """
-bitCheck
 
-April 6th - on the road, 2019 
+April 8th, 2019 
 
 SA200.10
 
@@ -659,18 +658,18 @@ class GuiClass(object):
         """
         # Eight tkinter boolean vars widgets
 
-        sys0label = ttk.Label(self.diagnosticButtonFrame, text="Reward Type")
+        sys0label = ttk.Label(self.diagnosticButtonFrame, text="Reward Port")
         sys0label.grid(column = 0, row = 5, sticky = (W))
-        sys0FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="Drug", variable=self.sys0CheckVar, value=0)
+        sys0FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="Pumps", variable=self.sys0CheckVar, value=0)
         sys0FalseRadiobutton.grid(column = 1, row = 5, sticky = (W))
-        sys0TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="Food", variable=self.sys0CheckVar, value=1)
+        sys0TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="Aux 1-8", variable=self.sys0CheckVar, value=1)
         sys0TrueRadiobutton.grid(column = 2, row = 5, sticky = (W))
 
-        sys1label = ttk.Label(self.diagnosticButtonFrame, text="Logic type")
+        sys1label = ttk.Label(self.diagnosticButtonFrame, text="Reward Logic")
         sys1label.grid(column = 0, row = 6, sticky = (W))
-        sys1FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="GND On", variable=self.sys1CheckVar, value=0)
+        sys1FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="5VDC On", variable=self.sys1CheckVar, value=0)
         sys1FalseRadiobutton.grid(column = 1, row = 6, sticky = (W))
-        sys1TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="5VDC On", variable=self.sys1CheckVar, value=1)
+        sys1TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="GND On", variable=self.sys1CheckVar, value=1)
         sys1TrueRadiobutton.grid(column = 2, row = 6, sticky = (W))
 
         sys2label = ttk.Label(self.diagnosticButtonFrame, text="Label2")
@@ -714,6 +713,9 @@ class GuiClass(object):
         sys7FalseRadiobutton.grid(column = 1, row = 12, sticky = (W))
         sys7TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys7CheckVar, value=1)
         sys7TrueRadiobutton.grid(column = 2, row = 12, sticky = (W))
+
+        sendConfigButton = ttk.Button(self.diagnosticButtonFrame,text="Send config",command = self.sendSysVars)
+        sendConfigButton.grid(column = 0, row = 13, columnspan = 3)
 
         # ***************************************************************************************
                
@@ -916,6 +918,10 @@ class GuiClass(object):
 
         #********************* END of GUI_Class __INIT__(self) ********************
 
+    def sendSysVars(self):
+        self.updateVarCode()
+        self.outputText("<SYSVARS "+str(self.varCode)+">")
+
     def calcPumpTime(self,checked,boxIndex):
         """
         4 sec * 5 mg/ml * 0.025 ml/sec / 0.333kg = 1.5 mg/kg
@@ -953,17 +959,31 @@ class GuiClass(object):
             self.calcPumpTimeList[i].set(tokens[6])
         aString = iniFile.readline().rstrip("\n")      # COM number (done differently on a Mac)
         self.portString.set(aString)
-        print("portString = "+aString)
+        # print("portString = "+aString)
         aString = iniFile.readline().rstrip("\n")   # read next line
         tokens = aString.split()
         self.varCode = int(tokens[0])
-        print("self.varCode =",self.varCode,format(self.varCode,'08b'))       
+        # print("self.varCode =",self.varCode,format(self.varCode,'08b'))       
         for bit in range(8):
             mask = (2**bit)     # mask (eg. 00001000)
             # Uses AND and mask to determine whether to set bit
             if (self.varCode & mask > 0): self.sysVarList[bit].set(True)
             else: self.sysVarList[bit].set(False)
         iniFile.close()
+
+    def updateVarCode(self):
+        self.varCode = 0
+        for bit in range(8):
+            # print(self.sysVarList[bit].get())
+            if (self.sysVarList[bit].get() == False):               
+                # Set bit to 0 if False
+                # uses AND and a mask (eg. 11110111)
+                self.varCode = self.varCode & (255 - (2**bit))           
+            else:
+                # Set bit to 1 if True
+                # uses OR and a number (eg. 1,2,4,8 etc)
+                self.varCode = self.varCode | (2**bit)
+        # print("self.varCode =",self.varCode,format(self.varCode,'08b'))
 
     def writeToINIFile(self):
         INIfileName = "SA200.ini"
@@ -988,18 +1008,7 @@ class GuiClass(object):
                 print(tempStr)
             iniFile.write(tempStr+'\n')
         iniFile.write(self.portString.get()+'\n')
-        self.varCode = 0
-        for bit in range(8):
-            # print(self.sysVarList[bit].get())
-            if (self.sysVarList[bit].get() == False):               
-                # Set bit to 0 if False
-                # uses AND and a mask (eg. 11110111)
-                self.varCode = self.varCode & (255 - (2**bit))           
-            else:
-                # Set bit to 1 if True
-                # uses OR and a number (eg. 1,2,4,8 etc)
-                self.varCode = self.varCode | (2**bit)
-        print("self.varCode =",self.varCode,format(self.varCode,'08b')) 
+        self.updateVarCode()
         iniFile.write(str(self.varCode)+'\n')       
         iniFile.close()
         
