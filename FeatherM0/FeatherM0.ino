@@ -3,14 +3,8 @@
  *   
  *   To Do:
  *   SwitchRewardDevice(On) etc. 
- *    Time stamp should reflect Pump (P,p) or Hopper (H,h)
- *   
- *   Incorporate Device??
- *   If not: 
- *   -  rename switchPump to switchDevice
- *   -  use rewardType to determine port
- *   -  rename _pumpTime, _pumpDuration etc. to _deviceTime
- *   -  also _pumpOn
+ *    Time stamp could reflect Pump (P,p) or Hopper (H,h)
+ *    But that would require updates to graphs
  *   
  *   Change labels for sysVars0-2 in Python
  *   
@@ -25,14 +19,14 @@
  *   Document how the timing is done and relate it to the PowerPoint slide.
  *    Reinforce() changes _timeOut = true which is checked in tick() each 10 mSec.
  *   - use only one _rewardTimer
- *   - _timeOut can be different and longer than pump
+ *   - _timeOut can be different and longer than rewardDuration
  *   
  *   Test: 
  *   Programm was changed from decrementing a timer value to incrementing.
  *   Why? It seems more intuitive to count down.
- *   if (_pumpTime > 0) {
- *      _pumpTime--;
- *      if (_pumpTime == 0) switchOff
+ *   if (_rewardTime > 0) {
+ *      _rewardTime--;
+ *      if (_rewardTime == 0) switchOff
  *   }
  *   
  *   Test:
@@ -49,7 +43,7 @@
  *   Also, right now the input and reinforcer output is on the same chip. Need to be  
  *   able to choose chip and port _inputAddr(0,0)
  *   
- *   void Lever::switchPump(boolean state) {
+ *   void Lever::switchRewardPort(boolean state) {
         chip1.digitalWrite(_boxNum+8,!state);
  *   
  *   Default:  
@@ -78,15 +72,13 @@
  *   Timestamp codes will have to be instantiated differently for lever1 and lever2 
  *   
  *   TIMEOUT and LED = timeOutDuration
- *   pumpDuration may be shorter
- *   
- *   Eventually change the Pump and LED to devices.
+ *   rewardDuration may be shorter
  *   
  *   Changes: 
- *   _pumpTime++ until equals pumpDuration
+ *   _rewardTime++ until equals rewardDuration
  *   _blockTime++ until equals _blockDuration
  *   _IBILength changed to _IBIDuration
- *   _pumpTimer changed to _pumpTime
+ *   _pumpTimer changed to _rewardTime
  *   states _boxState = PRESTART; 
  *   
  *   _blockTime was used for IBI as well - created _IBITime
@@ -108,16 +100,13 @@
  * Chip2, Port0:  8 L2 levers - retract/extend
  * Chip2, Port1:  8 L2 lever LEDs 
  * Chip3, Port0:  8 L2 inputs
- * Chip3, Port1:  8 spare DIOs
+ * Chip3, Port1:  8 AUX output (perhaps food hoppers)
  * 
  */
 
 #include <cppQueue.h>
 #include <SPI.h>        // Arduino Library SPI.h
 #include "MCP23S17.h"   
-#include "Device.h"
-
-// Device pump1(1);
 
 const uint8_t chipSelect = 10;  // All four chips use the same SPI chipSelect
 MCP23S17 chip0(chipSelect, 0);  // Instantiate 16 pin Port Expander chip at address 0
@@ -184,11 +173,11 @@ class Lever {
     void startSession();
     void endSession();
     void setProtocolNum(int protocalNum);  // set with lever1._protocolNum = protocolNum
-    void setPumpDuration(int pumpDuration);
+    void setrewardDuration(int rewardDuration);
     void setParamNum(int paramNum);
     void setBlockDuration(int blockDuration); 
     void handleResponse();
-    void switchPump(boolean state);
+    void switchRewardPort(boolean state);
     void switchStim1(boolean state);
     void switchStim2(boolean state);
     void moveLever(int state);
@@ -227,8 +216,8 @@ class Lever {
     unsigned int _maxTrialNumber = 999;
     unsigned int _trialResponses = 0;
     // Reinforce 
-    int _pumpDuration = 400;    // 400 x 10 mSec = 4,000 mSec = 4 seconds;
-    int _pumpTime = 0;    
+    int _rewardDuration = 400;    // 400 x 10 mSec = 4,000 mSec = 4 seconds;
+    int _rewardTime = 0;    
     int _THPumpTimeArray[13] = {316, 316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};
     // int _THPumpTimeArray[13] = {100, 100, 50, 40, 30, 20, 10, 9, 8, 7, 5, 3, 2};    
     int _timeOutTime = 0;
@@ -247,8 +236,8 @@ Lever::Lever(int boxNum) {
 
 void Lever::tick(){       
     if (_timeOut) {
-      _pumpTime++;
-      if (_pumpTime == _pumpDuration) switchPump(Off);  // change to pump.update() 
+      _rewardTime++;
+      if (_rewardTime == _rewardDuration) switchRewardPort(Off);  // change to pump.update() 
       _timeOutTime++;
       if (_timeOutTime == _timeOutDuration) endTimeOut();     
     }
@@ -278,7 +267,7 @@ void Lever::startSession() {
   // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', 
   // '4: PR', '5: TH', '6: IntA: 5-25', '7: Debug']
 
-   _timeOutDuration = _pumpDuration;     // except in protocol 2
+   _timeOutDuration = _rewardDuration;     // except in protocol 2
 
   if (_protocolNum == 0) endSession();
   else  {  
@@ -335,7 +324,7 @@ void Lever::startSession() {
         _responseCriterion = 1;
         _maxTrialNumber = 999;
         _cycles = _paramNum;
-        _pumpOnTime = _pumpDuration;
+        _pumpOnTime = _rewardDuration;
         _blockDuration = 21600;          // default to 6hr
         _timeOutDuration = ((_cycles+1)*(_pumpOnTime + _pumpOffTime));
         _cyclePump = false;             // This is the thing that controls the cycle in tick()  
@@ -343,7 +332,7 @@ void Lever::startSession() {
       */  
       _startTime = millis();
       _blockNumber = 0;  
-      _pumpTime = 0; 
+      _rewardTime = 0; 
       _timeOutTime = 0;
       // sessionRunning = true;     
       TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
@@ -359,8 +348,8 @@ void Lever::endSession () {
     moveLever(Retract);         // was moveLever1
     // moveLever2(Retract);
     switchStim1(Off);
-    switchPump(Off);
-    _pumpTime = 0;
+    switchRewardPort(Off);
+    _rewardTime = 0;
     _timeOutTime = 0;
     _boxState = FINISHED;    
     TStamp tStamp = {_boxNum, 'E', millis() - _startTime, 0, 9};
@@ -371,8 +360,8 @@ void Lever::setProtocolNum(int protocolNum) {
   _protocolNum = protocolNum;
 }
 
-void Lever::setPumpDuration(int pumpDuration) {
-  _pumpDuration = pumpDuration;
+void Lever::setrewardDuration(int rewardDuration) {
+  _rewardDuration = rewardDuration;
 }
 
 void Lever::setParamNum(int paramNum) {
@@ -406,8 +395,8 @@ void Lever::startBlock() {
   TStamp tStamp = {_boxNum, 'B', millis() - _startTime, 0, 9};
   printQueue.push(&tStamp);  
   if (_schedTH == true){                                    // TH
-      _pumpDuration = _THPumpTimeArray[_blockNumber - 1];    // zero indexed array; block 1 = index 0
-      _timeOutDuration = _pumpDuration;
+      _rewardDuration = _THPumpTimeArray[_blockNumber - 1];    // zero indexed array; block 1 = index 0
+      _timeOutDuration = _rewardDuration;
   }
   startTrial();
 }
@@ -448,8 +437,8 @@ void Lever::endIBI() {
 }
 
 void Lever::reinforce() { 
-    _pumpTime = 0;
-    switchPump(On);
+    _rewardTime = 0;
+    switchRewardPort(On);
 }
 
 void Lever::startTimeOut() {
@@ -473,35 +462,26 @@ void Lever::endTimeOut() {
     }  
 }
 
-void Lever::switchPump(boolean state) {
-
-    // rename switchPump to switchDevice and use rewardType to determine port   
+void Lever::switchRewardPort(boolean state) { 
     // boxNum 0..7 maps to pin 0..7 on chip1 or chip3 
     // Normally: On (true) switches the bit to HIGH
     //       and Off (false) switches the bit to LOW
     // BUT if sysVarArray[1] == true -> then the reverse happens
    
     boolean level;
+    // sysVarArray[1] selects of the device goes on with 5VDC or GND
     if (sysVarArray[1]) level = !state;
     else level = state; 
 
-    // Pumps are usually wired to Port1 and hoppers to Port3
-    if (sysVarArray[0] == 0) {
-      chip1.digitalWrite(_boxNum+8,level);
-      Serial.println("port1 ");
-    }
-    else {
-      chip3.digitalWrite(_boxNum+8,level);
-      Serial.println("port3 ");
-    }
-       
-    if (state) {              // pumpOn == true 
-      
+    // sysVarArray[0] selects either Pump Port or AUX Port
+    if (sysVarArray[0] == 0) chip1.digitalWrite(_boxNum+8,level);
+    else chip3.digitalWrite(_boxNum+8,level); 
+              
+    if (state) {              // ON or true      
           TStamp tStamp = {_boxNum, 'P', millis() - _startTime, 1, 2};
           printQueue.push(&tStamp);
     }
-    else {
-      
+    else {      
           TStamp tStamp = {_boxNum, 'p', millis() - _startTime, 0, 2};
           printQueue.push(&tStamp);
     }
@@ -585,7 +565,7 @@ class Box  {
     void tick();
     void handle_L1_Response();
     void setProtocolNum(int protocalNum);
-    void setPumpDuration(int pumpDuration);
+    void setrewardDuration(int rewardDuration);
     void setParamNum(int paramNum);
     void setBlockDuration(int blockDuration);    
     void reportParameters();
@@ -661,9 +641,8 @@ void Box::setProtocolNum(int protocolNum) {
   lever1.setProtocolNum(protocolNum);
 }
 
-void Box::setPumpDuration(int pumpDuration) {
-  // _pumpDuration = pumpDuration;
-  lever1.setPumpDuration(pumpDuration);
+void Box::setrewardDuration(int rewardDuration) {
+  lever1.setrewardDuration(rewardDuration);
 }
 
 void Box::setParamNum(int paramNum) {
@@ -680,7 +659,7 @@ void Box::setBlockDuration(int blockDuration) {
 void Box::reportParameters() { 
   Serial.print("9 "+String(lever1._boxNum)+":"+String(lever1._protocolNum)+":");
   Serial.print(String(lever1._responseCriterion)+":"+String(lever1._blockDuration)+":");
-  Serial.print(String(lever1._pumpDuration)+":"+String(lever1._timeOutDuration));
+  Serial.print(String(lever1._rewardDuration)+":"+String(lever1._timeOutDuration));
   Serial.println("-"+String(lever1._maxTrialNumber));
 } 
 
@@ -910,10 +889,10 @@ void handleInputString()
      else if (stringCode == "G")     boxArray[num1].startSession();
      else if (stringCode == "Q")     boxArray[num1].endSession();
      else if (stringCode == "L1")    boxArray[num1].lever1.handleResponse(); 
-     else if (stringCode == "P")     boxArray[num1].lever1.switchPump(On);
-     else if (stringCode == "p")     boxArray[num1].lever1.switchPump(Off);
+     else if (stringCode == "P")     boxArray[num1].lever1.switchRewardPort(On);
+     else if (stringCode == "p")     boxArray[num1].lever1.switchRewardPort(Off);
      else if (stringCode == "SCHED") boxArray[num1].lever1.setProtocolNum(num2);
-     else if (stringCode == "PUMP")  boxArray[num1].lever1.setPumpDuration(num2); 
+     else if (stringCode == "PUMP")  boxArray[num1].lever1.setrewardDuration(num2); 
      else if (stringCode == "RATIO") boxArray[num1].setParamNum(num2);
      else if (stringCode == "TIME")  boxArray[num1].lever1.setBlockDuration(num2);
      else if (stringCode == "R")     boxArray[num1].reportParameters();
