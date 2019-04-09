@@ -2,6 +2,9 @@
  *   <SYSVARS num> and DecodeSySVars(num) sets eight sysVars
  *   
  *   To Do:
+ *   SwitchRewardDevice(On) etc. 
+ *    Time stamp should reflect Pump (P,p) or Hopper (H,h)
+ *   
  *   Incorporate Device??
  *   If not: 
  *   -  rename switchPump to switchDevice
@@ -17,12 +20,7 @@
  *   debugBoolVarList removed
  *   setRewardType removed
  *   rewardType defined globally  Drug = 0, Food = 1
- *   logicOnLow (sysVar2) substituted for pumpOnHigh
- *   
- *   check on 
- *   1, how _rewardTpye triggers which port
- *   2. Does Python still have a RadioButton to select Drug or Food
- *        <REWARD box type>
+ *   sysVarArray[1] substituted for pumpOnHigh
  *   
  *   Document how the timing is done and relate it to the PowerPoint slide.
  *    Reinforce() changes _timeOut = true which is checked in tick() each 10 mSec.
@@ -127,21 +125,13 @@ MCP23S17 chip1(chipSelect, 1);
 MCP23S17 chip2(chipSelect, 2);    
 MCP23S17 chip3(chipSelect, 3); 
 
-boolean rewardType = false;    // Used to select Drug = 0 or Food = 1  
-boolean logicOnLow = false;    // For pumps, default to ON High - supply 5VDC to PowerSwitch Tails 
-boolean sysVar2 = false; 
-boolean sysVar3 = false;
-boolean sysVar4 = false;
-boolean sysVar5 = false;
-boolean sysVar6 = false;
-boolean sysVar7 = false;
+boolean sysVarArray[8] = {false,false,false,false,false,false,false,false};
+// sysVarArray[0] used for reward type; 0 = Drug, 1 = Food
+// sysVarArray[1] used for logic type: 0 = 5VDC switches On, 1 = GND switches On
 
-boolean sysVarArray[8] = {rewardType,logicOnLow,sysVar2,sysVar3,sysVar4,sysVar5,sysVar6,sysVar7};
 
-#define pumpOn true
-#define pumpOff false  
-#define On LOW
-#define Off HIGH
+#define On true
+#define Off false
 #define Extend LOW
 #define Retract HIGH
 
@@ -199,8 +189,8 @@ class Lever {
     void setBlockDuration(int blockDuration); 
     void handleResponse();
     void switchPump(boolean state);
-    void switchStim1(int state);
-    void switchStim2(int state);
+    void switchStim1(boolean state);
+    void switchStim2(boolean state);
     void moveLever(int state);
     int _boxNum;
     
@@ -258,7 +248,7 @@ Lever::Lever(int boxNum) {
 void Lever::tick(){       
     if (_timeOut) {
       _pumpTime++;
-      if (_pumpTime == _pumpDuration) switchPump(pumpOff);  // change to pump.update() 
+      if (_pumpTime == _pumpDuration) switchPump(Off);  // change to pump.update() 
       _timeOutTime++;
       if (_timeOutTime == _timeOutDuration) endTimeOut();     
     }
@@ -369,7 +359,7 @@ void Lever::endSession () {
     moveLever(Retract);         // was moveLever1
     // moveLever2(Retract);
     switchStim1(Off);
-    switchPump(pumpOff);
+    switchPump(Off);
     _pumpTime = 0;
     _timeOutTime = 0;
     _boxState = FINISHED;    
@@ -458,17 +448,8 @@ void Lever::endIBI() {
 }
 
 void Lever::reinforce() { 
-    /* 
-    if (_protocolNum == 7) {
-      if (logicOnLow) chip1.digitalWrite(_boxNum+8,HIGH);
-      else chip1.digitalWrite(_boxNum+8,LOW);
-      _cyclePump = true;
-      _cycleCount = 0;  
-      _pumpOnTicker = _pumpOnTime; 
-    }
-    else { */
     _pumpTime = 0;
-    switchPump(pumpOn);
+    switchPump(On);
 }
 
 void Lever::startTimeOut() {
@@ -496,15 +477,24 @@ void Lever::switchPump(boolean state) {
 
     // rename switchPump to switchDevice and use rewardType to determine port   
     // boxNum 0..7 maps to pin 0..7 on chip1 or chip3 
-    // Normally: pumpOn (true) switches the bit to HIGH
-    //       and pumpOff (false) switches the bit to LOW
-    // BUT if logicOnLow == true - then the reverse
+    // Normally: On (true) switches the bit to HIGH
+    //       and Off (false) switches the bit to LOW
+    // BUT if sysVarArray[1] == true -> then the reverse happens
    
     boolean level;
-    if (logicOnLow) level = !state;
+    if (sysVarArray[1]) level = !state;
     else level = state; 
- 
-    chip1.digitalWrite(_boxNum+8,level);   
+
+    // Pumps are usually wired to Port1 and hoppers to Port3
+    if (sysVarArray[0] == 0) {
+      chip1.digitalWrite(_boxNum+8,level);
+      Serial.println("port1 ");
+    }
+    else {
+      chip3.digitalWrite(_boxNum+8,level);
+      Serial.println("port3 ");
+    }
+       
     if (state) {              // pumpOn == true 
       
           TStamp tStamp = {_boxNum, 'P', millis() - _startTime, 1, 2};
@@ -518,29 +508,33 @@ void Lever::switchPump(boolean state) {
     // The Pump CheckBox is index 2 
 }
 
-void Lever::switchStim1(int state) { 
-    chip0.digitalWrite(_boxNum+8,state);   // boxNum 0..7 maps to pin 8..15 on chip0
+void Lever::switchStim1(boolean state) {
+    boolean level;
+    level = !state;                        // On = true -> level goes low 
+    chip0.digitalWrite(_boxNum+8,level);   // boxNum 0..7 maps to pin 8..15 on chip0
     // HIGH = OFF
     if (state) {
-          TStamp tStamp = {_boxNum, 's', millis() - _startTime, 0, 3};
+          TStamp tStamp = {_boxNum, 'S', millis() - _startTime, 1, 3};
           printQueue.push(&tStamp);
     }
     else {
-          TStamp tStamp = {_boxNum, 'S', millis() - _startTime, 1, 3};
+          TStamp tStamp = {_boxNum, 's', millis() - _startTime, 0, 3};
           printQueue.push(&tStamp);
     }
     // StimCheckBox is index 3     
 }
 
-void Lever::switchStim2(int state) {   
-    chip2.digitalWrite(_boxNum+8,state);   // boxNum 0..7  maps to pin 8..15 on chip2
+void Lever::switchStim2(boolean state) {
+    boolean level;
+    level = !state;                        // On = true -> level goes low    
+    chip2.digitalWrite(_boxNum+8,level);   // boxNum 0..7  maps to pin 8..15 on chip2
     // HIGH = OFF
     if (state) {
-          TStamp tStamp = {_boxNum, 'c', millis() - _startTime, 0, 4};
+          TStamp tStamp = {_boxNum, 'C', millis() - _startTime, 1, 4};
           printQueue.push(&tStamp);
     }
     else {
-          TStamp tStamp = {_boxNum, 'C', millis() - _startTime, 1, 4};
+          TStamp tStamp = {_boxNum, 'c', millis() - _startTime, 0, 4};
           printQueue.push(&tStamp);
     }
     // StimCheckBox is index 4     
@@ -624,7 +618,7 @@ void Box::cyclePump(){
     if (_pumpOnTicker > 0) {
        _pumpOnTicker--;
        if (_pumpOnTicker == 0) {
-           if (logicOnLow) chip1.digitalWrite(_boxNum+8,LOW);
+           if (sysVarArray{1]) chip1.digitalWrite(_boxNum+8,LOW);
            else chip1.digitalWrite(_boxNum+8,HIGH);
           _pumpOffTicker = _pumpOffTime;
           _cycleCount++;
@@ -634,7 +628,7 @@ void Box::cyclePump(){
     else if (_pumpOffTicker > 0) {
         _pumpOffTicker--;
         if (_pumpOffTicker == 0) {
-           if (logicOnLow) chip1.digitalWrite(_boxNum+8,HIGH);
+           if (sysVarArray[1]) chip1.digitalWrite(_boxNum+8,HIGH);
            else chip1.digitalWrite(_boxNum+8,LOW);
           _pumpOnTicker = _pumpOnTime;
         }
@@ -754,7 +748,7 @@ void TC4_Handler()                                // Interrupt Service Routine (
 
 void turnStuffOff(){
   chip0.writePort(0xFFFF);
-  if (logicOnLow) chip1.writePort(1,0xFF);    // Pumps or hoppers on chip1 Off
+  if (sysVarArray[1]) chip1.writePort(1,0xFF);    // Pumps or hoppers on chip1 Off
   else chip1.writePort(1,0x00);
   chip2.writePort(0xFFFF);
   chip3.writePort(1,0x00);    // Off  
@@ -865,7 +859,6 @@ void checkLeverTwo() {
 void decodeSysVars(byte varCode) {
   byte mask;
   byte result; 
-  Serial.println("9 varCode = "+String(varCode));
   for (byte i = 0; i < 8; i++) {    
      mask = pow(2,i);           // mask (eg. 00001000)
      // Serial.println("mask = "+String(mask));
@@ -877,6 +870,7 @@ void decodeSysVars(byte varCode) {
   for (byte i = 0; i < 8; i++) {
     Serial.print(sysVarArray[i]);
     }
+    Serial.println("9 varCode = "+String(varCode));
 }
 
 void getInputString() {
@@ -916,8 +910,8 @@ void handleInputString()
      else if (stringCode == "G")     boxArray[num1].startSession();
      else if (stringCode == "Q")     boxArray[num1].endSession();
      else if (stringCode == "L1")    boxArray[num1].lever1.handleResponse(); 
-     else if (stringCode == "P")     boxArray[num1].lever1.switchPump(pumpOn);
-     else if (stringCode == "p")     boxArray[num1].lever1.switchPump(pumpOff);
+     else if (stringCode == "P")     boxArray[num1].lever1.switchPump(On);
+     else if (stringCode == "p")     boxArray[num1].lever1.switchPump(Off);
      else if (stringCode == "SCHED") boxArray[num1].lever1.setProtocolNum(num2);
      else if (stringCode == "PUMP")  boxArray[num1].lever1.setPumpDuration(num2); 
      else if (stringCode == "RATIO") boxArray[num1].setParamNum(num2);
@@ -929,9 +923,13 @@ void handleInputString()
      else if (stringCode == "S")     boxArray[num1].lever1.switchStim1(On);
      else if (stringCode == "c")     boxArray[num1].lever1.switchStim2(Off);
      else if (stringCode == "C")     boxArray[num1].lever1.switchStim2(On);
-     else if (stringCode == "V")     Serial.println("9 StateBeta");
+     else if (stringCode == "V")     Serial.println("9 Beta");
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "SYSVARS") decodeSysVars(num1); 
+     else if (stringCode == "Logic") {
+      Serial.println(sysVarArray[num1]);
+      Serial.println(sysVarArray[0]);
+     }
      /*
      // debug stuff 
      else if (stringCode == "L1")    boxArray[num1].handle_L1_Response();
