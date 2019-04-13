@@ -276,13 +276,6 @@ void Lever::startSession() {
         _schedTH = false;
         _maxTrialNumber = 999;           
         _responseCriterion = _paramNum;
-        /*
-        _responseCriterion = 2;         // for debug
-        _blockDuration = 60;
-        _IBIDuration = 10;                  // no IBI
-        _maxBlockNumber = 2;
-        Serial.println(String(_boxNum)+" started");
-        */
       }
       else if (_protocolNum == 2) {      // FR1 x 20
         _schedPR = false;
@@ -573,7 +566,6 @@ class Box  {
     
     //************
   private:
-    int _boxTicks = 0;  // used for flashing LED and printTime
     int _boxNum;
     // used in debug protocol 7 
     boolean _cyclePump = false;
@@ -617,11 +609,6 @@ void Box::cyclePump(){
 */
 
 void Box::tick() { // do stuff every 10 mSec 
-  _boxTicks++;
-  if (_boxTicks == 100) {
-    _boxTicks = 0;
-    // Probabaly no need for boxTicks
-  }
   lever1.tick();
 }
 
@@ -759,7 +746,7 @@ void setup() {
 
   delay(500); 
   init_10_mSec_Timer(); 
-  Serial.println("9 StateBeta");
+  Serial.println("9 Beta");
 }
 
 void checkLeverOne() {
@@ -893,7 +880,7 @@ void handleInputString()
      else if (stringCode == "p")     boxArray[num1].lever1.switchRewardPort(Off);
      else if (stringCode == "SCHED") boxArray[num1].lever1.setProtocolNum(num2);
      else if (stringCode == "PUMP")  boxArray[num1].lever1.setrewardDuration(num2); 
-     else if (stringCode == "RATIO") boxArray[num1].setParamNum(num2);
+     else if (stringCode == "PARAM") boxArray[num1].setParamNum(num2);
      else if (stringCode == "TIME")  boxArray[num1].lever1.setBlockDuration(num2);
      else if (stringCode == "R")     boxArray[num1].reportParameters();
      else if (stringCode == "=")     boxArray[num1].lever1.moveLever(Extend);   // extend lever1
