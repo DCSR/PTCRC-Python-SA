@@ -99,7 +99,7 @@ class GuiClass(object):
         self.B1_IDStr = StringVar(value="box1")                       
         self.B1_Weight = IntVar(value=100)
         self.B1_sched = StringVar(value="FR")         
-        self.B1_FR_value = IntVar(value=1)         
+        self.B1_Param_value = IntVar(value=1)         
         self.B1_SessionLength = IntVar(value=120)
         self.B1_IBILength = IntVar(value=0)
         self.B1_PumpTime = IntVar(value=4000)
@@ -117,7 +117,7 @@ class GuiClass(object):
         self.B2_IDStr = StringVar(value="box2")
         self.B2_Weight = IntVar(value=100)
         self.B2_sched = StringVar(value="FR")             
-        self.B2_FR_value = IntVar(value=1)        
+        self.B2_Param_value = IntVar(value=1)        
         self.B2_SessionLength = IntVar(value=2)
         self.B2_IBILength = IntVar(value=0)
         self.B2_PumpTime = IntVar(value=4000)
@@ -135,7 +135,7 @@ class GuiClass(object):
         self.B3_IDStr = StringVar(value="box3")
         self.B3_Weight = IntVar(value=100)
         self.B3_sched = StringVar(value="FR")            
-        self.B3_FR_value = IntVar(value=1)         
+        self.B3_Param_value = IntVar(value=1)         
         self.B3_SessionLength = IntVar(value=2)
         self.B3_IBILength = IntVar(value=0)
         self.B3_PumpTime = IntVar(value=4000)
@@ -153,7 +153,7 @@ class GuiClass(object):
         self.B4_IDStr = StringVar(value="box4")
         self.B4_Weight = IntVar(value=100)
         self.B4_sched = StringVar(value="FR")            
-        self.B4_FR_value = IntVar(value=1)   
+        self.B4_Param_value = IntVar(value=1)   
         self.B4_SessionLength = IntVar(value=2)
         self.B4_IBILength = IntVar(value=0)
         self.B4_PumpTime = IntVar(value=4000)
@@ -171,7 +171,7 @@ class GuiClass(object):
         self.B5_IDStr = StringVar(value="box5")
         self.B5_Weight = IntVar(value=100)
         self.B5_sched = StringVar(value="FR")             
-        self.B5_FR_value = IntVar(value=1)       
+        self.B5_Param_value = IntVar(value=1)       
         self.B5_SessionLength = IntVar(value=2)
         self.B5_IBILength = IntVar(value=0)
         self.B5_PumpTime = IntVar(value=4000)
@@ -189,7 +189,7 @@ class GuiClass(object):
         self.B6_IDStr = StringVar(value="box6")
         self.B6_Weight = IntVar(value=100)
         self.B6_sched = StringVar(value="FR")           
-        self.B6_FR_value = IntVar(value=1)      
+        self.B6_Param_value = IntVar(value=1)      
         self.B6_SessionLength = IntVar(value=2)
         self.B6_IBILength = IntVar(value=0)
         self.B6_PumpTime = IntVar(value=4000)
@@ -207,7 +207,7 @@ class GuiClass(object):
         self.B7_IDStr = StringVar(value="box7")
         self.B7_Weight = IntVar(value=100)
         self.B7_sched = StringVar(value="FR")          
-        self.B7_FR_value = IntVar(value=1)       
+        self.B7_Param_value = IntVar(value=1)       
         self.B7_SessionLength = IntVar(value=2)
         self.B7_IBILength = IntVar(value=0)
         self.B7_PumpTime = IntVar(value=4000)
@@ -225,7 +225,7 @@ class GuiClass(object):
         self.B8_IDStr = StringVar(value="box8")
         self.B8_Weight = IntVar(value=100)
         self.B8_sched = StringVar(value="FR")             
-        self.B8_FR_value = IntVar(value=1)        
+        self.B8_Param_value = IntVar(value=1)        
         self.B8_SessionLength = IntVar(value=2)
         self.B8_IBILength = IntVar(value=0)
         self.B8_PumpTime = IntVar(value=4000)
@@ -759,8 +759,8 @@ class GuiClass(object):
                            self.B5_Weight,self.B6_Weight,self.B7_Weight,self.B8_Weight]
         self.schedList = [self.B1_sched,self.B2_sched,self.B3_sched,self.B4_sched, \
                           self.B5_sched,self.B6_sched,self.B7_sched,self.B8_sched, ]
-        self.FR_valueList = [self.B1_FR_value,self.B2_FR_value,self.B3_FR_value,self.B4_FR_value, \
-                             self.B5_FR_value,self.B6_FR_value,self.B7_FR_value,self.B8_FR_value,]
+        self.FR_valueList = [self.B1_Param_value,self.B2_Param_value,self.B3_Param_value,self.B4_Param_value, \
+                             self.B5_Param_value,self.B6_Param_value,self.B7_Param_value,self.B8_Param_value,]
         self.SessionLengthList = [self.B1_SessionLength,self.B2_SessionLength,self.B3_SessionLength,self.B4_SessionLength, \
                                   self.B5_SessionLength,self.B6_SessionLength,self.B7_SessionLength,self.B8_SessionLength]
         self.IBILengthList = [self.B1_IBILength,self.B2_IBILength,self.B3_IBILength,self.B4_IBILength, \
@@ -811,7 +811,7 @@ class GuiClass(object):
         B1_ROW_ =  ttk.Label(INI_Frame, text="BOX 1").grid(column=0, row=0, sticky=(W, E))
         B1_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B1_IDStr).grid(column = 1, row = 0) 
         B1_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B1_Weight).grid(column = 2, row = 0)
-        B1_Ratio = Spinbox(INI_Frame, textvariable = self.B1_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=0)
+        B1_Param = Spinbox(INI_Frame, textvariable = self.B1_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=0)
         B1_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B1_sched, width = 12, \
                 values = self.sched).grid(column=4, row=0)
         B1_SessionLength = Spinbox(INI_Frame, textvariable = self.B1_SessionLength, width = 3, \
@@ -827,7 +827,7 @@ class GuiClass(object):
         B2_ROW_ =  ttk.Label(INI_Frame, text="BOX 2").grid(column=0, row=1, sticky=(W, E))
         B2_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B2_IDStr).grid(column = 1, row=1) 
         B2_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B2_Weight).grid(column = 2, row=1)
-        B2_Ratio = Spinbox(INI_Frame, textvariable = self.B2_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=1)
+        B2_Param = Spinbox(INI_Frame, textvariable = self.B2_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=1)
         B2_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B2_sched, width = 12, \
                 values = self.sched).grid(column=4, row=1)
         B2_SessionLength = Spinbox(INI_Frame, textvariable = self.B2_SessionLength, width = 3, \
@@ -843,7 +843,7 @@ class GuiClass(object):
         B3_ROW_ =  ttk.Label(INI_Frame, text="BOX 3").grid(column=0, row=2, sticky=(W, E))
         B3_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B3_IDStr).grid(column = 1, row=2) 
         B3_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B3_Weight).grid(column = 2, row=2)
-        B3_Ratio = Spinbox(INI_Frame, textvariable = self.B3_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=2)
+        B3_Param = Spinbox(INI_Frame, textvariable = self.B3_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=2)
         B3_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B3_sched, width = 12, \
                 values = self.sched).grid(column=4, row=2)
         B3_SessionLength = Spinbox(INI_Frame, textvariable = self.B3_SessionLength, width = 3, \
@@ -858,7 +858,7 @@ class GuiClass(object):
         B4_ROW_ =  ttk.Label(INI_Frame, text="BOX 4").grid(column=0, row=3, sticky=(W, E))
         B4_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B4_IDStr).grid(column = 1, row=3) 
         B4_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B4_Weight).grid(column = 2, row=3)
-        B4_Ratio = Spinbox(INI_Frame, textvariable = self.B4_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=3)
+        B4_Param = Spinbox(INI_Frame, textvariable = self.B4_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=3)
         B4_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B4_sched, width = 12,
                 values = self.sched).grid(column=4, row=3)
         B4_SessionLength = Spinbox(INI_Frame, textvariable = self.B4_SessionLength, width = 3, \
@@ -873,7 +873,7 @@ class GuiClass(object):
         B5_ROW_ =  ttk.Label(INI_Frame, text="BOX 5").grid(column=0, row=4, sticky=(W, E))
         B5_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B5_IDStr).grid(column = 1, row = 4) 
         B5_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B5_Weight).grid(column = 2, row = 4)
-        B5_Ratio = Spinbox(INI_Frame, textvariable = self.B5_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=4)
+        B5_Param = Spinbox(INI_Frame, textvariable = self.B5_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=4)
         B5_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B5_sched, width = 12, \
                 values = self.sched).grid(column=4, row=4)
         B5_SessionLength = Spinbox(INI_Frame, textvariable = self.B5_SessionLength, width = 3, \
@@ -888,7 +888,7 @@ class GuiClass(object):
         B6_ROW_ =  ttk.Label(INI_Frame, text="BOX 6").grid(column=0, row=5, sticky=(W, E))
         B6_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B6_IDStr).grid(column = 1, row=5) 
         B6_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B6_Weight).grid(column = 2, row=5)
-        B6_Ratio = Spinbox(INI_Frame, textvariable = self.B6_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=5)
+        B6_Param = Spinbox(INI_Frame, textvariable = self.B6_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=5)
         B6_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B6_sched, width = 12, \
                 values = self.sched).grid(column=4, row=5)
         B6_SessionLength = Spinbox(INI_Frame, textvariable = self.B6_SessionLength, width = 3, \
@@ -903,7 +903,7 @@ class GuiClass(object):
         B7_ROW_ =  ttk.Label(INI_Frame, text="BOX 7").grid(column=0, row=6, sticky=(W, E))
         B7_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B7_IDStr).grid(column = 1, row=6) 
         B7_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B7_Weight).grid(column = 2, row=6)
-        B7_Ratio = Spinbox(INI_Frame, textvariable = self.B7_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=6)
+        B7_Param = Spinbox(INI_Frame, textvariable = self.B7_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=6)
         B7_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B7_sched, width = 12, \
                 values = self.sched).grid(column=4, row=6)
         B7_SessionLength = Spinbox(INI_Frame, textvariable = self.B7_SessionLength, width = 3, \
@@ -918,7 +918,7 @@ class GuiClass(object):
         B8_ROW_ =  ttk.Label(INI_Frame, text="BOX 8").grid(column=0, row=7, sticky=(W, E))
         B8_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B8_IDStr).grid(column = 1, row=7) 
         B8_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B8_Weight).grid(column = 2, row=7)
-        B8_Ratio = Spinbox(INI_Frame, textvariable = self.B8_FR_value, width = 3, from_=1, to=1000).grid(column=3, row=7)
+        B8_Param = Spinbox(INI_Frame, textvariable = self.B8_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=7)
         B8_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B8_sched, width = 12, \
                 values = self.sched).grid(column=4, row=7)
         B8_SessionLength = Spinbox(INI_Frame, textvariable = self.B8_SessionLength, width = 3, \
