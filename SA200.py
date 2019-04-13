@@ -1,8 +1,13 @@
 """
 
-April 8th, 2019 
+April 12th, 2019 
+SA200.20
 
-SA200.10
+To Do:
+Send IBI Parameter in StartSession()
+
+Shouldn't Sched spinbox change sessionlength?
+Arduino should be changed to Feather or ARM_Cortex_M0
 
 """
 
@@ -33,11 +38,11 @@ def main(argv=None):
 class GuiClass(object):
     def __init__(self):
 
-        self.version = "SA200.10"
+        self.version = "SA200.20"
         self.varCode = 0
         self.verbose = True
-        self.sched = ['0: Do not run', '1: FR(N)', '2:FR1 x 20', '3: FR1 x N', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Debug']
-        self.box1 = Box(1)    # note that boxes[0] is box1
+        self.sched = ['0: Do not run', '1: FR(N)', '2: FR1 x 20', '3: FR1 x N', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Debug']
+        self.box1 = Box(1)
         self.box2 = Box(2)
         self.box3 = Box(3)
         self.box4 = Box(4)
@@ -47,6 +52,8 @@ class GuiClass(object):
         self.box8 = Box(8)
         self.example1List = []
         self.example2List = []
+        
+        # note that boxes[0] is box1
         self.boxes = [self.box1,self.box2,self.box3,self.box4,self.box5,self.box6,self.box7,self.box8]
         # ********  Display stuff ************
         self.X_ZERO = 50
@@ -93,7 +100,8 @@ class GuiClass(object):
         self.B1_Weight = IntVar(value=100)
         self.B1_sched = StringVar(value="FR")         
         self.B1_FR_value = IntVar(value=1)         
-        self.B1_SessionLength = IntVar(value=2)  # added Should it take a value or an index to the array in the Spinbox?
+        self.B1_SessionLength = IntVar(value=120)
+        self.B1_IBILength = IntVar(value=0)
         self.B1_PumpTime = IntVar(value=4000)
         self.B1_calcPumpTime = BooleanVar(value=True)
         self.B1_L1Resp   = IntVar(value=0)
@@ -110,7 +118,8 @@ class GuiClass(object):
         self.B2_Weight = IntVar(value=100)
         self.B2_sched = StringVar(value="FR")             
         self.B2_FR_value = IntVar(value=1)        
-        self.B2_SessionLength = IntVar(value=2)  
+        self.B2_SessionLength = IntVar(value=2)
+        self.B2_IBILength = IntVar(value=0)
         self.B2_PumpTime = IntVar(value=4000)
         self.B2_calcPumpTime = BooleanVar(value=True)
         self.B2_L1Resp   = IntVar(value=0)
@@ -127,7 +136,8 @@ class GuiClass(object):
         self.B3_Weight = IntVar(value=100)
         self.B3_sched = StringVar(value="FR")            
         self.B3_FR_value = IntVar(value=1)         
-        self.B3_SessionLength = IntVar(value=2)  
+        self.B3_SessionLength = IntVar(value=2)
+        self.B3_IBILength = IntVar(value=0)
         self.B3_PumpTime = IntVar(value=4000)
         self.B3_calcPumpTime = BooleanVar(value=True)
         self.B3_L1Resp   = IntVar(value=0)
@@ -145,6 +155,7 @@ class GuiClass(object):
         self.B4_sched = StringVar(value="FR")            
         self.B4_FR_value = IntVar(value=1)   
         self.B4_SessionLength = IntVar(value=2)
+        self.B4_IBILength = IntVar(value=0)
         self.B4_PumpTime = IntVar(value=4000)
         self.B4_calcPumpTime = BooleanVar(value=True)
         self.B4_L1Resp   = IntVar(value=0)
@@ -161,7 +172,8 @@ class GuiClass(object):
         self.B5_Weight = IntVar(value=100)
         self.B5_sched = StringVar(value="FR")             
         self.B5_FR_value = IntVar(value=1)       
-        self.B5_SessionLength = IntVar(value=2)  
+        self.B5_SessionLength = IntVar(value=2)
+        self.B5_IBILength = IntVar(value=0)
         self.B5_PumpTime = IntVar(value=4000)
         self.B5_calcPumpTime = BooleanVar(value=True)
         self.B5_L1Resp   = IntVar(value=0)
@@ -178,7 +190,8 @@ class GuiClass(object):
         self.B6_Weight = IntVar(value=100)
         self.B6_sched = StringVar(value="FR")           
         self.B6_FR_value = IntVar(value=1)      
-        self.B6_SessionLength = IntVar(value=2) 
+        self.B6_SessionLength = IntVar(value=2)
+        self.B6_IBILength = IntVar(value=0)
         self.B6_PumpTime = IntVar(value=4000)
         self.B6_calcPumpTime = BooleanVar(value=True)
         self.B6_L1Resp   = IntVar(value=0)
@@ -195,7 +208,8 @@ class GuiClass(object):
         self.B7_Weight = IntVar(value=100)
         self.B7_sched = StringVar(value="FR")          
         self.B7_FR_value = IntVar(value=1)       
-        self.B7_SessionLength = IntVar(value=2)  
+        self.B7_SessionLength = IntVar(value=2)
+        self.B7_IBILength = IntVar(value=0)
         self.B7_PumpTime = IntVar(value=4000)
         self.B7_calcPumpTime = BooleanVar(value=True)
         self.B7_L1Resp   = IntVar(value=0)
@@ -212,7 +226,8 @@ class GuiClass(object):
         self.B8_Weight = IntVar(value=100)
         self.B8_sched = StringVar(value="FR")             
         self.B8_FR_value = IntVar(value=1)        
-        self.B8_SessionLength = IntVar(value=2)  
+        self.B8_SessionLength = IntVar(value=2)
+        self.B8_IBILength = IntVar(value=0)
         self.B8_PumpTime = IntVar(value=4000)
         self.B8_calcPumpTime = BooleanVar(value=True)
         self.B8_L1Resp   = IntVar(value=0)
@@ -748,6 +763,8 @@ class GuiClass(object):
                              self.B5_FR_value,self.B6_FR_value,self.B7_FR_value,self.B8_FR_value,]
         self.SessionLengthList = [self.B1_SessionLength,self.B2_SessionLength,self.B3_SessionLength,self.B4_SessionLength, \
                                   self.B5_SessionLength,self.B6_SessionLength,self.B7_SessionLength,self.B8_SessionLength]
+        self.IBILengthList = [self.B1_IBILength,self.B2_IBILength,self.B3_IBILength,self.B4_IBILength, \
+                                  self.B5_IBILength,self.B6_IBILength,self.B7_IBILength,self.B8_IBILength]
         self.PumpTimeList = [self.B1_PumpTime,self.B2_PumpTime,self.B3_PumpTime,self.B4_PumpTime, \
                              self.B5_PumpTime,self.B6_PumpTime,self.B7_PumpTime,self.B8_PumpTime,]
         self.calcPumpTimeList = [self.B1_calcPumpTime,self.B2_calcPumpTime,self.B3_calcPumpTime,self.B4_calcPumpTime, \
@@ -799,10 +816,12 @@ class GuiClass(object):
                 values = self.sched).grid(column=4, row=0)
         B1_SessionLength = Spinbox(INI_Frame, textvariable = self.B1_SessionLength, width = 3, \
                 values = [2, 5, 30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=0)
-        B1_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B1_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=0)
+        B1_IBILength = Spinbox(INI_Frame, textvariable = self.B1_IBILength, width = 3, \
+                values = [0, 5, 10, 15, 20, 25, 30]).grid(column=6, row=0)
+        B1_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B1_PumpTime), width = 3, from_=300, to=600).grid(column=7,row=0)
         B1_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B1_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 0: \
-                self.calcPumpTime(self.B1_calcPumpTime.get(),boxIndex)).grid(column=7, row=0)
+                self.calcPumpTime(self.B1_calcPumpTime.get(),boxIndex)).grid(column=8, row=0)
 
 
         B2_ROW_ =  ttk.Label(INI_Frame, text="BOX 2").grid(column=0, row=1, sticky=(W, E))
@@ -813,10 +832,12 @@ class GuiClass(object):
                 values = self.sched).grid(column=4, row=1)
         B2_SessionLength = Spinbox(INI_Frame, textvariable = self.B2_SessionLength, width = 3, \
                 values = [2, 5, 30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=1)
-        B2_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B2_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=1)
+        B2_IBILength = Spinbox(INI_Frame, textvariable = self.B2_IBILength, width = 3, \
+                values = [0, 5, 10, 15, 20, 25, 30]).grid(column=6, row=1)
+        B2_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B2_PumpTime), width = 3, from_=300, to=600).grid(column=7,row=1)
         B2_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B2_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 1: \
-                self.calcPumpTime(self.B2_calcPumpTime.get(),boxIndex)).grid(column=7, row=1)
+                self.calcPumpTime(self.B2_calcPumpTime.get(),boxIndex)).grid(column=8, row=1)
 
 
         B3_ROW_ =  ttk.Label(INI_Frame, text="BOX 3").grid(column=0, row=2, sticky=(W, E))
@@ -827,10 +848,12 @@ class GuiClass(object):
                 values = self.sched).grid(column=4, row=2)
         B3_SessionLength = Spinbox(INI_Frame, textvariable = self.B3_SessionLength, width = 3, \
                 values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=2)
-        B3_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B3_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=2)
+        B3_IBILength = Spinbox(INI_Frame, textvariable = self.B3_IBILength, width = 3, \
+                values = [0, 5, 10, 15, 20, 25, 30]).grid(column=6, row=2)
+        B3_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B3_PumpTime), width = 3, from_=300, to=600).grid(column=7,row=2)
         B3_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B3_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 2: \
-                self.calcPumpTime(self.B3_calcPumpTime.get(),boxIndex)).grid(column=7, row=2)
+                self.calcPumpTime(self.B3_calcPumpTime.get(),boxIndex)).grid(column=8, row=2)
 
         B4_ROW_ =  ttk.Label(INI_Frame, text="BOX 4").grid(column=0, row=3, sticky=(W, E))
         B4_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B4_IDStr).grid(column = 1, row=3) 
@@ -840,10 +863,12 @@ class GuiClass(object):
                 values = self.sched).grid(column=4, row=3)
         B4_SessionLength = Spinbox(INI_Frame, textvariable = self.B4_SessionLength, width = 3, \
                 values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=3)
-        B4_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B4_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=3)
+        B4_IBILength = Spinbox(INI_Frame, textvariable = self.B4_IBILength, width = 3, \
+                values = [0, 5, 10, 15, 20, 25, 30]).grid(column=6, row=3)
+        B4_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B4_PumpTime), width = 3, from_=300, to=600).grid(column=7,row=3)
         B4_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B4_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 3: \
-                self.calcPumpTime(self.B4_calcPumpTime.get(),boxIndex)).grid(column=7, row=3)
+                self.calcPumpTime(self.B4_calcPumpTime.get(),boxIndex)).grid(column=8, row=3)
 
         B5_ROW_ =  ttk.Label(INI_Frame, text="BOX 5").grid(column=0, row=4, sticky=(W, E))
         B5_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B5_IDStr).grid(column = 1, row = 4) 
@@ -853,10 +878,12 @@ class GuiClass(object):
                 values = self.sched).grid(column=4, row=4)
         B5_SessionLength = Spinbox(INI_Frame, textvariable = self.B5_SessionLength, width = 3, \
                 values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=4)
-        B5_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B5_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=4)
+        B5_IBILength = Spinbox(INI_Frame, textvariable = self.B5_IBILength, width = 3, \
+                values = [0, 5, 10, 15, 20, 25, 30]).grid(column=6, row=4)
+        B5_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B5_PumpTime), width = 3, from_=300, to=600).grid(column=7,row=4)
         B5_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B5_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 4: \
-                self.calcPumpTime(self.B5_calcPumpTime.get(),boxIndex)).grid(column=7, row=4)
+                self.calcPumpTime(self.B5_calcPumpTime.get(),boxIndex)).grid(column=8, row=4)
         
         B6_ROW_ =  ttk.Label(INI_Frame, text="BOX 6").grid(column=0, row=5, sticky=(W, E))
         B6_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B6_IDStr).grid(column = 1, row=5) 
@@ -866,10 +893,12 @@ class GuiClass(object):
                 values = self.sched).grid(column=4, row=5)
         B6_SessionLength = Spinbox(INI_Frame, textvariable = self.B6_SessionLength, width = 3, \
                 values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=5)
-        B6_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B6_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=5)
+        B6_IBILength = Spinbox(INI_Frame, textvariable = self.B6_IBILength, width = 3, \
+                values = [0, 5, 10, 15, 20, 25, 30]).grid(column=6, row=5)
+        B6_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B6_PumpTime), width = 3, from_=300, to=600).grid(column=7,row=5)
         B6_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B6_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 5: \
-                self.calcPumpTime(self.B6_calcPumpTime.get(),boxIndex)).grid(column=7, row=5)
+                self.calcPumpTime(self.B6_calcPumpTime.get(),boxIndex)).grid(column=8, row=5)
 
         B7_ROW_ =  ttk.Label(INI_Frame, text="BOX 7").grid(column=0, row=6, sticky=(W, E))
         B7_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B7_IDStr).grid(column = 1, row=6) 
@@ -879,10 +908,12 @@ class GuiClass(object):
                 values = self.sched).grid(column=4, row=6)
         B7_SessionLength = Spinbox(INI_Frame, textvariable = self.B7_SessionLength, width = 3, \
                 values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=6)
-        B7_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B7_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=6)
+        B7_IBILength = Spinbox(INI_Frame, textvariable = self.B7_IBILength, width = 3, \
+                values = [0, 5, 10, 15, 20, 25, 30]).grid(column=6, row=6)
+        B7_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B7_PumpTime), width = 3, from_=300, to=600).grid(column=7,row=6)
         B7_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B7_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 6: \
-                self.calcPumpTime(self.B7_calcPumpTime.get(),boxIndex)).grid(column=7, row=6)
+                self.calcPumpTime(self.B7_calcPumpTime.get(),boxIndex)).grid(column=8, row=6)
 
         B8_ROW_ =  ttk.Label(INI_Frame, text="BOX 8").grid(column=0, row=7, sticky=(W, E))
         B8_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B8_IDStr).grid(column = 1, row=7) 
@@ -892,10 +923,12 @@ class GuiClass(object):
                 values = self.sched).grid(column=4, row=7)
         B8_SessionLength = Spinbox(INI_Frame, textvariable = self.B8_SessionLength, width = 3, \
                 values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=7)
-        B8_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B8_PumpTime), width = 3, from_=300, to=600).grid(column=6,row=7)
+        B8_IBILength = Spinbox(INI_Frame, textvariable = self.B8_IBILength, width = 3, \
+                values = [0, 5, 10, 15, 20, 25, 30]).grid(column=6, row=7)
+        B8_PumpTime = Spinbox(INI_Frame, textvariable = str(self.B8_PumpTime), width = 3, from_=300, to=600).grid(column=7,row=7)
         B8_CalcPumpTime = Checkbutton(INI_Frame, text = "Calc  ", variable = self.B8_calcPumpTime, \
                 onvalue = True, offvalue = False, command=lambda boxIndex = 7: \
-                self.calcPumpTime(self.B8_calcPumpTime.get(),boxIndex)).grid(column=7, row=7)
+                self.calcPumpTime(self.B8_calcPumpTime.get(),boxIndex)).grid(column=8, row=7)
         """
             1     2      3     4      5      6    
             RatID Weight Ratio Sched Session Pump")
@@ -906,10 +939,12 @@ class GuiClass(object):
         aLabel =  ttk.Label(INI_Frame, text="N").grid(column=3, row=12)
         aLabel =  ttk.Label(INI_Frame, text="Sched ").grid(column=4, row=12)
         aLabel =  ttk.Label(INI_Frame, text="Session ").grid(column=5, row=12)
-        aLabel =  ttk.Label(INI_Frame, text="Pump").grid(column=6, row=12)
+        aLabel =  ttk.Label(INI_Frame, text="IBI").grid(column=6, row=12)        
+        aLabel =  ttk.Label(INI_Frame, text="Pump").grid(column=7, row=12)
         aLabel =  ttk.Label(INI_Frame, text="(gms)").grid(column=2, row=13)
         aLabel =  ttk.Label(INI_Frame, text="(Min)").grid(column=5, row=13)
-        aLabel =  ttk.Label(INI_Frame, text="(10 mSec)").grid(column=6, row=13)
+        aLabel =  ttk.Label(INI_Frame, text="(Min)").grid(column=6, row=13)
+        aLabel =  ttk.Label(INI_Frame, text="(10 mSec)").grid(column=7, row=13)
 
 
         self.loadFromINIFile()
@@ -942,8 +977,8 @@ class GuiClass(object):
         Lists as used to iterate over each variable.
         """       
         if (self.verbose):
-            print("Reading SA200.ini")
-        iniFile = open('SA200.ini','r')
+            print("Reading SA200_20.ini")
+        iniFile = open('SA200_20.ini','r')
         for i in range(8):
             aLine = iniFile.readline().rstrip("\n")   # read line 
             tokens = aLine.split()
@@ -951,12 +986,12 @@ class GuiClass(object):
                 print(tokens)
             self.IDStrList[i].set(tokens[0])
             self.WeightList[i].set(tokens[1])
-            # print(self.sched[int(tokens[2])])
             self.schedList[i].set(self.sched[int(tokens[2])])
             self.FR_valueList[i].set(tokens[3])
             self.SessionLengthList[i].set(tokens[4])
-            self.PumpTimeList[i].set(tokens[5])
-            self.calcPumpTimeList[i].set(tokens[6])
+            self.IBILengthList[i].set(tokens[5])
+            self.PumpTimeList[i].set(tokens[6])
+            self.calcPumpTimeList[i].set(tokens[7])
         aString = iniFile.readline().rstrip("\n")      # COM number (done differently on a Mac)
         self.portString.set(aString)
         # print("portString = "+aString)
@@ -986,7 +1021,7 @@ class GuiClass(object):
         # print("self.varCode =",self.varCode,format(self.varCode,'08b'))
 
     def writeToINIFile(self):
-        INIfileName = "SA200.ini"
+        INIfileName = "SA200_20.ini"
         if (self.verbose):
             print("Writing", INIfileName)
         iniFile = open(INIfileName,'w')        
@@ -999,6 +1034,7 @@ class GuiClass(object):
             str(schedIndex)+' '+ \
             str(self.FR_valueList[i].get())+' '+ \
             str(self.SessionLengthList[i].get())+' '+ \
+            str(self.IBILengthList[i].get())+' '+ \
             str(self.PumpTimeList[i].get())
             if (self.calcPumpTimeList[i].get() == True):
                 tempStr = tempStr+' 1'
