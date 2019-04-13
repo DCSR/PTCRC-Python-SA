@@ -1328,6 +1328,7 @@ class GuiClass(object):
             self.outputText("<SCHED "+str(boxIndex)+" "+str(self.schedList[listIndex].get())+">")
             self.outputText("<RATIO "+str(boxIndex)+" "+str(self.FR_valueList[listIndex].get())+">")
             self.outputText("<TIME "+str(boxIndex)+" "+str(self.SessionLengthList[listIndex].get()*60)+">")
+            self.outputText("<IBI "+str(boxIndex)+" "+str(self.IBILengthList[listIndex].get())+">")
             self.outputText("<PUMP "+str(boxIndex)+" "+str(self.PumpTimeList[listIndex].get())+">")
             # request report
             self.outputText("<R "+str(boxIndex)+">")
