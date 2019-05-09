@@ -1,6 +1,6 @@
 """
 
-May have been edited on Mar 6th, 2019 in error
+May 9th, 2019
 
 To Do:
 exception at getInput:  [b'000000009', b'varCode', b'=', b'0']
@@ -38,7 +38,7 @@ class GuiClass(object):
         self.version = "SA200.20"
         self.varCode = 0
         self.verbose = True
-        self.sched = ['0: Do not run', '1: FR(N)', '2: FR1 x 20 trials', '3: FR1 x N trials', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Debug']
+        self.sched = ['0: Do not run', '1: FR(N)', '2: FR1 x 20 trials', '3: FR1 x N trials', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Flush']
         self.box1 = Box(1)
         self.box2 = Box(2)
         self.box3 = Box(3)
@@ -638,7 +638,7 @@ class GuiClass(object):
         self.diagnosticButtonFrame = ttk.Frame(self.diagnosticFrame,borderwidth=3, relief="sunken")
         self.diagnosticButtonFrame.grid(column = 0, row = 1, sticky = (N))
         
-        testButton1 = ttk.Button(self.diagnosticButtonFrame,text="testFunction1", command = self.testFunction1)
+        testButton1 = ttk.Button(self.diagnosticButtonFrame,text="Report Parameters", command = self.reportParameters)
         testButton1.grid(column = 0, row = 1, columnspan = 3)
         testButton2 = ttk.Button(self.diagnosticButtonFrame,text="testFunction2",command = self.testFunction2)
         testButton2.grid(column = 0, row = 2, columnspan = 3)
@@ -943,16 +943,16 @@ class GuiClass(object):
         aLabel =  ttk.Label(INI_Frame, text="(Min)").grid(column=6, row=13)
         aLabel =  ttk.Label(INI_Frame, text="(10 mSec)").grid(column=7, row=13)
 
-        #['0: Do not run', '1: FR(N)', '2: FR1 x 20', '3: FR1 x N', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Debug']
+        #['0: Do not run', '1: FR(N)', '2: FR1 x 20', '3: FR1 x N', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Flush']
 
         aLabel = ttk.Label(INI_Frame, text="0: Do Not Run - enough said").grid(column=1, sticky = W, columnspan=7, row=14)
         aLabel = ttk.Label(INI_Frame, text="1: FR(N) - session length = block length").grid(column=1, sticky = W, columnspan=7, row=15)
         aLabel = ttk.Label(INI_Frame, text="2: FR1 x 20 - session length = block length. Stops after 20 infusions").grid(column=1, sticky = W, columnspan=7, row=16)
-        aLabel = ttk.Label(INI_Frame, text="3: FR1 x N - session length = block length").grid(column=1, sticky = W, columnspan=7, row=17)
+        aLabel = ttk.Label(INI_Frame, text="3: FR1 x N trials - session length = block length. Stops after N infusions").grid(column=1, sticky = W, columnspan=7, row=17)
         aLabel = ttk.Label(INI_Frame, text="4: PR starting at step N (usually 1)").grid(column=1, sticky = W, columnspan=7, row=18)
-        aLabel = ttk.Label(INI_Frame, text="5: TH - 12 Trials - uses Block length (typically 10) and IBI (Typically 0)").grid(column=1, sticky = W, columnspan=7, row=19)
+        aLabel = ttk.Label(INI_Frame, text="5: TH - 12 Trials - uses Block length (typically 10 min) and IBI (Typically 0 min)").grid(column=1, sticky = W, columnspan=7, row=19)
         aLabel = ttk.Label(INI_Frame, text="6: IntA: 5 - 25. Defaults to 5 min trials and 25 min. ").grid(column=1, sticky = W, columnspan=7, row=20)
-        aLabel = ttk.Label(INI_Frame, text="7: Changes depending on current debugging needs").grid(column=1, sticky = W, columnspan=7, row=21)
+        aLabel = ttk.Label(INI_Frame, text="7: Flush: N Infusions separated by Block time").grid(column=1, sticky = W, columnspan=7, row=21)
         aLabel = ttk.Label(INI_Frame, text="* IBI - presently only applies to TH").grid(column=1, sticky = W, columnspan=7, row=22)
 
         self.loadFromINIFile()
@@ -1151,7 +1151,7 @@ class GuiClass(object):
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-205, x_pixel_width, max_x_scale, dataList, ["J"], "L2")
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-180, x_pixel_width, max_x_scale, dataList, ["P","p"], "Pump")
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-155, x_pixel_width, max_x_scale, dataList, ["S","s"], "Stim")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-130, x_pixel_width, max_x_scale, dataList, ["=","-"], "Lever 1")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-130, x_pixel_width, max_x_scale, dataList, ["=","."], "Lever 1")
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-105, x_pixel_width, max_x_scale, dataList, ["~",","], "Lever 2")
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-80,  x_pixel_width, max_x_scale, dataList, ["T","t"], "Trial")
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-55,  x_pixel_width, max_x_scale, dataList, ["B","b"], "Block")
@@ -1161,8 +1161,15 @@ class GuiClass(object):
     def sendCode(self, codeStr):
         self.outputText(codeStr)
     
-    def testFunction1(self):
-        pass
+    def reportParameters(self):
+        self.outputText("<R 0>")    # Report parameters
+        self.outputText("<R 1>")
+        self.outputText("<R 2>")
+        self.outputText("<R 3>")
+        self.outputText("<R 4>")
+        self.outputText("<R 5>")
+        self.outputText("<R 6>")
+        self.outputText("<R 7>")
 
     def testFunction2(self):
         pass
@@ -1187,18 +1194,6 @@ class GuiClass(object):
     def diagnostics(self):
         self.outputText("<V>")      # Get version on M0
         self.outputText("<D>")      # Get Diagnostics
-        """
-        self.outputText("<R 7>")    # Report parameters
-        self.outputText("<R 6>")
-        self.outputText("<R 5>")
-        self.outputText("<R 4>")
-        self.outputText("<R 3>")
-        self.outputText("<R 2>")
-        self.outputText("<R 1>")
-        self.outputText("<R 0>")
-        """
-        
-        
 
     def drawCumulativeRecord(self, aCanvas, selectedList, max_x_scale):
         aCanvas.delete('all')
@@ -1260,7 +1255,7 @@ class GuiClass(object):
         self.outputText(tempStr)
 
     def moveLever2(self,boxIndex,state):
-        if (state == True): tempStr = "<~ "+str(boxIndex)+">"
+        if (state == True): tempStr = "<. "+str(boxIndex)+">"
         else: tempStr = "<, "+str(boxIndex)+">"
         self.outputText(tempStr)
 
@@ -1345,11 +1340,7 @@ class GuiClass(object):
             if sched == "0: Do not run":
                 self.boxes[boxIndex].sessionStarted = False
             else:
-                self.boxes[boxIndex].sessionStarted = True
-                
-            # request report - 
-            # self.outputText("<R "+str(boxIndex)+">")
-                
+                self.boxes[boxIndex].sessionStarted = True                
         else:           
            self.writeToTextbox("No arduino connected",0)
 
@@ -1535,7 +1526,6 @@ class Box(object):
         self.schedNum = initSched
         self.dose = initDose
         self.dataList = []
-        print("Initialize report: ",self.subject_ID_string,self.weight,self.schedNum,self.dose)
 
     def sessionEnded(self):
         """

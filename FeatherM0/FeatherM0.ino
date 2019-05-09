@@ -1,12 +1,36 @@
 /*  
  *   
- *   May 8th.
+ *   May 9th.
+ *   
+ *   TH - Block one ends after 4 injections
+ *   "Flush" - N injections separated by Block Time
+ *   _cycle stuff deleted
+ *   sessionRunning deleted
+ *   Fixed lever retract timestamp
+ *   boolean _pumpOn = added to functionally separate pump and _timeOut 
+ *   Suppress initialize report
+ *   Only responds to lever response during BLOCK
+ *   Conflict of commands and timestamps for Lever resolved (=,.) 
+ *   
+ *   Update Adafruit SAMD Boards to Ver 1.2.7
+ *  
+ *   To Do:
+ *   
+ *   Document SysVar stuff
+ *   
+ *   Document the fact that the lever timestamp is/was inconsistent 
+ *   (= and -) vs (= and.) and may require a work around in Analysis
+ *   
+ *   Block ending retracts lever etc. but no Trial end timestamp. 
+ *   endBlock() should endTrial() 
+ *   
+ *   reportParameters() available but and called by  
  *   
  *   Check 5-25 - should it override all parameters?
  *   
- *   
- *   Should it be handled by a sysVar?
- *   
+ *   What should be handled by a sysVar?
+ *   -  CheckLeverOneBits?
+ *   -  
  *   
  *   _blockDuration and _IBIDuration are a bit complicated.
  *   Some protocols have them set by default (eg.IntA 5-25)
@@ -173,7 +197,6 @@ volatile boolean tickFlag = false;
 
 // program housekeeping varaibles
 String inputString;
-boolean sessionRunning = false;
 boolean echoInput = false;
 unsigned long maxDelta = 0;
 byte maxQueueRecs = 0;
@@ -217,11 +240,12 @@ class Lever {
 
     // void moveLever2(int state);
  
-    boolean _timeOut = false;                     
+    boolean _timeOut = false; 
+    boolean _rewardOn = false;                    
     boolean _schedPR = false;
     boolean _schedTH = false;
     // defaults to a 6h FR1 session 
-    int _protocolNum = 1;  // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25']
+    int _protocolNum = 1;  // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25', '7: Flush']
     int _paramNum = 1;
     int _PRstepNum = 1;   
     states _boxState = PRESTART;
@@ -256,12 +280,14 @@ Lever::Lever(int boxNum) {
   _boxNum = boxNum;
 }
 
-void Lever::tick(){       
+void Lever::tick(){ 
+    if (_rewardOn) {
+       _rewardTime++;
+       if (_rewardTime == _rewardDuration) switchRewardPort(Off);
+    }  
     if (_timeOut) {
-      _rewardTime++;
-      if (_rewardTime == _rewardDuration) switchRewardPort(Off);  // change to pump.update() 
-      _timeOutTime++;
-      if (_timeOutTime == _timeOutDuration) endTimeOut();     
+       _timeOutTime++;
+       if (_timeOutTime == _timeOutDuration) endTimeOut();     
     }
     _tickCounts++; 
     if (_tickCounts == 100)    {         // do this every second
@@ -336,10 +362,7 @@ void Lever::setProtocolDefaults() {
       }   
       else if (_protocolNum == 5) {      // TH
         // _blockDuration = 21600;       Set in startBlock()
-
-        _maxTrialNumber = 999;
-        _blockDuration = _blockDurationInit;              // Block duration in seconds;
-
+        // _maxTrialNumber = 4;          Set in startBlock()
         _maxBlockNumber = 13;            // 13 blocks
         _IBIDuration = _IBIDurationInit;                                         
         _schedPR = false;
@@ -352,7 +375,7 @@ void Lever::setProtocolDefaults() {
       else if (_protocolNum == 6) {      // IntA 5-25 6h
         _blockDuration = 300;            // 60 seconds * 5 min
         _maxBlockNumber = 12;            // 12 blocks        
-        _IBIDuration = 1500;               // 25 * 60 sec = 1500 seconds
+        _IBIDuration = 1500;             // 25 * 60 sec = 1500 seconds
         _schedPR = false;
         _schedTH = false;
         _maxTrialNumber = 999;
@@ -360,20 +383,17 @@ void Lever::setProtocolDefaults() {
         _PRstepNum = 1;                 // irrelevant
         _timeOutDuration = _rewardDuration; 
       }
-      /*
-      else if (_protocolNum == 7) {      // Debug
-        _schedPR = false;                // Sets up initially as an FR1 
+      else if (_protocolNum == 7) {      // Flush
+        _blockDuration = _blockDurationInit;
+        _maxBlockNumber = _paramNum;    // Maybe 24
+        _IBIDuration = 0;
+        _schedPR = false;                 
         _schedTH = false;
-        _timeOutDuration = _rewardDuration;
-        _responseCriterion = 1;
         _maxTrialNumber = 999;
-        _cycles = _paramNum;          <- does this still exist?
-        _pumpOnTime = _rewardDuration;
-        _blockDuration = 21600;          // default to 6hr
-        _timeOutDuration = ((_cycles+1)*(_pumpOnTime + _pumpOffTime));
-        _cyclePump = false;             // This is the thing that controls the cycle in tick()  
-      } 
-      */  
+        _responseCriterion = 999;       
+        _PRstepNum = 1;                 // irrelevant
+        _timeOutDuration = _rewardDuration; 
+      }   
 }
 
 void Lever::startSession() { 
@@ -382,8 +402,7 @@ void Lever::startSession() {
   _startTime = millis();
   _blockNumber = 0;  
   _rewardTime = 0; 
-  _timeOutTime = 0;
-  // sessionRunning = true;     
+  _timeOutTime = 0;   
   TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
   printQueue.push(&tStamp);
   startBlock();
@@ -391,7 +410,6 @@ void Lever::startSession() {
 
 void Lever::endSession () {   
     // endTrial(); the only thing this did was retract the lever, but see next line. 
-    // _cyclePump = false;
     moveLever(Retract);         // was moveLever1
     // moveLever2(Retract);
     switchStim1(Off);
@@ -425,16 +443,18 @@ void Lever::setIBIDuration(int IBIDuration) {
 }
 
 void Lever::handleResponse() { 
-  if (_timeOut == false) {  
-       TStamp tStamp = {_boxNum, 'L', millis() - _startTime, 0, 9};
-       printQueue.push(&tStamp);
-       _trialResponses++;
-       if (_trialResponses >= _responseCriterion) {
-               endTrial();
-               reinforce();
-               startTimeOut();
-       }
-    }
+   if (_boxState == BLOCK) {
+      if (_timeOut == false) {  
+         TStamp tStamp = {_boxNum, 'L', millis() - _startTime, 0, 9};
+         printQueue.push(&tStamp);
+         _trialResponses++;
+         if (_trialResponses >= _responseCriterion) {
+                 endTrial();
+                 reinforce();
+                 startTimeOut();
+         }
+      }  
+   }
 }
 
 void Lever::startBlock() {
@@ -447,23 +467,25 @@ void Lever::startBlock() {
   if (_schedTH == true){                                       // TH
       _rewardDuration = _THPumpTimeArray[_blockNumber - 1];    // zero indexed array; block 1 = index 0
       _timeOutDuration = _rewardDuration;
-      /*
       if (_blockNumber == 1) {
-        _maxTrialNumber = 4;
         _blockDuration = 21600;          // 60 * 60 * 6 = 21600 seconds = 6 hrs;
+        _maxTrialNumber = 4;
       }
       else {
-        _maxTrialNumber = 999;
-        _blockDuration = _blockDurationInit * 60;              // Block duration in seconds;    
+        _blockDuration = _blockDurationInit;              // Block duration in seconds; 
+        _maxTrialNumber = 999;   
       }  
-      */
   }
-  startTrial();
+  if (_protocolNum != 7) startTrial();    // If not Flush
 }
 
 void Lever::endBlock() {   
    TStamp tStamp = {_boxNum, 'b', millis() - _startTime, 0, 9};
    printQueue.push(&tStamp);
+   if (_protocolNum == 7) {             // Flush
+      _rewardTime = 0;
+      switchRewardPort(On);
+   }   
    if (_blockNumber < _maxBlockNumber) startIBI();
    else endSession();
 }
@@ -511,8 +533,8 @@ void Lever::reinforce() {
 
 void Lever::startTimeOut() {
     switchStim1(On); 
-    _timeOutTime = 0;       // _timeOutTimer counts down with each tick
-    _timeOut = true;                  //timeOut    
+    _timeOutTime = 0;       // _timeOutTime counts up _timeOutDuration
+    _timeOut = true;          
 }
 
 void Lever::endTimeOut() {
@@ -542,10 +564,12 @@ void Lever::switchRewardPort(boolean state) {
     if (state) {              // ON or true      
           TStamp tStamp = {_boxNum, 'P', millis() - _startTime, 1, 2};
           printQueue.push(&tStamp);
+          _rewardOn = true;
     }
     else {      
           TStamp tStamp = {_boxNum, 'p', millis() - _startTime, 0, 2};
           printQueue.push(&tStamp);
+          _rewardOn = false;
     }
     // The Pump CheckBox is index 2 
 }
@@ -636,10 +660,6 @@ class Box  {
     //************
   private:
     int _boxNum;
-    // used in debug protocol 7 
-    boolean _cyclePump = false;
-    int _cycleCount = 0;
-    int _cycles;
     int _pumpOnTime;          // set in StartSession()
     int _pumpOffTime = 20;    // default
     int _pumpOnTicker = 0;
@@ -653,29 +673,6 @@ void Box::startSession() {
 void Box::endSession() {
   lever1.endSession();
 }
-
-/*
-void Box::cyclePump(){
-    if (_pumpOnTicker > 0) {
-       _pumpOnTicker--;
-       if (_pumpOnTicker == 0) {
-           if (sysVarArray{1]) chip1.digitalWrite(_boxNum+8,LOW);
-           else chip1.digitalWrite(_boxNum+8,HIGH);
-          _pumpOffTicker = _pumpOffTime;
-          _cycleCount++;
-          if (_cycleCount == _cycles) _cyclePump = false;
-       }
-    }
-    else if (_pumpOffTicker > 0) {
-        _pumpOffTicker--;
-        if (_pumpOffTicker == 0) {
-           if (sysVarArray[1]) chip1.digitalWrite(_boxNum+8,HIGH);
-           else chip1.digitalWrite(_boxNum+8,LOW);
-          _pumpOnTicker = _pumpOnTime;
-        }
-    }
-}
-*/
 
 void Box::tick() { // do stuff every 10 mSec 
   lever1.tick();
@@ -974,7 +971,7 @@ void handleInputString()
      else if (stringCode == "PUMP")  boxArray[num1].lever1.setrewardDuration(num2); 
      else if (stringCode == "R")     boxArray[num1].reportParameters();
      else if (stringCode == "=")     boxArray[num1].lever1.moveLever(Extend);   // extend lever1
-     else if (stringCode == "-")     boxArray[num1].lever1.moveLever(Retract);    // retract lever1
+     else if (stringCode == ".")     boxArray[num1].lever1.moveLever(Retract);    // retract lever1
      else if (stringCode == "s")     boxArray[num1].lever1.switchStim1(Off);
      else if (stringCode == "S")     boxArray[num1].lever1.switchStim1(On);
      else if (stringCode == "c")     boxArray[num1].lever1.switchStim2(Off);
@@ -988,13 +985,9 @@ void handleInputString()
      }
      /*
      // debug stuff 
-     else if (stringCode == "off")   turnStuffOff();
      else if (stringCode == "i")     timeUSB();
      else if (stringCode == "E")     echoInput = !echoInput;
-     else if (stringCode == "B")     boxArray[num1].getBlockTime();
      ****** Deprecated - check Python for codes being sent
-     // else if (stringCode == "1")     boxArray[0].handleResponse();
-     // else if (stringCode == "2")     boxArray[1].handleResponse();
      // else if (stringCode == "~")     boxArray[num1].moveLever2(Extend);   // extend lever2  
      // else if (stringCode == ",")     boxArray[num1].moveLever2(Retract);    // retract lever2
      */
