@@ -1,13 +1,10 @@
 """
 
-April 12th, 2019 
-SA200.20
+May have been edited on Mar 6th, 2019 in error
 
 To Do:
-Send IBI Parameter in StartSession()
+exception at getInput:  [b'000000009', b'varCode', b'=', b'0']
 
-Shouldn't Sched spinbox change sessionlength?
-Arduino should be changed to Feather or ARM_Cortex_M0
 
 """
 
@@ -41,7 +38,7 @@ class GuiClass(object):
         self.version = "SA200.20"
         self.varCode = 0
         self.verbose = True
-        self.sched = ['0: Do not run', '1: FR(N)', '2: FR1 x 20', '3: FR1 x N', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Debug']
+        self.sched = ['0: Do not run', '1: FR(N)', '2: FR1 x 20 trials', '3: FR1 x N trials', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Debug']
         self.box1 = Box(1)
         self.box2 = Box(2)
         self.box3 = Box(3)
@@ -759,7 +756,7 @@ class GuiClass(object):
                            self.B5_Weight,self.B6_Weight,self.B7_Weight,self.B8_Weight]
         self.schedList = [self.B1_sched,self.B2_sched,self.B3_sched,self.B4_sched, \
                           self.B5_sched,self.B6_sched,self.B7_sched,self.B8_sched, ]
-        self.FR_valueList = [self.B1_Param_value,self.B2_Param_value,self.B3_Param_value,self.B4_Param_value, \
+        self.paramNumList = [self.B1_Param_value,self.B2_Param_value,self.B3_Param_value,self.B4_Param_value, \
                              self.B5_Param_value,self.B6_Param_value,self.B7_Param_value,self.B8_Param_value,]
         self.SessionLengthList = [self.B1_SessionLength,self.B2_SessionLength,self.B3_SessionLength,self.B4_SessionLength, \
                                   self.B5_SessionLength,self.B6_SessionLength,self.B7_SessionLength,self.B8_SessionLength]
@@ -812,7 +809,7 @@ class GuiClass(object):
         B1_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B1_IDStr).grid(column = 1, row = 0) 
         B1_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B1_Weight).grid(column = 2, row = 0)
         B1_Param = Spinbox(INI_Frame, textvariable = self.B1_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=0)
-        B1_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B1_sched, width = 12, \
+        B1_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B1_sched, width = 15, \
                 values = self.sched).grid(column=4, row=0)
         B1_SessionLength = Spinbox(INI_Frame, textvariable = self.B1_SessionLength, width = 3, \
                 values = [2, 5, 30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=0)
@@ -828,7 +825,7 @@ class GuiClass(object):
         B2_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B2_IDStr).grid(column = 1, row=1) 
         B2_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B2_Weight).grid(column = 2, row=1)
         B2_Param = Spinbox(INI_Frame, textvariable = self.B2_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=1)
-        B2_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B2_sched, width = 12, \
+        B2_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B2_sched, width = 15, \
                 values = self.sched).grid(column=4, row=1)
         B2_SessionLength = Spinbox(INI_Frame, textvariable = self.B2_SessionLength, width = 3, \
                 values = [2, 5, 30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=1)
@@ -844,7 +841,7 @@ class GuiClass(object):
         B3_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B3_IDStr).grid(column = 1, row=2) 
         B3_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B3_Weight).grid(column = 2, row=2)
         B3_Param = Spinbox(INI_Frame, textvariable = self.B3_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=2)
-        B3_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B3_sched, width = 12, \
+        B3_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B3_sched, width = 15, \
                 values = self.sched).grid(column=4, row=2)
         B3_SessionLength = Spinbox(INI_Frame, textvariable = self.B3_SessionLength, width = 3, \
                 values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=2)
@@ -859,7 +856,7 @@ class GuiClass(object):
         B4_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B4_IDStr).grid(column = 1, row=3) 
         B4_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B4_Weight).grid(column = 2, row=3)
         B4_Param = Spinbox(INI_Frame, textvariable = self.B4_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=3)
-        B4_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B4_sched, width = 12,
+        B4_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B4_sched, width = 15,
                 values = self.sched).grid(column=4, row=3)
         B4_SessionLength = Spinbox(INI_Frame, textvariable = self.B4_SessionLength, width = 3, \
                 values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=3)
@@ -874,7 +871,7 @@ class GuiClass(object):
         B5_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B5_IDStr).grid(column = 1, row = 4) 
         B5_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B5_Weight).grid(column = 2, row = 4)
         B5_Param = Spinbox(INI_Frame, textvariable = self.B5_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=4)
-        B5_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B5_sched, width = 12, \
+        B5_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B5_sched, width = 15, \
                 values = self.sched).grid(column=4, row=4)
         B5_SessionLength = Spinbox(INI_Frame, textvariable = self.B5_SessionLength, width = 3, \
                 values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=4)
@@ -889,7 +886,7 @@ class GuiClass(object):
         B6_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B6_IDStr).grid(column = 1, row=5) 
         B6_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B6_Weight).grid(column = 2, row=5)
         B6_Param = Spinbox(INI_Frame, textvariable = self.B6_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=5)
-        B6_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B6_sched, width = 12, \
+        B6_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B6_sched, width = 15, \
                 values = self.sched).grid(column=4, row=5)
         B6_SessionLength = Spinbox(INI_Frame, textvariable = self.B6_SessionLength, width = 3, \
                 values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=5)
@@ -904,7 +901,7 @@ class GuiClass(object):
         B7_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B7_IDStr).grid(column = 1, row=6) 
         B7_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B7_Weight).grid(column = 2, row=6)
         B7_Param = Spinbox(INI_Frame, textvariable = self.B7_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=6)
-        B7_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B7_sched, width = 12, \
+        B7_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B7_sched, width = 15, \
                 values = self.sched).grid(column=4, row=6)
         B7_SessionLength = Spinbox(INI_Frame, textvariable = self.B7_SessionLength, width = 3, \
                 values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=6)
@@ -919,7 +916,7 @@ class GuiClass(object):
         B8_ID_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B8_IDStr).grid(column = 1, row=7) 
         B8_Weight_Entry = ttk.Entry(INI_Frame, width=6,textvariable=self.B8_Weight).grid(column = 2, row=7)
         B8_Param = Spinbox(INI_Frame, textvariable = self.B8_Param_value, width = 3, from_=1, to=1000).grid(column=3, row=7)
-        B8_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B8_sched, width = 12, \
+        B8_SchedComboBox = ttk.Combobox(INI_Frame, textvariable=self.B8_sched, width = 15, \
                 values = self.sched).grid(column=4, row=7)
         B8_SessionLength = Spinbox(INI_Frame, textvariable = self.B8_SessionLength, width = 3, \
                 values = [30, 60, 90, 120, 180, 240, 300, 360]).grid(column=5, row=7)
@@ -937,15 +934,26 @@ class GuiClass(object):
         aLabel =  ttk.Label(INI_Frame, text="RatID ").grid(column=1, row=12)
         aLabel =  ttk.Label(INI_Frame, text="Weight").grid(column=2, row=12)
         aLabel =  ttk.Label(INI_Frame, text="N").grid(column=3, row=12)
-        aLabel =  ttk.Label(INI_Frame, text="Sched ").grid(column=4, row=12)
-        aLabel =  ttk.Label(INI_Frame, text="Session ").grid(column=5, row=12)
-        aLabel =  ttk.Label(INI_Frame, text="IBI").grid(column=6, row=12)        
+        aLabel =  ttk.Label(INI_Frame, text="Protocol ").grid(column=4, row=12)
+        aLabel =  ttk.Label(INI_Frame, text="Block ").grid(column=5, row=12)
+        aLabel =  ttk.Label(INI_Frame, text="IBI*").grid(column=6, row=12)        
         aLabel =  ttk.Label(INI_Frame, text="Pump").grid(column=7, row=12)
         aLabel =  ttk.Label(INI_Frame, text="(gms)").grid(column=2, row=13)
         aLabel =  ttk.Label(INI_Frame, text="(Min)").grid(column=5, row=13)
         aLabel =  ttk.Label(INI_Frame, text="(Min)").grid(column=6, row=13)
         aLabel =  ttk.Label(INI_Frame, text="(10 mSec)").grid(column=7, row=13)
 
+        #['0: Do not run', '1: FR(N)', '2: FR1 x 20', '3: FR1 x N', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Debug']
+
+        aLabel = ttk.Label(INI_Frame, text="0: Do Not Run - enough said").grid(column=1, sticky = W, columnspan=7, row=14)
+        aLabel = ttk.Label(INI_Frame, text="1: FR(N) - session length = block length").grid(column=1, sticky = W, columnspan=7, row=15)
+        aLabel = ttk.Label(INI_Frame, text="2: FR1 x 20 - session length = block length. Stops after 20 infusions").grid(column=1, sticky = W, columnspan=7, row=16)
+        aLabel = ttk.Label(INI_Frame, text="3: FR1 x N - session length = block length").grid(column=1, sticky = W, columnspan=7, row=17)
+        aLabel = ttk.Label(INI_Frame, text="4: PR starting at step N (usually 1)").grid(column=1, sticky = W, columnspan=7, row=18)
+        aLabel = ttk.Label(INI_Frame, text="5: TH - 12 Trials - uses Block length (typically 10) and IBI (Typically 0)").grid(column=1, sticky = W, columnspan=7, row=19)
+        aLabel = ttk.Label(INI_Frame, text="6: IntA: 5 - 25. Defaults to 5 min trials and 25 min. ").grid(column=1, sticky = W, columnspan=7, row=20)
+        aLabel = ttk.Label(INI_Frame, text="7: Changes depending on current debugging needs").grid(column=1, sticky = W, columnspan=7, row=21)
+        aLabel = ttk.Label(INI_Frame, text="* IBI - presently only applies to TH").grid(column=1, sticky = W, columnspan=7, row=22)
 
         self.loadFromINIFile()
         self.readExampleFiles()
@@ -987,7 +995,7 @@ class GuiClass(object):
             self.IDStrList[i].set(tokens[0])
             self.WeightList[i].set(tokens[1])
             self.schedList[i].set(self.sched[int(tokens[2])])
-            self.FR_valueList[i].set(tokens[3])
+            self.paramNumList[i].set(tokens[3])
             self.SessionLengthList[i].set(tokens[4])
             self.IBILengthList[i].set(tokens[5])
             self.PumpTimeList[i].set(tokens[6])
@@ -1032,7 +1040,7 @@ class GuiClass(object):
             tempStr = IDStr+' '+ \
             str(self.WeightList[i].get())+' '+ \
             str(schedIndex)+' '+ \
-            str(self.FR_valueList[i].get())+' '+ \
+            str(self.paramNumList[i].get())+' '+ \
             str(self.SessionLengthList[i].get())+' '+ \
             str(self.IBILengthList[i].get())+' '+ \
             str(self.PumpTimeList[i].get())
@@ -1139,15 +1147,16 @@ class GuiClass(object):
         y_zero = self.Y_ZERO
         x_pixel_width = 500
         GraphLib.drawXaxis(aCanvas, x_zero, y_zero, x_pixel_width, max_x_scale, x_divisions)
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-250, x_pixel_width, max_x_scale, dataList, ["L"], "L1")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-220, x_pixel_width, max_x_scale, dataList, ["J"], "L2")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-190, x_pixel_width, max_x_scale, dataList, ["P","p"], "Pump")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-160, x_pixel_width, max_x_scale, dataList, ["S","s"], "Stim")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-230, x_pixel_width, max_x_scale, dataList, ["L"], "L1")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-205, x_pixel_width, max_x_scale, dataList, ["J"], "L2")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-180, x_pixel_width, max_x_scale, dataList, ["P","p"], "Pump")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-155, x_pixel_width, max_x_scale, dataList, ["S","s"], "Stim")
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-130, x_pixel_width, max_x_scale, dataList, ["=","-"], "Lever 1")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-100, x_pixel_width, max_x_scale, dataList, ["~",","], "Lever 2")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-70,  x_pixel_width, max_x_scale, dataList, ["t","T"], "Timeout")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-40,  x_pixel_width, max_x_scale, dataList, ["B","b"], "Block")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-10,  x_pixel_width, max_x_scale, dataList, ["G","E"], "Session")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-105, x_pixel_width, max_x_scale, dataList, ["~",","], "Lever 2")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-80,  x_pixel_width, max_x_scale, dataList, ["T","t"], "Trial")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-55,  x_pixel_width, max_x_scale, dataList, ["B","b"], "Block")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-30,  x_pixel_width, max_x_scale, dataList, ["I","i"], "IBI")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-5,  x_pixel_width, max_x_scale, dataList, ["G","E"], "Session")
 
     def sendCode(self, codeStr):
         self.outputText(codeStr)
@@ -1325,13 +1334,11 @@ class GuiClass(object):
             self.L2ResponsesList[listIndex].set(0)
             self.InfList[listIndex].set(0)
             # send Parameters
-            self.outputText("<SCHED "+str(boxIndex)+" "+str(self.schedList[listIndex].get())+">")
-            self.outputText("<RATIO "+str(boxIndex)+" "+str(self.FR_valueList[listIndex].get())+">")
+            self.outputText("<PROTOCOL "+str(boxIndex)+" "+str(self.schedList[listIndex].get())+">")
+            self.outputText("<PARAM "+str(boxIndex)+" "+str(self.paramNumList[listIndex].get())+">")
             self.outputText("<TIME "+str(boxIndex)+" "+str(self.SessionLengthList[listIndex].get()*60)+">")
-            self.outputText("<IBI "+str(boxIndex)+" "+str(self.IBILengthList[listIndex].get())+">")
+            self.outputText("<IBI "+str(boxIndex)+" "+str(self.IBILengthList[listIndex].get()*60)+">")
             self.outputText("<PUMP "+str(boxIndex)+" "+str(self.PumpTimeList[listIndex].get())+">")
-            # request report
-            self.outputText("<R "+str(boxIndex)+">")
             # send Go signal
             self.outputText("<G "+str(boxIndex)+">")
             sched = self.schedList[listIndex].get()
@@ -1339,6 +1346,10 @@ class GuiClass(object):
                 self.boxes[boxIndex].sessionStarted = False
             else:
                 self.boxes[boxIndex].sessionStarted = True
+                
+            # request report - 
+            # self.outputText("<R "+str(boxIndex)+">")
+                
         else:           
            self.writeToTextbox("No arduino connected",0)
 
@@ -1448,7 +1459,9 @@ class GuiClass(object):
                 elif (strCode == "E"):
                     self.boxes[listIndex].sessionEnded()
         elif (boxNum == 8): self.boolVarLists[8][boolVarListIndex].set(level)           # update debug checkbox 
-        elif (boxNum == 9): self.writeToTextbox(strCode,0)      
+        elif (boxNum == 9):
+            print(strCode)
+            # self.writeToTextbox(strCode,0)      
 
     def periodic_check(self):
         if self.arduino0.activeConnection == True:    

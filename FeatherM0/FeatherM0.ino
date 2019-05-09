@@ -1,4 +1,22 @@
 /*  
+ *   
+ *   May 8th.
+ *   
+ *   Check 5-25 - should it override all parameters?
+ *   
+ *   
+ *   Should it be handled by a sysVar?
+ *   
+ *   
+ *   _blockDuration and _IBIDuration are a bit complicated.
+ *   Some protocols have them set by default (eg.IntA 5-25)
+ *   But they can be set in TH.
+ *   - the complication is that the first block duration is 6h and changes 
+ *   in the second block.
+ *   
+ *   So we need _blockDurationInit and _IBIDurationInit which can be 
+ *   used or not in specific protocols. 
+ *   
  *   <SYSVARS num> and DecodeSySVars(num) sets eight sysVars
  *   
  *   To Do:
@@ -170,12 +188,14 @@ class Lever {
   public:
     Lever(int boxNum);
     void tick();
+    void setProtocolDefaults();
     void startSession();
     void endSession();
     void setProtocolNum(int protocalNum);  // set with lever1._protocolNum = protocolNum
     void setrewardDuration(int rewardDuration);
     void setParamNum(int paramNum);
-    void setBlockDuration(int blockDuration); 
+    void setBlockDuration(int blockDuration);
+    void setIBIDuration(int IBIDuration);  
     void handleResponse();
     void switchRewardPort(boolean state);
     void switchStim1(boolean state);
@@ -206,7 +226,8 @@ class Lever {
     int _PRstepNum = 1;   
     states _boxState = PRESTART;
     // Block
-    unsigned long _blockDuration = 21600;  // 60 * 60 * 6 = 21600 seconds = 6 hrs;
+    unsigned long _blockDuration = 21600;  // default to 6 hrs = 60 * 60 * 6 = 21600 seconds 
+    int _blockDurationInit = 21600;        // default to 6 hrs
     unsigned long _blockTime = 0;    // unsigned int would only allow 65,535 seconds = 18.2 hours
     unsigned int _blockNumber = 0;
     unsigned int _maxBlockNumber = 1;  
@@ -224,7 +245,8 @@ class Lever {
     int _timeOutDuration = 400;  // default to 4 sec    
     // IBI     
     unsigned long _IBIDuration = 0;
-    unsigned long _IBITime = 0;    
+    int _IBIDurationInit = 0;  // default to no IBI
+    unsigned long _IBITime = 0;
     unsigned long _startTime = 0;
 };
 
@@ -250,89 +272,121 @@ void Lever::tick(){
             _blockTime++;
             TStamp tStamp = {_boxNum, '*', _blockTime, 0, 9};
             printQueue.push(&tStamp);
-            if (_blockTime >+ _blockDuration) endBlock();
+            if (_blockTime == _blockDuration) {
+              endBlock();
             }
-        else if (_boxState == IBI) {
+       }
+       else if (_boxState == IBI) {
             _IBITime++;
             TStamp tStamp = {_boxNum, '*', _IBITime, 0, 9};
             printQueue.push(&tStamp);
-            if (_IBITime >= _IBIDuration) endIBI(); 
+            if (_IBITime == _IBIDuration) endIBI(); 
             }      
        }  
 }
 
-void Lever::startSession() { 
-  // Set Protocol defaults here
+void Lever::setProtocolDefaults() {
   // Python protocol list:  
   // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', 
   // '4: PR', '5: TH', '6: IntA: 5-25', '7: Debug']
-
-   _timeOutDuration = _rewardDuration;     // except in protocol 2
-
-  if (_protocolNum == 0) endSession();
-  else  {  
+ 
       if (_protocolNum == 1) {           // FR(N)
+        _blockDuration = _blockDurationInit;
+        _maxBlockNumber = 1;
+        _IBIDuration = 0;
         _schedPR = false;
         _schedTH = false;
         _maxTrialNumber = 999;           
         _responseCriterion = _paramNum;
+        _PRstepNum = 1;                 // irrelevant
+        _timeOutDuration = _rewardDuration;
       }
       else if (_protocolNum == 2) {      // FR1 x 20
+        _blockDuration = _blockDurationInit;
+        _maxBlockNumber = 1;
+        _IBIDuration = 0;
         _schedPR = false;
         _schedTH = false;
         _maxTrialNumber = 20;
         _responseCriterion = 1;
+        _PRstepNum = 1;                 // irrelevant
         _timeOutDuration = 2000;         // 10 mSec x 2000 = 20 sec
       }
       else if (_protocolNum == 3) {      // FR x N
+        _blockDuration = _blockDurationInit;
+        _maxBlockNumber = 1;
+        _IBIDuration = 0;
         _schedPR = false;
         _schedTH = false;
         _maxTrialNumber = _paramNum;
         _responseCriterion = 1;
+        _PRstepNum = 1;                 // irrelevant
+        _timeOutDuration = _rewardDuration;
       }
       else if (_protocolNum == 4) {      // PR(N)
+        _blockDuration = _blockDurationInit;
+        _maxBlockNumber = 1;
+        _IBIDuration = 0;
         _schedPR = true;
-        _PRstepNum  = _paramNum;
         _schedTH = false;
+        _maxTrialNumber = 999;
+        // _responseCriterion  set in startTrial()
+        _PRstepNum  = _paramNum;
+        _timeOutDuration = _rewardDuration;
       }   
       else if (_protocolNum == 5) {      // TH
+        // _blockDuration = 21600;       Set in startBlock()
+
+        _maxTrialNumber = 999;
+        _blockDuration = _blockDurationInit;              // Block duration in seconds;
+
+        _maxBlockNumber = 13;            // 13 blocks
+        _IBIDuration = _IBIDurationInit;                                         
         _schedPR = false;
         _schedTH = true;
-        _maxTrialNumber = 4;
-        _blockDuration = 21600;          // 60 * 60 * 6 = 21600 seconds = 6 hrs; This changes in Block 2
-        _IBIDuration = 0;                  // no IBI
-        _maxBlockNumber = 13;            // 13 blocks
+        _maxTrialNumber = 4;             // Max injections in trial one
+        _responseCriterion = 1;
+        _PRstepNum = 1;                  // irrelevant
+        _timeOutDuration = _rewardDuration;     
       }
       else if (_protocolNum == 6) {      // IntA 5-25 6h
+        _blockDuration = 300;            // 60 seconds * 5 min
+        _maxBlockNumber = 12;            // 12 blocks        
+        _IBIDuration = 1500;               // 25 * 60 sec = 1500 seconds
         _schedPR = false;
         _schedTH = false;
-        _blockDuration = 300;            // 60 seconds * 5 min
-        _IBIDuration = 1500;               // 25 * 60 sec = 1500 seconds
-        _maxBlockNumber = 12;            // 12 blocks
+        _maxTrialNumber = 999;
+        _responseCriterion = 1;
+        _PRstepNum = 1;                 // irrelevant
+        _timeOutDuration = _rewardDuration; 
       }
       /*
       else if (_protocolNum == 7) {      // Debug
         _schedPR = false;                // Sets up initially as an FR1 
         _schedTH = false;
+        _timeOutDuration = _rewardDuration;
         _responseCriterion = 1;
         _maxTrialNumber = 999;
-        _cycles = _paramNum;
+        _cycles = _paramNum;          <- does this still exist?
         _pumpOnTime = _rewardDuration;
         _blockDuration = 21600;          // default to 6hr
         _timeOutDuration = ((_cycles+1)*(_pumpOnTime + _pumpOffTime));
         _cyclePump = false;             // This is the thing that controls the cycle in tick()  
       } 
       */  
-      _startTime = millis();
-      _blockNumber = 0;  
-      _rewardTime = 0; 
-      _timeOutTime = 0;
-      // sessionRunning = true;     
-      TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
-      printQueue.push(&tStamp);
-      startBlock();
-  }
-  Serial.println("9 "+String(_boxNum)+"_"+String(_responseCriterion)+"_"+String(_protocolNum)); 
+}
+
+void Lever::startSession() { 
+  setProtocolDefaults();
+  if (_protocolNum == 0) endSession();
+  _startTime = millis();
+  _blockNumber = 0;  
+  _rewardTime = 0; 
+  _timeOutTime = 0;
+  // sessionRunning = true;     
+  TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
+  printQueue.push(&tStamp);
+  startBlock();
 }
 
 void Lever::endSession () {   
@@ -363,7 +417,11 @@ void Lever::setParamNum(int paramNum) {
 }
 
 void Lever::setBlockDuration(int blockDuration) {
-  _blockDuration = blockDuration;
+  _blockDurationInit = blockDuration;
+}
+
+void Lever::setIBIDuration(int IBIDuration) {
+  _IBIDurationInit = IBIDuration;
 }
 
 void Lever::handleResponse() { 
@@ -379,17 +437,26 @@ void Lever::handleResponse() {
     }
 }
 
-
 void Lever::startBlock() {
+  TStamp tStamp = {_boxNum, 'B', millis() - _startTime, 0, 9};
+  printQueue.push(&tStamp);
   _blockTime = 0;
   _trialNumber = 0;
   _blockNumber++;
-  _boxState = BLOCK;
-  TStamp tStamp = {_boxNum, 'B', millis() - _startTime, 0, 9};
-  printQueue.push(&tStamp);  
-  if (_schedTH == true){                                    // TH
+  _boxState = BLOCK;  
+  if (_schedTH == true){                                       // TH
       _rewardDuration = _THPumpTimeArray[_blockNumber - 1];    // zero indexed array; block 1 = index 0
       _timeOutDuration = _rewardDuration;
+      /*
+      if (_blockNumber == 1) {
+        _maxTrialNumber = 4;
+        _blockDuration = 21600;          // 60 * 60 * 6 = 21600 seconds = 6 hrs;
+      }
+      else {
+        _maxTrialNumber = 999;
+        _blockDuration = _blockDurationInit * 60;              // Block duration in seconds;    
+      }  
+      */
   }
   startTrial();
 }
@@ -401,31 +468,39 @@ void Lever::endBlock() {
    else endSession();
 }
 
-void Lever::startTrial() {   
-   _trialResponses = 0;
-   _trialNumber++;
-   if (_schedPR == true) _responseCriterion = round((5 * exp(0.2 * _PRstepNum)) - 5);    // Sched = PR
-   _PRstepNum++;
-   moveLever(Extend);     // extend lever
-   _timeOut = false;      
+void Lever::startTrial() { 
    TStamp tStamp = {_boxNum, 'T', millis() - _startTime, 0, 9};
    printQueue.push(&tStamp);
+   _trialResponses = 0;
+   _trialNumber++;
+   if (_schedPR == true) {
+      _responseCriterion = round((5 * exp(0.2 * _PRstepNum)) - 5);    // Sched = PR
+      _PRstepNum++;
+   }
+   moveLever(Extend);     // extend lever
+   _timeOut = false;      
 }
 
 void Lever::endTrial() {
+   TStamp tStamp = {_boxNum, 't', millis() - _startTime, 0, 9};
+   printQueue.push(&tStamp);
    if (_protocolNum != 5) moveLever(Retract);       // if not TH then retract lever
 }
 
-void Lever::startIBI() {  
-   if (_IBIDuration == 0) startBlock();
+void Lever::startIBI() { 
+   TStamp tStamp = {_boxNum, 'I', millis() - _startTime, 0, 9}; 
+   printQueue.push(&tStamp); 
+   if (_IBIDuration == 0) endIBI();
    else
    {   moveLever(Retract);
-       _IBITime = 0;    // tick will handle when to end IBI 
+       _IBITime = 0;         // tick will handle when to end IBI 
        _boxState = IBI;      // IBI
    }    
 }
 
 void Lever::endIBI() {
+   TStamp tStamp = {_boxNum, 'i', millis() - _startTime, 0, 9}; 
+   printQueue.push(&tStamp);
    startBlock();
 }
 
@@ -438,8 +513,6 @@ void Lever::startTimeOut() {
     switchStim1(On); 
     _timeOutTime = 0;       // _timeOutTimer counts down with each tick
     _timeOut = true;                  //timeOut    
-    TStamp tStamp = {_boxNum, 't', millis() - _startTime, 0, 9};
-    printQueue.push(&tStamp);
 }
 
 void Lever::endTimeOut() {
@@ -447,10 +520,6 @@ void Lever::endTimeOut() {
     switchStim1(Off);
     if (_trialNumber < _maxTrialNumber) startTrial(); 
     else {
-      if (_schedTH == true) {
-        _maxTrialNumber = 999;    // _maxTrialNumber is 4 for block 1 and 999 thereafter.
-        _blockDuration = 600;     // Block duration in seconds; 60 = 1 min; 600 = 10 min
-      }
       endBlock();
     }  
 }
@@ -639,15 +708,35 @@ void Box::setParamNum(int paramNum) {
 }
 
 void Box::setBlockDuration(int blockDuration) {
-  // _blockDuration = blockDuration;
   lever1.setBlockDuration(blockDuration);
 }
 
-void Box::reportParameters() { 
-  Serial.print("9 "+String(lever1._boxNum)+":"+String(lever1._protocolNum)+":");
-  Serial.print(String(lever1._responseCriterion)+":"+String(lever1._blockDuration)+":");
-  Serial.print(String(lever1._rewardDuration)+":"+String(lever1._timeOutDuration));
-  Serial.println("-"+String(lever1._maxTrialNumber));
+void Box::reportParameters() {
+ /*  _boxNum
+ *   _protocolNum
+ *   _paramNum
+ *   _blockDurationInit
+ *   _IBIDurationInit
+ *   _rewardDuration
+ *   _maxTrialNumber 
+ *   
+ *   _responseCriterion
+ *   _PRstepNum
+ *   _timeOutDuration
+ *   _maxTrialNum
+ */
+  Serial.println("9 *****BOX_"+String(lever1._boxNum)+"****");
+  Serial.println("9 _paramNum:"+String(lever1._paramNum));
+  Serial.println("9 _protocolNum:"+String(lever1._protocolNum));
+  Serial.println("9 _blockDuration:"+String(lever1._blockDurationInit)+"sec");
+  Serial.println("9 _IBIDurationInit:"+String(lever1._IBIDurationInit)+"sec");
+  Serial.println("9 _IBIDuration:"+String(lever1._IBIDuration)+"sec");
+  Serial.println("9 _rewardDuration:"+String(lever1._rewardDuration)+"0mSec");
+  Serial.println("9 _responseCriterion:"+String(lever1._responseCriterion));
+  Serial.println("9 _PRstepNum:"+String(lever1._PRstepNum));
+  Serial.println("9 _timeOutDuration:"+String(lever1._timeOutDuration)+"0mSec");
+  Serial.println("9 _maxTrialNumber:"+String(lever1._maxTrialNumber));
+  Serial.println("9 _maxBlockNumber:"+String(lever1._maxBlockNumber));
 } 
 
 void Box::getBlockTime() {
@@ -836,7 +925,7 @@ void decodeSysVars(byte varCode) {
   for (byte i = 0; i < 8; i++) {
     Serial.print(sysVarArray[i]);
     }
-    Serial.println("9 varCode = "+String(varCode));
+    Serial.println("9 varCode="+String(varCode));
 }
 
 void getInputString() {
@@ -878,10 +967,11 @@ void handleInputString()
      else if (stringCode == "L1")    boxArray[num1].lever1.handleResponse(); 
      else if (stringCode == "P")     boxArray[num1].lever1.switchRewardPort(On);
      else if (stringCode == "p")     boxArray[num1].lever1.switchRewardPort(Off);
-     else if (stringCode == "SCHED") boxArray[num1].lever1.setProtocolNum(num2);
-     else if (stringCode == "PUMP")  boxArray[num1].lever1.setrewardDuration(num2); 
+     else if (stringCode == "PROTOCOL") boxArray[num1].lever1.setProtocolNum(num2);
      else if (stringCode == "PARAM") boxArray[num1].setParamNum(num2);
-     else if (stringCode == "TIME")  boxArray[num1].lever1.setBlockDuration(num2);
+     else if (stringCode == "TIME")  boxArray[num1].lever1.setBlockDuration(num2);  
+     else if (stringCode == "IBI")  boxArray[num1].lever1.setIBIDuration(num2);         
+     else if (stringCode == "PUMP")  boxArray[num1].lever1.setrewardDuration(num2); 
      else if (stringCode == "R")     boxArray[num1].reportParameters();
      else if (stringCode == "=")     boxArray[num1].lever1.moveLever(Extend);   // extend lever1
      else if (stringCode == "-")     boxArray[num1].lever1.moveLever(Retract);    // retract lever1
@@ -889,7 +979,7 @@ void handleInputString()
      else if (stringCode == "S")     boxArray[num1].lever1.switchStim1(On);
      else if (stringCode == "c")     boxArray[num1].lever1.switchStim2(Off);
      else if (stringCode == "C")     boxArray[num1].lever1.switchStim2(On);
-     else if (stringCode == "V")     Serial.println("9 Beta");
+     else if (stringCode == "V")     Serial.println("9 200.20_Beta");
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "SYSVARS") decodeSysVars(num1); 
      else if (stringCode == "Logic") {
@@ -898,7 +988,6 @@ void handleInputString()
      }
      /*
      // debug stuff 
-     else if (stringCode == "L1")    boxArray[num1].handle_L1_Response();
      else if (stringCode == "off")   turnStuffOff();
      else if (stringCode == "i")     timeUSB();
      else if (stringCode == "E")     echoInput = !echoInput;
