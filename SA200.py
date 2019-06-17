@@ -684,7 +684,7 @@ class GuiClass(object):
         sys1TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="GND On", variable=self.sys1CheckVar, value=1)
         sys1TrueRadiobutton.grid(column = 2, row = 6, sticky = (W))
 
-        sys2label = ttk.Label(self.diagnosticButtonFrame, text="Label2")
+        sys2label = ttk.Label(self.diagnosticButtonFrame, text="Check Lever 2")
         sys2label.grid(column = 0, row = 7, sticky = (W))
         sys2FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys2CheckVar, value=0)
         sys2FalseRadiobutton.grid(column = 1, row = 7, sticky = (W))

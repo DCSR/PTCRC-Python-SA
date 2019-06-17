@@ -1,14 +1,5 @@
 /*  
- *    
- *    Check:
- *    Do levers extend and retract as expected?
- *    Does the program detect inactive lever responses?
- *    
- *   
- *   June 13th
- *   Bug fix, correction to chars being sent from Diagnostic Tab to move levers 1 and 2
- *   Request for inactive lever timestamps.The choice was to use the lever class with all 
- *   it's overhead or simply create a work araound for an inactove lever. The latter was chosen.
+ *   June 16th
  *   
  *   Inactive Workaround:
  *   
@@ -19,13 +10,6 @@
  *   checkLevertwo() reinstated as checkLeverTwoBits()
  *   It directs to boxArray[i].handle_L2_Response() which sends a timestamp
  *   Time is taken from lever1._startTime
- *   
- *   The timestamp should reflect the state. 
- *   Should define Box::moveInactiveLever(state).
- *   
- *   // else if (stringCode == "~")     boxArray[num1].moveLever2(Extend);   // extend lever2  
- *   // else if (stringCode == ",")     boxArray[num1].moveLever2(Retract);    // retract lever2
- *   
  *   
  *   May 9th.
  *   
@@ -906,8 +890,8 @@ void checkLeverOneBits() {
                   lastLeverOneState[i] = newLeverOneState[i]; 
                   if (newLeverOneState[i] == 0) {
                      boxArray[i].handle_L1_Response();
-                     String tempStr = "9 L1_Response:pin_"+String(i); 
-                     Serial.println(tempStr);
+                     // String tempStr = "9 L1_Response:pin_"+String(i); 
+                     // Serial.println(tempStr);
                   }
              }
          }    
@@ -926,8 +910,8 @@ void checkLeverTwoBits() {
                   lastLeverTwoState[i] = newLeverTwoState[i]; 
                   if (newLeverTwoState[i] == 0) {
                      boxArray[i].handle_L2_Response();
-                     String tempStr = "9 L2_Response:pin_"+String(i); 
-                     Serial.println(tempStr);
+                     // String tempStr = "9 L2_Response:pin_"+String(i); 
+                     // Serial.println(tempStr);
                   }
              }
          }    
