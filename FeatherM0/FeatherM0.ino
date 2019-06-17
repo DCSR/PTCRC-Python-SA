@@ -1,4 +1,31 @@
 /*  
+ *    
+ *    Check:
+ *    Do levers extend and retract as expected?
+ *    Does the program detect inactive lever responses?
+ *    
+ *   
+ *   June 13th
+ *   Bug fix, correction to chars being sent from Diagnostic Tab to move levers 1 and 2
+ *   Request for inactive lever timestamps.The choice was to use the lever class with all 
+ *   it's overhead or simply create a work araound for an inactove lever. The latter was chosen.
+ *   
+ *   Inactive Workaround:
+ *   
+ *   boolean variable "inactiveLeverExists" created = sysVarsArray[2]
+ *   inactive lever (L2) extended in Box::startSession() and retracted in Box::endSession()   
+ *   using: 
+ *          if (inactiveLeverExists) chip2.digitalWrite(_boxNum,LOW); 
+ *   checkLevertwo() reinstated as checkLeverTwoBits()
+ *   It directs to boxArray[i].handle_L2_Response() which sends a timestamp
+ *   Time is taken from lever1._startTime
+ *   
+ *   The timestamp should reflect the state. 
+ *   Should define Box::moveInactiveLever(state).
+ *   
+ *   // else if (stringCode == "~")     boxArray[num1].moveLever2(Extend);   // extend lever2  
+ *   // else if (stringCode == ",")     boxArray[num1].moveLever2(Retract);    // retract lever2
+ *   
  *   
  *   May 9th.
  *   
@@ -11,6 +38,7 @@
  *   Suppress initialize report
  *   Only responds to lever response during BLOCK
  *   Conflict of commands and timestamps for Lever resolved (=,.) 
+ *   reportParameters() on Feather called by reportParameters() in Python
  *   
  *   Update Adafruit SAMD Boards to Ver 1.2.7
  *  
@@ -24,7 +52,7 @@
  *   Block ending retracts lever etc. but no Trial end timestamp. 
  *   endBlock() should endTrial() 
  *   
- *   reportParameters() available but and called by  
+  
  *   
  *   Check 5-25 - should it override all parameters?
  *   
@@ -159,6 +187,7 @@ MCP23S17 chip3(chipSelect, 3);
 boolean sysVarArray[8] = {false,false,false,false,false,false,false,false};
 // sysVarArray[0] used for reward type; 0 = Drug, 1 = Food
 // sysVarArray[1] used for logic type: 0 = 5VDC switches On, 1 = GND switches On
+// sysVarArray[2] used for inactiveLeverExists
 
 
 #define On true
@@ -192,6 +221,7 @@ boolean newResponse[8] = {false,false,false,false,false,false,false,false};
 byte ticks[8] = {0,0,0,0,0,0,0,0};
 int lastLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 int newLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
+boolean inactiveLeverExists = false;
 
 volatile boolean tickFlag = false;
 
@@ -225,6 +255,7 @@ class Lever {
     void switchStim2(boolean state);
     void moveLever(int state);
     int _boxNum;
+    unsigned long _startTime = 0;   // Used for active and inactive lever timestamnps 
     
   // private:
     int _tickCounts = 0;
@@ -237,8 +268,6 @@ class Lever {
     void reinforce();
     void startTimeOut();
     void endTimeOut();
-
-    // void moveLever2(int state);
  
     boolean _timeOut = false; 
     boolean _rewardOn = false;                    
@@ -271,7 +300,6 @@ class Lever {
     unsigned long _IBIDuration = 0;
     int _IBIDurationInit = 0;  // default to no IBI
     unsigned long _IBITime = 0;
-    unsigned long _startTime = 0;
 };
 
 // ************* Lever Class Procedures *************************************
@@ -411,7 +439,6 @@ void Lever::startSession() {
 void Lever::endSession () {   
     // endTrial(); the only thing this did was retract the lever, but see next line. 
     moveLever(Retract);         // was moveLever1
-    // moveLever2(Retract);
     switchStim1(Off);
     switchRewardPort(Off);
     _rewardTime = 0;
@@ -620,23 +647,6 @@ void Lever::moveLever(int state) {          // boxNum 0..7  maps to pin 0..7 on 
     // Lever1 (active) CheckBox is index 0 
 }
 
-/*
-void Box::moveLever2(int state) {          // boxNum 0..7  maps to pin 0..7 on chip2
-    chip2.digitalWrite(_boxNum,state);
-    // HIGH = Retract
-    if (state) { 
-          TStamp tStamp = {_boxNum, ',', millis() - _startTime, 0, 1};
-          printQueue.push(&tStamp);
-    }
-    else {
-         TStamp tStamp = {_boxNum, '-', millis() - _startTime, 1, 1};
-         printQueue.push(&tStamp);
-    }
-    // Lever2 (inactive) CheckBox is index 1 
-}
-*/
-
-
 // **************  Box Class Procedures *************************************
 
 class Box  {
@@ -650,12 +660,14 @@ class Box  {
     // void cyclePump();
     void tick();
     void handle_L1_Response();
+    void handle_L2_Response();
     void setProtocolNum(int protocalNum);
     void setrewardDuration(int rewardDuration);
     void setParamNum(int paramNum);
     void setBlockDuration(int blockDuration);    
     void reportParameters();
     void getBlockTime();
+    void moveInactiveLever(int state);
     
     //************
   private:
@@ -666,12 +678,15 @@ class Box  {
     int _pumpOffTicker = 0;    
 };
 
+
 void Box::startSession() {
   lever1.startSession();
+  if (inactiveLeverExists) moveInactiveLever(Extend);
 }
 
 void Box::endSession() {
   lever1.endSession();
+  if (inactiveLeverExists) moveInactiveLever(Retract);
 }
 
 void Box::tick() { // do stuff every 10 mSec 
@@ -682,12 +697,10 @@ void Box::handle_L1_Response() {
   lever1.handleResponse();
 }
 
-/*
-void Box::handle_L2_Response() {           // Inactive lever press
-  TStamp tStamp = {_boxNum, 'J', millis() - _startTime, 0, 9};
+void Box::handle_L2_Response() {   // Inactive lever press
+  TStamp tStamp = {_boxNum, 'J', millis() - lever1._startTime, 0, 9};
   printQueue.push(&tStamp);
 }
-*/
 
 void Box::setProtocolNum(int protocolNum) {
   // _protocolNum = protocolNum;
@@ -740,6 +753,20 @@ void Box::getBlockTime() {
   // Serial.println("9 "+String(_boxNum)+" BTime: "+ String(_blockTime));
   // TStamp tStamp = {_boxNum, '9', millis() - _startTime, 0, 9};
   // printQueue.push(&tStamp);
+}
+
+void Box::moveInactiveLever(int state) {
+  if (state == Extend) {
+    chip2.digitalWrite(_boxNum,Extend);  // Extend inactove lever (L2)
+    TStamp tStamp = {_boxNum, '~', millis() - lever1._startTime, 1, 1};
+    printQueue.push(&tStamp);    
+  }
+  else {
+    chip2.digitalWrite(_boxNum,Retract);  // Retract inactive lever (L2)
+    TStamp tStamp = {_boxNum, ',', millis() - lever1._startTime, 0, 1};
+    printQueue.push(&tStamp);
+  }
+  
 }
 
 // ************** End of Box Class ******************************************
@@ -818,16 +845,16 @@ void setup() {
     chip2.pinMode(i,OUTPUT);             // Set chip2 to OUTPUT
   }
   for (uint8_t i = 0; i <= 7; i++)  {
-     chip1.pinMode(i,INPUT_PULLUP);          // Ver 200.04
-     chip3.pinMode(i,INPUT_PULLUP);          // Ver 200.04
+     chip1.pinMode(i,INPUT_PULLUP);          
+     chip3.pinMode(i,INPUT_PULLUP);          
   }
   for (uint8_t i = 8; i <= 15; i++) {
-     chip1.pinMode(i, OUTPUT);               // Ver 200.04
-     chip3.pinMode(i, OUTPUT);               // Ver 200.04
+     chip1.pinMode(i, OUTPUT);               
+     chip3.pinMode(i, OUTPUT);               
   }
   turnStuffOff();  
-  portOneValue = chip1.readPort(0);          // Ver 200.04
-  portTwoValue = chip3.readPort(0);          // Ver 200.04
+  portOneValue = chip1.readPort(0);          
+  portTwoValue = chip3.readPort(0);          
   // Serial.println(portOneValue,BIN);
 
   delay(500); 
@@ -835,6 +862,7 @@ void setup() {
   Serial.println("9 Beta");
 }
 
+/*
 void checkLeverOne() {
     static byte oldPortOneValue = 255;       
     portOneValue = chip1.readPort(0);                
@@ -853,7 +881,7 @@ void checkLeverOne() {
          }    
     }           
 }
-
+*/
 
 void checkLeverOneBits() {
     byte diff = 0;
@@ -886,8 +914,7 @@ void checkLeverOneBits() {
     }           
 }
 
-/*
-void checkLeverTwo() {
+void checkLeverTwoBits() {
     static byte oldPortTwoValue = 255;      
     portTwoValue = chip3.readPort(0);
     if(portTwoValue != oldPortTwoValue) {
@@ -906,7 +933,6 @@ void checkLeverTwo() {
          }    
     }           
 }
-*/
 
 void decodeSysVars(byte varCode) {
   byte mask;
@@ -923,6 +949,7 @@ void decodeSysVars(byte varCode) {
     Serial.print(sysVarArray[i]);
     }
     Serial.println("9 varCode="+String(varCode));
+  inactiveLeverExists = sysVarArray[2]; 
 }
 
 void getInputString() {
@@ -972,6 +999,8 @@ void handleInputString()
      else if (stringCode == "R")     boxArray[num1].reportParameters();
      else if (stringCode == "=")     boxArray[num1].lever1.moveLever(Extend);   // extend lever1
      else if (stringCode == ".")     boxArray[num1].lever1.moveLever(Retract);    // retract lever1
+     else if (stringCode == "~")     boxArray[num1].moveInactiveLever(Extend);  
+     else if (stringCode == ",")     boxArray[num1].moveInactiveLever(Retract);
      else if (stringCode == "s")     boxArray[num1].lever1.switchStim1(Off);
      else if (stringCode == "S")     boxArray[num1].lever1.switchStim1(On);
      else if (stringCode == "c")     boxArray[num1].lever1.switchStim2(Off);
@@ -987,9 +1016,6 @@ void handleInputString()
      // debug stuff 
      else if (stringCode == "i")     timeUSB();
      else if (stringCode == "E")     echoInput = !echoInput;
-     ****** Deprecated - check Python for codes being sent
-     // else if (stringCode == "~")     boxArray[num1].moveLever2(Extend);   // extend lever2  
-     // else if (stringCode == ",")     boxArray[num1].moveLever2(Retract);    // retract lever2
      */
      inputString = "";
    }
@@ -1047,6 +1073,7 @@ void tick()    {
    for (uint8_t i = 0; i < 8; i++) boxArray[i].tick();
    getInputString();
    checkLeverOneBits();
+   if (inactiveLeverExists) checkLeverTwoBits(); 
    sendOneTimeStamp();
    delta = micros() - micro1;
    if (delta > maxDelta) maxDelta = delta;   
