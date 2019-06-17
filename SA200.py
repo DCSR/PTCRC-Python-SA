@@ -1251,11 +1251,11 @@ class GuiClass(object):
 
     def moveLever1(self,boxIndex,state):
         if (state == True): tempStr = "<= "+str(boxIndex)+">"
-        else: tempStr = "<- "+str(boxIndex)+">"
+        else: tempStr = "<. "+str(boxIndex)+">"
         self.outputText(tempStr)
 
     def moveLever2(self,boxIndex,state):
-        if (state == True): tempStr = "<. "+str(boxIndex)+">"
+        if (state == True): tempStr = "<~ "+str(boxIndex)+">"
         else: tempStr = "<, "+str(boxIndex)+">"
         self.outputText(tempStr)
 
