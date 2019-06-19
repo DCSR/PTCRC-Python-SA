@@ -2,14 +2,20 @@
  *   June 16th
  *   
  *   Inactive Workaround:
+ *   The lever class was created so that two or more levers could be instantiated with a Box using
+ *   the same code.  
+ *   
+ *   The "inactive" lever doesn't use the Lever Class. For now it is a bit of a hybrid since. It is
+ *   extended and retracted from within the L1 Class, and handle_L2_Response within Box.
  *   
  *   boolean variable "inactiveLeverExists" created = sysVarsArray[2]
- *   inactive lever (L2) extended in Box::startSession() and retracted in Box::endSession()   
+ *   moveInctiveLever() created within Lever. That is, the Lever class "owns" both the schedule
+ *     lever and the inactive lever. 
+ *   inactive lever (L2) extended in Lever::startSession() and retracted in Lever::endSession()   
  *   using: 
  *          if (inactiveLeverExists) chip2.digitalWrite(_boxNum,LOW); 
  *   checkLevertwo() reinstated as checkLeverTwoBits()
  *   It directs to boxArray[i].handle_L2_Response() which sends a timestamp
- *   Time is taken from lever1._startTime
  *   
  *   May 9th.
  *   
@@ -237,6 +243,7 @@ class Lever {
     void switchRewardPort(boolean state);
     void switchStim1(boolean state);
     void switchStim2(boolean state);
+    void moveInactiveLever(int state);
     void moveLever(int state);
     int _boxNum;
     unsigned long _startTime = 0;   // Used for active and inactive lever timestamnps 
@@ -418,6 +425,7 @@ void Lever::startSession() {
   TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
   printQueue.push(&tStamp);
   startBlock();
+  if (inactiveLeverExists) moveInactiveLever(Extend);
 }
 
 void Lever::endSession () {   
@@ -430,6 +438,7 @@ void Lever::endSession () {
     _boxState = FINISHED;    
     TStamp tStamp = {_boxNum, 'E', millis() - _startTime, 0, 9};
     printQueue.push(&tStamp);
+    if (inactiveLeverExists) moveInactiveLever(Retract);
 }
 
 void Lever::setProtocolNum(int protocolNum) {
@@ -617,9 +626,21 @@ void Lever::switchStim2(boolean state) {
     // StimCheckBox is index 4     
 }
 
+void Lever::moveInactiveLever(int state) {
+  chip2.digitalWrite(_boxNum,state);  // Extend inactove lever (L2)
+  if (state == Extend) {
+    TStamp tStamp = {_boxNum, '~', millis() - _startTime, 1, 1};
+    printQueue.push(&tStamp);    
+  }
+  else {
+    TStamp tStamp = {_boxNum, ',', millis() - _startTime, 0, 1};
+    printQueue.push(&tStamp);
+  }
+}
+
 void Lever::moveLever(int state) {          // boxNum 0..7  maps to pin 0..7 on chip0
     chip0.digitalWrite(_boxNum,state);
-    // HIGH = Retract; LOW = extend
+    // HIGH = Retract; LOW = Extend
     if (state) {
            TStamp tStamp = {_boxNum, '.', millis() - _startTime, 0, 0};
            printQueue.push(&tStamp); 
@@ -651,7 +672,6 @@ class Box  {
     void setBlockDuration(int blockDuration);    
     void reportParameters();
     void getBlockTime();
-    void moveInactiveLever(int state);
     
     //************
   private:
@@ -665,12 +685,10 @@ class Box  {
 
 void Box::startSession() {
   lever1.startSession();
-  if (inactiveLeverExists) moveInactiveLever(Extend);
 }
 
 void Box::endSession() {
   lever1.endSession();
-  if (inactiveLeverExists) moveInactiveLever(Retract);
 }
 
 void Box::tick() { // do stuff every 10 mSec 
@@ -737,20 +755,6 @@ void Box::getBlockTime() {
   // Serial.println("9 "+String(_boxNum)+" BTime: "+ String(_blockTime));
   // TStamp tStamp = {_boxNum, '9', millis() - _startTime, 0, 9};
   // printQueue.push(&tStamp);
-}
-
-void Box::moveInactiveLever(int state) {
-  if (state == Extend) {
-    chip2.digitalWrite(_boxNum,Extend);  // Extend inactove lever (L2)
-    TStamp tStamp = {_boxNum, '~', millis() - lever1._startTime, 1, 1};
-    printQueue.push(&tStamp);    
-  }
-  else {
-    chip2.digitalWrite(_boxNum,Retract);  // Retract inactive lever (L2)
-    TStamp tStamp = {_boxNum, ',', millis() - lever1._startTime, 0, 1};
-    printQueue.push(&tStamp);
-  }
-  
 }
 
 // ************** End of Box Class ******************************************
@@ -978,13 +982,13 @@ void handleInputString()
      else if (stringCode == "PROTOCOL") boxArray[num1].lever1.setProtocolNum(num2);
      else if (stringCode == "PARAM") boxArray[num1].setParamNum(num2);
      else if (stringCode == "TIME")  boxArray[num1].lever1.setBlockDuration(num2);  
-     else if (stringCode == "IBI")  boxArray[num1].lever1.setIBIDuration(num2);         
+     else if (stringCode == "IBI")   boxArray[num1].lever1.setIBIDuration(num2);         
      else if (stringCode == "PUMP")  boxArray[num1].lever1.setrewardDuration(num2); 
      else if (stringCode == "R")     boxArray[num1].reportParameters();
      else if (stringCode == "=")     boxArray[num1].lever1.moveLever(Extend);   // extend lever1
      else if (stringCode == ".")     boxArray[num1].lever1.moveLever(Retract);    // retract lever1
-     else if (stringCode == "~")     boxArray[num1].moveInactiveLever(Extend);  
-     else if (stringCode == ",")     boxArray[num1].moveInactiveLever(Retract);
+     else if (stringCode == "~")     boxArray[num1].lever1.moveInactiveLever(Extend);  
+     else if (stringCode == ",")     boxArray[num1].lever1.moveInactiveLever(Retract);
      else if (stringCode == "s")     boxArray[num1].lever1.switchStim1(Off);
      else if (stringCode == "S")     boxArray[num1].lever1.switchStim1(On);
      else if (stringCode == "c")     boxArray[num1].lever1.switchStim2(Off);
