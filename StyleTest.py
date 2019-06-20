@@ -160,14 +160,14 @@ class GuiClass(object):
         Label2 = ttk.Label(self.Frame2, text="Middle",style="DarkMode.TLabel")
         Label2.grid(column = 0, row = 2)
 
-        self.Button2 = ttk.Button(self.Frame2,text="Clam",command=lambda arg = 2: self.switchStyle("clam"))
+        self.Button2 = ttk.Button(self.Frame2,text="|Default",command=lambda arg = 2: self.switchStyle("clam"))
         self.Button2.grid(column = 0, row = 1)
 
         Label3 = ttk.Label(self.Frame3, text="Bottom")
         Label3.grid(column = 0, row = 0)
 
-        self.Button3 = ttk.Button(self.Frame3,text="Classic",command=lambda arg = 3: self.switchStyle("classic"))
-        self.Button3.grid(column = 0, row = 2) 
+        #self.Button3 = ttk.Button(self.Frame3,text="Classic",command=lambda arg = 3: self.switchStyle("classic"))
+        #self.Button3.grid(column = 0, row = 2) 
         
         self.testString = StringVar(value="Enter")
 
