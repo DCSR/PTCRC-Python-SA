@@ -418,14 +418,16 @@ void Lever::setProtocolDefaults() {
 void Lever::startSession() { 
   setProtocolDefaults();
   if (_protocolNum == 0) endSession();
-  _startTime = millis();
-  _blockNumber = 0;  
-  _rewardTime = 0; 
-  _timeOutTime = 0;   
-  TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
-  printQueue.push(&tStamp);
-  startBlock();
-  if (inactiveLeverExists) moveInactiveLever(Extend);
+  else {
+      _startTime = millis();
+      _blockNumber = 0;  
+      _rewardTime = 0; 
+      _timeOutTime = 0;   
+      TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
+      printQueue.push(&tStamp);
+      startBlock();
+      if (inactiveLeverExists) moveInactiveLever(Extend);  
+  }
 }
 
 void Lever::endSession () {   
