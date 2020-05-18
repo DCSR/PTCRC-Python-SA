@@ -164,6 +164,7 @@
  * 
  */
 
+
 #include <cppQueue.h>
 #include <SPI.h>        // Arduino Library SPI.h
 #include "MCP23S17.h"   
@@ -302,7 +303,7 @@ Lever::Lever(int boxNum) {
 void Lever::tick(){ 
     if (_rewardOn) {
        _rewardTime++;
-       if (_rewardTime == _rewardDuration) switchRewardPort(Off);
+       if (_rewardTime >= _rewardDuration) switchRewardPort(Off);
     }  
     if (_timeOut) {
        _timeOutTime++;
