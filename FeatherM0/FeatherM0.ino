@@ -1,4 +1,5 @@
 /*  
+ *   
  *   June 16th
  *   
  *   Inactive Workaround:
@@ -241,7 +242,8 @@ class Lever {
     void setBlockDuration(int blockDuration);
     void setIBIDuration(int IBIDuration);  
     void handleResponse();
-    void switchRewardPort(boolean state);
+    void switchRewardPortOn();
+    void switchRewardPortOff();
     void switchStim1(boolean state);
     void switchStim2(boolean state);
     void moveInactiveLever(int state);
@@ -303,7 +305,7 @@ Lever::Lever(int boxNum) {
 void Lever::tick(){ 
     if (_rewardOn) {
        _rewardTime++;
-       if (_rewardTime >= _rewardDuration) switchRewardPort(Off);
+       if (_rewardTime >= _rewardDuration) switchRewardPortOff();
     }  
     if (_timeOut) {
        _timeOutTime++;
@@ -435,7 +437,7 @@ void Lever::endSession () {
     // endTrial(); the only thing this did was retract the lever, but see next line. 
     moveLever(Retract);         // was moveLever1
     switchStim1(Off);
-    switchRewardPort(Off);
+    switchRewardPortOff();
     _rewardTime = 0;
     _timeOutTime = 0;
     _boxState = FINISHED;    
@@ -507,7 +509,7 @@ void Lever::endBlock() {
    printQueue.push(&tStamp);
    if (_protocolNum == 7) {             // Flush
       _rewardTime = 0;
-      switchRewardPort(On);
+      switchRewardPortOn();
    }   
    if (_blockNumber < _maxBlockNumber) startIBI();
    else endSession();
@@ -551,7 +553,7 @@ void Lever::endIBI() {
 
 void Lever::reinforce() { 
     _rewardTime = 0;
-    switchRewardPort(On);
+    switchRewardPortOn();
 }
 
 void Lever::startTimeOut() {
@@ -569,7 +571,30 @@ void Lever::endTimeOut() {
     }  
 }
 
-void Lever::switchRewardPort(boolean state) { 
+void Lever::switchRewardPortOn() { 
+    // boxNum 0..7 maps to pin 0..7 on chip1 or chip3 
+    // Normally: On (true) switches the bit to HIGH
+    //       and Off (false) switches the bit to LOW
+    // BUT if sysVarArray[1] == true -> then the reverse happens
+   
+    boolean level;
+    // sysVarArray[1] selects if the device goes on with 5VDC or GND
+    if (sysVarArray[1]) level = HIGH;
+    else level = LOW; 
+
+    // sysVarArray[0] selects either Pump Port or AUX Port
+    if (sysVarArray[0] == 0) chip1.digitalWrite(_boxNum+8,level);
+    else chip3.digitalWrite(_boxNum+8,level); 
+              
+    // ON or true      
+    TStamp tStamp = {_boxNum, 'P', millis() - _startTime, 1, 2};
+    printQueue.push(&tStamp);
+    _rewardOn = true;
+    
+    // The Pump CheckBox is index 2 
+}
+
+void Lever::switchRewardPortOff() { 
     // boxNum 0..7 maps to pin 0..7 on chip1 or chip3 
     // Normally: On (true) switches the bit to HIGH
     //       and Off (false) switches the bit to LOW
@@ -577,25 +602,22 @@ void Lever::switchRewardPort(boolean state) {
    
     boolean level;
     // sysVarArray[1] selects of the device goes on with 5VDC or GND
-    if (sysVarArray[1]) level = !state;
-    else level = state; 
+    if (sysVarArray[1]) level = LOW;
+    else level = HIGH; 
 
     // sysVarArray[0] selects either Pump Port or AUX Port
     if (sysVarArray[0] == 0) chip1.digitalWrite(_boxNum+8,level);
     else chip3.digitalWrite(_boxNum+8,level); 
-              
-    if (state) {              // ON or true      
-          TStamp tStamp = {_boxNum, 'P', millis() - _startTime, 1, 2};
-          printQueue.push(&tStamp);
-          _rewardOn = true;
-    }
-    else {      
-          TStamp tStamp = {_boxNum, 'p', millis() - _startTime, 0, 2};
-          printQueue.push(&tStamp);
-          _rewardOn = false;
-    }
+                    
+    TStamp tStamp = {_boxNum, 'p', millis() - _startTime, 0, 2};
+    printQueue.push(&tStamp);
+    _rewardOn = false;
+    
     // The Pump CheckBox is index 2 
 }
+
+
+
 
 void Lever::switchStim1(boolean state) {
     boolean level;
@@ -980,8 +1002,8 @@ void handleInputString()
      else if (stringCode == "G")     boxArray[num1].startSession();
      else if (stringCode == "Q")     boxArray[num1].endSession();
      else if (stringCode == "L1")    boxArray[num1].lever1.handleResponse(); 
-     else if (stringCode == "P")     boxArray[num1].lever1.switchRewardPort(On);
-     else if (stringCode == "p")     boxArray[num1].lever1.switchRewardPort(Off);
+     else if (stringCode == "P")     boxArray[num1].lever1.switchRewardPortOn();
+     else if (stringCode == "p")     boxArray[num1].lever1.switchRewardPortOff();
      else if (stringCode == "PROTOCOL") boxArray[num1].lever1.setProtocolNum(num2);
      else if (stringCode == "PARAM") boxArray[num1].setParamNum(num2);
      else if (stringCode == "TIME")  boxArray[num1].lever1.setBlockDuration(num2);  
