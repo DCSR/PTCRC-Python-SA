@@ -242,7 +242,7 @@ class Lever {
     void setBlockDuration(int blockDuration);
     void setIBIDuration(int IBIDuration);  
     void handleResponse();
-    void switchRewardPortOn();
+    void switchRewardPortOn(boolean timed);
     void switchRewardPortOff();
     void switchStim1(boolean state);
     void switchStim2(boolean state);
@@ -264,7 +264,7 @@ class Lever {
     void endTimeOut();
  
     boolean _timeOut = false; 
-    boolean _rewardOn = false;                    
+    boolean _timedRewardOn = false;                    
     boolean _schedPR = false;
     boolean _schedTH = false;
     // defaults to a 6h FR1 session 
@@ -303,7 +303,7 @@ Lever::Lever(int boxNum) {
 }
 
 void Lever::tick(){ 
-    if (_rewardOn) {
+    if (_timedRewardOn) {
        _rewardTime++;
        if (_rewardTime >= _rewardDuration) switchRewardPortOff();
     }  
@@ -509,7 +509,7 @@ void Lever::endBlock() {
    printQueue.push(&tStamp);
    if (_protocolNum == 7) {             // Flush
       _rewardTime = 0;
-      switchRewardPortOn();
+      switchRewardPortOn(true);
    }   
    if (_blockNumber < _maxBlockNumber) startIBI();
    else endSession();
@@ -553,7 +553,7 @@ void Lever::endIBI() {
 
 void Lever::reinforce() { 
     _rewardTime = 0;
-    switchRewardPortOn();
+    switchRewardPortOn(true);
 }
 
 void Lever::startTimeOut() {
@@ -571,7 +571,7 @@ void Lever::endTimeOut() {
     }  
 }
 
-void Lever::switchRewardPortOn() { 
+void Lever::switchRewardPortOn(boolean timed) { 
     // boxNum 0..7 maps to pin 0..7 on chip1 or chip3 
     // Normally: On (true) switches the bit to HIGH
     //       and Off (false) switches the bit to LOW
@@ -589,7 +589,7 @@ void Lever::switchRewardPortOn() {
     // ON or true      
     TStamp tStamp = {_boxNum, 'P', millis() - _startTime, 1, 2};
     printQueue.push(&tStamp);
-    _rewardOn = true;
+    if (timed) _timedRewardOn = true;
     
     // The Pump CheckBox is index 2 
 }
@@ -611,13 +611,11 @@ void Lever::switchRewardPortOff() {
                     
     TStamp tStamp = {_boxNum, 'p', millis() - _startTime, 0, 2};
     printQueue.push(&tStamp);
-    _rewardOn = false;
+
+    _timedRewardOn = false;
     
     // The Pump CheckBox is index 2 
 }
-
-
-
 
 void Lever::switchStim1(boolean state) {
     boolean level;
@@ -1002,7 +1000,7 @@ void handleInputString()
      else if (stringCode == "G")     boxArray[num1].startSession();
      else if (stringCode == "Q")     boxArray[num1].endSession();
      else if (stringCode == "L1")    boxArray[num1].lever1.handleResponse(); 
-     else if (stringCode == "P")     boxArray[num1].lever1.switchRewardPortOn();
+     else if (stringCode == "P")     boxArray[num1].lever1.switchRewardPortOn(false);
      else if (stringCode == "p")     boxArray[num1].lever1.switchRewardPortOff();
      else if (stringCode == "PROTOCOL") boxArray[num1].lever1.setProtocolNum(num2);
      else if (stringCode == "PARAM") boxArray[num1].setParamNum(num2);
@@ -1018,7 +1016,7 @@ void handleInputString()
      else if (stringCode == "S")     boxArray[num1].lever1.switchStim1(On);
      else if (stringCode == "c")     boxArray[num1].lever1.switchStim2(Off);
      else if (stringCode == "C")     boxArray[num1].lever1.switchStim2(On);
-     else if (stringCode == "V")     Serial.println("9 200.20_Beta");
+     else if (stringCode == "V")     Serial.println("9 200.21_Beta");
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "SYSVARS") decodeSysVars(num1); 
      else if (stringCode == "Logic") {
