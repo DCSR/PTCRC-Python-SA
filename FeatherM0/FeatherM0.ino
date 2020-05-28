@@ -579,8 +579,9 @@ void Lever::switchRewardPortOn(boolean timed) {
    
     boolean level;
     // sysVarArray[1] selects if the device goes on with 5VDC or GND
-    if (sysVarArray[1]) level = HIGH;
-    else level = LOW; 
+    // sysVarArray[1] 5VDC On = 0; GND On = 1  
+    if (sysVarArray[1]) level = LOW;          // if "GND On" go low to turn on 
+    else level = HIGH;                        // else '5VDC On" go high to turn on
 
     // sysVarArray[0] selects either Pump Port or AUX Port
     if (sysVarArray[0] == 0) chip1.digitalWrite(_boxNum+8,level);
@@ -602,8 +603,9 @@ void Lever::switchRewardPortOff() {
    
     boolean level;
     // sysVarArray[1] selects of the device goes on with 5VDC or GND
-    if (sysVarArray[1]) level = LOW;
-    else level = HIGH; 
+    // sysVarArray[1] 5VDC On = 0; GND On = 1 
+    if (sysVarArray[1]) level = HIGH;     // if "GND On" go high to turn off
+    else level = LOW;                     // else '5VDC On" go low to turn off
 
     // sysVarArray[0] selects either Pump Port or AUX Port
     if (sysVarArray[0] == 0) chip1.digitalWrite(_boxNum+8,level);
