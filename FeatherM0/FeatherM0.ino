@@ -876,24 +876,13 @@ void setup() {
 }
 
 /*
-void checkLeverOne() {
-    static byte oldPortOneValue = 255;       
-    portOneValue = chip1.readPort(0);                
-    if (portOneValue != oldPortOneValue) {
-         oldPortOneValue = portOneValue;
-         for (byte i = 0; i < 8; i++) {
-             newLeverOneState[i] = bitRead(portOneValue,i);
-             if (newLeverOneState[i] != lastLeverOneState[i]) {          
-                  lastLeverOneState[i] = newLeverOneState[i]; 
-                  if (newLeverOneState[i] == 0) {
-                     boxArray[i].handle_L1_Response();
-                     String tempStr = "9 L1_Response:pin_"+String(i); 
-                     Serial.println(tempStr);
-                  }
-             }
-         }    
-    }           
-}
+checkLeverOneBit() was modified to filter out noise. I appears that on
+occassion, a ground spike would flip several bits and the program would
+interpret it as simultaneous responses on several boxes. The sketch
+now scans the input port to see if more than one bit has changed. If
+more than one bit has changed it is logged as a "phantomResp" 
+
+boxArray[i].handle_L1_Response() is called when the lever goes to ground.
 */
 
 void checkLeverOneBits() {
