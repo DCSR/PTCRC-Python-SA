@@ -2,6 +2,10 @@
  *   
  *   June 30th, 2020
  *   
+ *   checkLeverTwoBits(): Implement the same check for phantom responses as checkLeverOneBits()
+ *   
+ *   
+ *   
  *   Inactive Workaround:
  *   The lever class was created so that two or more levers could be instantiated with a Box using
  *   the same code.  
@@ -690,7 +694,7 @@ class Box  {
     // void cyclePump();
     void tick();
     void handle_L1_Response();
-    void handle_L2_Response();
+    void handle_L2_Response(byte state);
     void setProtocolNum(int protocalNum);
     void setrewardDuration(int rewardDuration);
     void setParamNum(int paramNum);
@@ -724,9 +728,10 @@ void Box::handle_L1_Response() {
   lever1.handleResponse();
 }
 
-void Box::handle_L2_Response() {   // Inactive lever press
-  TStamp tStamp = {_boxNum, 'J', millis() - lever1._startTime, 0, 9};
-  printQueue.push(&tStamp);
+void Box::handle_L2_Response(byte state) {   // HD lever change
+  Serial.println("HD Lever change to "+String(state));
+  //TStamp tStamp = {_boxNum, 'J', millis() - lever1._startTime, 0, 9};
+  //printQueue.push(&tStamp);
 }
 
 void Box::setProtocolNum(int protocolNum) {
@@ -926,15 +931,11 @@ void checkLeverTwoBits() {
              newLeverTwoState[i] = bitRead(portTwoValue,i);
              if (newLeverTwoState[i] != lastLeverTwoState[i]) {          
                   lastLeverTwoState[i] = newLeverTwoState[i]; 
-                  if (newLeverTwoState[i] == 0) {
-                     boxArray[i].handle_L2_Response();
-                     // String tempStr = "9 L2_Response:pin_"+String(i); 
-                     // Serial.println(tempStr);
-                  }
+                  boxArray[i].handle_L2_Response(newLeverTwoState[i]);
              }
-         }    
-    }           
-}
+         }
+    }    
+}           
 
 void decodeSysVars(byte varCode) {
   byte mask;
