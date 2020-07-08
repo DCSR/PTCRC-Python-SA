@@ -2,9 +2,13 @@
  *   
  *   June 30th, 2020
  *   
+ *   checkLeverTwoBits() should pass the change in state and print it to the Serial Port.
+ *   
+ *   To Do:
  *   checkLeverTwoBits(): Implement the same check for phantom responses as checkLeverOneBits()
+ *   Couple it to boxArray[num1].lever1.switchRewardPortOn(false);
  *   
- *   
+ *   See Documents/SelfAdmin/Sketch FlowChart.ppt for program flow
  *   
  *   Inactive Workaround:
  *   The lever class was created so that two or more levers could be instantiated with a Box using
@@ -992,7 +996,7 @@ void handleInputString()
      else if (stringCode == "G")     boxArray[num1].startSession();
      else if (stringCode == "Q")     boxArray[num1].endSession();
      else if (stringCode == "L1")    boxArray[num1].lever1.handleResponse(); 
-     else if (stringCode == "P")     boxArray[num1].lever1.switchRewardPortOn(false);
+     else if (stringCode == "P")     boxArray[num1].lever1.switchRewardPortOn(false);  // not timed
      else if (stringCode == "p")     boxArray[num1].lever1.switchRewardPortOff();
      else if (stringCode == "PROTOCOL") boxArray[num1].lever1.setProtocolNum(num2);
      else if (stringCode == "PARAM") boxArray[num1].setParamNum(num2);
