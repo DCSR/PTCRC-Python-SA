@@ -1,6 +1,6 @@
 /*  
  *   
- *   June 30th, 2020
+ *   July 7, 2020
  *   
  *   checkLeverTwoBits() should pass the change in state and print it to the Serial Port.
  *   
@@ -733,7 +733,13 @@ void Box::handle_L1_Response() {
 }
 
 void Box::handle_L2_Response(byte state) {   // HD lever change
-  Serial.println("HD Lever change to "+String(state));
+  Serial.println("9 HD_"+String(state));
+  if (state) {
+    chip1.digitalWrite(_boxNum+8,0);
+  }
+  else {
+    chip1.digitalWrite(_boxNum+8,1);
+  }
   //TStamp tStamp = {_boxNum, 'J', millis() - lever1._startTime, 0, 9};
   //printQueue.push(&tStamp);
 }
