@@ -1,6 +1,29 @@
 /*  
  *   
- *   July 8, 2020
+ *   Aug 2, 2020
+ *   
+ *   'L2 HD' added as ProtocolNum 8
+ *   
+ *   states { PRESTART, BLOCK, IBI, FINISHED };
+ *   
+ *   interim change: 
+ *   
+ *   states { PRESTART, BLOCK, IBI, L2_HD, FINISHED };
+ *   
+ *   changed to:
+ *   
+ *   states { PRESTART, L1_ACTIVE, L1_TIMEOUT, IBI, L2_HD, FINISHED };
+ *   
+ *   
+ *   To do:
+ *   Merge SetProtocolDefaults into StartSession.
+ *   Do we need _timeOut? Can we simply use _timeOutTime?
+ *         
+ *   
+ *   
+ *   
+ *   
+ *   July 14, 2020
  *   
  *   First iteration of Ver 300 - rethink of the Box Class and 
  *   downsizing of Lever Class
@@ -232,107 +255,32 @@ byte maxQueueRecs = 0;
 int phantomResp = 0;
 byte diffCriteria = 1;
 
-enum  states { PRESTART, BLOCK, IBI, FINISHED };
-
-// ***************************  Lever Class *************************************
-
-class Lever {
-  public:
-    Lever(int boxNum);
-    // void tick();
-    // void setProtocolDefaults();
-    // void startSession();
-    // void endSession();
-    // void setProtocolNum(int protocalNum);  
-    // void setrewardDuration(int rewardDuration);
-    // void setParamNum(int paramNum);
-    // void setBlockDuration(int blockDuration);
-    // void setIBIDuration(int IBIDuration);  
-    // void handleResponse();
-    // void switchRewardPortOn(boolean timed);
-    // void switchRewardPortOff();
-    // void switchStim1(boolean state);
-    // void switchStim2(boolean state);
-    // void moveInactiveLever(int state);
-    // void moveLever(int state);
-    int _boxNum;
-    // unsigned long _startTime = 0;   // Used for active and inactive lever timestamnps 
-    
-  // private:
-    // int _tickCounts = 0;
-    // void startBlock();
-    // void endBlock();
-    // void startTrial();
-    // void endTrial();
-    // void startIBI();
-    // void endIBI();
-    // void reinforce();
-    // void startTimeOut();
-    // void endTimeOut();
- 
-    // boolean _timeOut = false; 
-    // boolean _timedRewardOn = false;                    
-    // boolean _schedPR = false;
-    // boolean _schedTH = false;
-    // defaults to a 6h FR1 session 
-    // int _protocolNum = 1;  // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25', '7: Flush']
-    // int _paramNum = 1;
-    // int _PRstepNum = 1;   
-    // states _boxState = PRESTART;
-    // Block
-    // unsigned long _blockDuration = 21600;  // default to 6 hrs = 60 * 60 * 6 = 21600 seconds 
-    // int _blockDurationInit = 21600;        // default to 6 hrs
-    // unsigned long _blockTime = 0;    // unsigned int would only allow 65,535 seconds = 18.2 hours
-    // unsigned int _blockNumber = 0;
-    // unsigned int _maxBlockNumber = 1;  
-    // Trial 
-    // unsigned int _responseCriterion = 1;  // default to FR1
-    // unsigned int _trialNumber = 0;
-    // unsigned int _maxTrialNumber = 999;
-    // unsigned int _trialResponses = 0;
-    // Reinforce 
-    // int _rewardDuration = 400;    // 400 x 10 mSec = 4,000 mSec = 4 seconds;
-    // int _rewardTime = 0;    
-    // int _THPumpTimeArray[13] = {316, 316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};
-    // int _THPumpTimeArray[13] = {100, 100, 50, 40, 30, 20, 10, 9, 8, 7, 5, 3, 2};    
-    // int _timeOutTime = 0;
-    // int _timeOutDuration = 400;  // default to 4 sec    
-    // IBI     
-    // unsigned long _IBIDuration = 0;
-    // int _IBIDurationInit = 0;  // default to no IBI
-    // unsigned long _IBITime = 0;
-};
+enum  states { PRESTART, BLOCK, IBI, L2_HD, FINISHED };
 
 // ******************** Box Class **************
 
 class Box  {
   public:
-    // Lever lever1;  
-    // Box(int boxNum) : lever1(boxNum) {
-    //    _boxNum = boxNum; 
-    // }
-    Box (int boxNum) {
+    Box (int boxNum) {                          // constructor
         _boxNum = boxNum;
     }
-    void startSession();                        // updated
-    void setProtocolDefaults();                 // updated
-    void endSession();                          // updated
-    void tick();                                // updated
-    void handle_L1_Response();                  // updated
-    void handle_L2_Response(byte state);        // updated
-    void setProtocolNum(int protocalNum);       // updated
-    void switchRewardPortOn(boolean timed);     // updated
-    void switchRewardPortOff();                 // updated
-    void switchStim1(boolean state);            // updated
-    void switchStim2(boolean state);            // updated
-    void moveLever(int state);                  // updated    
-    void moveInactiveLever(int state);          // updated
-    void setrewardDuration(int rewardDuration); // updated
-    void setParamNum(int paramNum);             // updated
-    void setBlockDuration(int blockDuration);   // updated 
-    void setIBIDuration(int IBIDuration);       // updated
-
- 
+    void startSession();
+    void setProtocolDefaults();
+    void endSession();
+    void tick();
+    void handle_L1_Response();
+    void handle_L2_Response(byte state);
+    void setProtocolNum(int protocalNum);
+    void switchRewardPortOn(boolean timed);
+    void switchRewardPortOff();
+    void switchStim1(boolean state);
+    void switchStim2(boolean state);
+    void moveLever(int state);    
+    void moveInactiveLever(int state);
+    void setrewardDuration(int rewardDuration);
+    void setParamNum(int paramNum);
+    void setBlockDuration(int blockDuration); 
+    void setIBIDuration(int IBIDuration);
     void reportParameters();
     void getBlockTime();
 
@@ -341,7 +289,7 @@ class Box  {
     //************
   private:
     int _boxNum;
-    int _protocolNum = 1;  // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25', '7: Flush']
+    int _protocolNum = 1;  // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25', '7: Flush', '8: L2-HD' ]
     int _paramNum = 1;
     int _pumpOnTime;          // set in StartSession()
     int _pumpOffTime = 20;    // default
@@ -361,10 +309,7 @@ class Box  {
     boolean _timeOut = false; 
     boolean _timedRewardOn = false;                    
     boolean _schedPR = false;
-    boolean _schedTH = false;
-    // defaults to a 6h FR1 session 
-    // int _protocolNum = 1;  // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25', '7: Flush']
-    // int _paramNum = 1;
+    boolean _schedTH = false; 
     int _PRstepNum = 1;   
     states _boxState = PRESTART;
     // Block
@@ -392,13 +337,7 @@ class Box  {
 };
 
 
-// ************* Lever Class Procedures *************************************
-
-Lever::Lever(int boxNum) {
-  _boxNum = boxNum;
-}
-
-// *************************************************************************
+// ********** Box Procedures *************
 
 void Box::startBlock() {
   TStamp tStamp = {_boxNum, 'B', millis() - _startTime, 0, 9};
@@ -597,24 +536,9 @@ void Box::moveLever(int state) {          // boxNum 0..7  maps to pin 0..7 on ch
 
 
 void Box::startSession() {
-  setProtocolDefaults();
-  if (_protocolNum == 0) endSession();
-  else {
-      _startTime = millis();
-      _blockNumber = 0;  
-      _rewardTime = 0; 
-      _timeOutTime = 0;   
-      TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
-      printQueue.push(&tStamp);
-      startBlock();
-      if (inactiveLeverExists) moveInactiveLever(Extend);  
-  }
-}
-
-void Box::setProtocolDefaults() {
   // Python protocol list:  
   // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', 
-  // '4: PR', '5: TH', '6: IntA: 5-25', '7: Debug']
+  // '4: PR', '5: TH', '6: IntA: 5-25', '7: Debug', '8: L2 HD']
  
       if (_protocolNum == 1) {           // FR(N)
         _blockDuration = _blockDurationInit;
@@ -693,7 +617,29 @@ void Box::setProtocolDefaults() {
         _responseCriterion = 999;       
         _PRstepNum = 1;                 // irrelevant
         _timeOutDuration = _rewardDuration; 
-      }   
+      }
+      else if (_protocolNum == 8) {      // L2 HD
+        _blockDuration = _blockDurationInit;
+        _maxBlockNumber = _paramNum;    // Maybe 24
+        _IBIDuration = 0;
+        _schedPR = false;                 
+        _schedTH = false;
+        _maxTrialNumber = 999;
+        _responseCriterion = 999;       
+        _PRstepNum = 1;                 // irrelevant
+        _timeOutDuration = _rewardDuration; 
+      }
+  if (_protocolNum == 0) endSession();
+  else {
+      _startTime = millis();
+      _blockNumber = 0;  
+      _rewardTime = 0; 
+      _timeOutTime = 0;   
+      TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
+      printQueue.push(&tStamp);
+      startBlock();
+      if (inactiveLeverExists) moveInactiveLever(Extend);  
+  }
 }
 
 void Box::endSession() { 
@@ -756,15 +702,22 @@ void Box::handle_L1_Response() {
 }
 
 void Box::handle_L2_Response(byte state) {   // HD lever change
-  Serial.println("9 HD_"+String(state));
-  if (state) {
-    chip1.digitalWrite(_boxNum+8,0);
+  if (_boxState == L2_HD) {
+      if (state) {
+        chip1.digitalWrite(_boxNum+8,0);
+        TStamp tStamp1 = {_boxNum, 'J', millis() - _startTime, 0, 9};
+        printQueue.push(&tStamp1);
+        TStamp tStamp2 = {_boxNum, 'P', millis() - _startTime, 1, 2};
+        printQueue.push(&tStamp2);
+      }
+      else {
+        chip1.digitalWrite(_boxNum+8,1);
+        TStamp tStamp1 = {_boxNum, 'j', millis() - _startTime, 0, 9};
+        printQueue.push(&tStamp1);
+        TStamp tStamp2 = {_boxNum, 'p', millis() - _startTime, 1, 2};
+        printQueue.push(&tStamp2);
+      }
   }
-  else {
-    chip1.digitalWrite(_boxNum+8,1);
-  }
-  //TStamp tStamp = {_boxNum, 'J', millis() - lever1._startTime, 0, 9};
-  //printQueue.push(&tStamp);
 }
 
 void Box::setProtocolNum(int protocolNum) {
@@ -933,8 +886,8 @@ void checkLeverOneBits() {
       if (bitRead(portOneValue,i) != (bitRead(oldPortOneValue,i))) diff++;
     }  
     if (diff > diffCriteria) {
-      Serial.println("9 diff_"+String(diff));
-      Serial.println("9 "+String(portOneValue));
+      Serial.println("9 diff_L1_"+String(diff));
+      Serial.println("9 L1="+String(portOneValue));
       oldPortOneValue = portOneValue;
       phantomResp++;
     }
@@ -956,9 +909,20 @@ void checkLeverOneBits() {
 }
 
 void checkLeverTwoBits() {
+    byte diff = 0;
     static byte oldPortTwoValue = 255;      
     portTwoValue = chip3.readPort(0);
-    if(portTwoValue != oldPortTwoValue) {
+    // **********  compareBits
+    for (int i = 7; i > -1; i--) {
+      if (bitRead(portTwoValue,i) != (bitRead(oldPortTwoValue,i))) diff++;
+    }
+    if (diff > diffCriteria) {
+      Serial.println("9 diff_L2_"+String(diff));
+      Serial.println("9 L2="+String(portOneValue));
+      oldPortTwoValue = portTwoValue;
+      phantomResp++;
+    }   
+    else if (diff == 1) {
         oldPortTwoValue = portTwoValue;
          // Serial.println (portTwoValue,BIN);
          for (byte i = 0; i < 8; i++) {
