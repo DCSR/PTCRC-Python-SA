@@ -1,27 +1,15 @@
 /*  
  *   
- *   Aug 2, 2020
+ *   Aug 3, 2020
  *   
- *   'L2 HD' added as ProtocolNum 8
- *   
- *   states { PRESTART, BLOCK, IBI, FINISHED };
- *   
- *   interim change: 
- *   
- *   states { PRESTART, BLOCK, IBI, L2_HD, FINISHED };
- *   
- *   changed to:
- *   
+ *   Added
  *   states { PRESTART, L1_ACTIVE, L1_TIMEOUT, IBI, L2_HD, FINISHED };
  *   
+ *   _timeOut deleted
  *   
- *   To do:
- *   Merge SetProtocolDefaults into StartSession.
- *   Do we need _timeOut? Can we simply use _timeOutTime?
- *         
+ *   Test Block time in L2_HD (protocol 8)
  *   
- *   
- *   
+ *   Add boolean unitDose variable
  *   
  *   July 14, 2020
  *   
@@ -255,7 +243,8 @@ byte maxQueueRecs = 0;
 int phantomResp = 0;
 byte diffCriteria = 1;
 
-enum  states { PRESTART, BLOCK, IBI, L2_HD, FINISHED };
+// enum  states { PRESTART, BLOCK, IBI, L2_HD, FINISHED };
+enum states { PRESTART, L1_ACTIVE, L1_TIMEOUT, IBI, L2_HD, FINISHED };
 
 // ******************** Box Class **************
 
@@ -306,7 +295,7 @@ class Box  {
     void startTimeOut();
     void endTimeOut(); 
 
-    boolean _timeOut = false; 
+    // boolean _timeOut = false; 
     boolean _timedRewardOn = false;                    
     boolean _schedPR = false;
     boolean _schedTH = false; 
@@ -344,8 +333,7 @@ void Box::startBlock() {
   printQueue.push(&tStamp);
   _blockTime = 0;
   _trialNumber = 0;
-  _blockNumber++;
-  _boxState = BLOCK;  
+  _blockNumber++;  
   if (_schedTH == true){                                       // TH
       _rewardDuration = _THPumpTimeArray[_blockNumber - 1];    // zero indexed array; block 1 = index 0
       _timeOutDuration = _rewardDuration;
@@ -382,7 +370,8 @@ void Box::startTrial() {
       _PRstepNum++;
    }
    moveLever(Extend);     // extend lever
-   _timeOut = false;      
+   _boxState = L1_ACTIVE;
+   //_timeOut = false;      
 }
 
 void Box::endTrial() {
@@ -416,11 +405,12 @@ void Box::reinforce() {
 void Box::startTimeOut() {
     switchStim1(On); 
     _timeOutTime = 0;       // _timeOutTime counts up _timeOutDuration
-    _timeOut = true;          
+    _boxState = L1_TIMEOUT;
+    // _timeOut = true;         
 }
 
 void Box::endTimeOut() {
-    _timeOut = false;  
+    // _timeOut = false;  
     switchStim1(Off);
     if (_trialNumber < _maxTrialNumber) startTrial(); 
     else {
@@ -660,16 +650,14 @@ void Box::tick() {                        // do stuff every 10 mSec
        _rewardTime++;
        if (_rewardTime >= _rewardDuration) switchRewardPortOff();
     }  
-    if (_timeOut) {
+    if (_boxState == L1_TIMEOUT) {
        _timeOutTime++;
        if (_timeOutTime == _timeOutDuration) endTimeOut();     
     }
     _tickCounts++; 
     if (_tickCounts == 100)    {         // do this every second
        _tickCounts = 0;
-       //switch (_boxState) {  // PRESTART, BLOCK, IBI, FINISHED 
-       //   case BLOCK:
-       if (_boxState == BLOCK) {
+       if (_boxState == L1_ACTIVE || _boxState == L1_TIMEOUT || _boxState == L2_HD) {
             _blockTime++;
             TStamp tStamp = {_boxNum, '*', _blockTime, 0, 9};
             printQueue.push(&tStamp);
@@ -687,8 +675,7 @@ void Box::tick() {                        // do stuff every 10 mSec
 }
 
 void Box::handle_L1_Response() { 
-   if (_boxState == BLOCK) {
-      if (_timeOut == false) {  
+   if (_boxState == L1_ACTIVE) { 
          TStamp tStamp = {_boxNum, 'L', millis() - _startTime, 0, 9};
          printQueue.push(&tStamp);
          _trialResponses++;
@@ -697,9 +684,9 @@ void Box::handle_L1_Response() {
                  reinforce();
                  startTimeOut();
          }
-      }  
-   }
+    }  
 }
+
 
 void Box::handle_L2_Response(byte state) {   // HD lever change
   if (_boxState == L2_HD) {
