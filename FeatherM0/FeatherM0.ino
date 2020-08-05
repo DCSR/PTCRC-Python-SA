@@ -6,6 +6,7 @@
  *   states { PRESTART, L1_ACTIVE, L1_TIMEOUT, IBI, L2_HD, FINISHED };
  *   
  *   _timeOut deleted
+ *   inactiveLeverExists renamed to leverTwoExists 
  *   
  *   Test Block time in L2_HD (protocol 8)
  *   
@@ -19,22 +20,12 @@
  *   checkLeverTwoBits() should pass the change in state and print it to the Serial Port.
  *   
  *   To Do:
- *   Check on and rename "inactiveLever" 
+ *   
  *   Rename and differentiate procedures for L1 and L2 (moveLever1 etc)
  *   checkLeverTwoBits(): Implement the same check for phantom responses as checkLeverOneBits()
- *   Eventually create an "inactive" state for the lever class
  *   
  *   See Documents/SelfAdmin/Sketch FlowChart.ppt for program flow
  *   
- *   
- *   boolean variable "inactiveLeverExists" created = sysVarsArray[2]
- *   moveInctiveLever() created within Lever. That is, the Lever class "owns" both the schedule
- *     lever and the inactive lever. 
- *   inactive lever (L2) extended in Lever::startSession() and retracted in Lever::endSession()   
- *   using: 
- *          if (inactiveLeverExists) chip2.digitalWrite(_boxNum,LOW); 
- *   checkLevertwo() reinstated as checkLeverTwoBits()
- *   It directs to boxArray[i].handle_L2_Response() which sends a timestamp
  *   
  *   May 9th.
  *   
@@ -197,7 +188,7 @@ MCP23S17 chip3(chipSelect, 3);
 boolean sysVarArray[8] = {false,false,false,false,false,false,false,false};
 // sysVarArray[0] used for reward type; 0 = Drug, 1 = Food
 // sysVarArray[1] used for logic type: 0 = 5VDC switches On, 1 = GND switches On
-// sysVarArray[2] used for inactiveLeverExists
+// sysVarArray[2] used for leverTwoExists
 
 
 #define On true
@@ -231,7 +222,7 @@ boolean newResponse[8] = {false,false,false,false,false,false,false,false};
 byte ticks[8] = {0,0,0,0,0,0,0,0};
 int lastLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 int newLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
-boolean inactiveLeverExists = false;
+boolean leverTwoExists = false;
 
 volatile boolean tickFlag = false;
 
@@ -264,8 +255,8 @@ class Box  {
     void switchRewardPortOff();
     void switchStim1(boolean state);
     void switchStim2(boolean state);
-    void moveLever(int state);    
-    void moveInactiveLever(int state);
+    void moveLeverOne(int state);    
+    void moveLeverTwo(int state);
     void setrewardDuration(int rewardDuration);
     void setParamNum(int paramNum);
     void setBlockDuration(int blockDuration); 
@@ -273,7 +264,7 @@ class Box  {
     void reportParameters();
     void getBlockTime();
 
-    unsigned long _startTime = 0;   // Used for active and inactive lever timestamnps 
+    unsigned long _startTime = 0;   // Used for lever timestamnps 
     
     //************
   private:
@@ -288,13 +279,15 @@ class Box  {
     void startBlock();
     void endBlock();
     void startTrial();
+    void startHDTrial();
     void endTrial();
+    void endHDTrial();
     void startIBI();
     void endIBI();
     void reinforce();
     void startTimeOut();
     void endTimeOut(); 
-
+    
     // boolean _timeOut = false; 
     boolean _timedRewardOn = false;                    
     boolean _schedPR = false;
@@ -318,7 +311,10 @@ class Box  {
     int _THPumpTimeArray[13] = {316, 316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};
     // int _THPumpTimeArray[13] = {100, 100, 50, 40, 30, 20, 10, 9, 8, 7, 5, 3, 2};    
     int _timeOutTime = 0;
-    int _timeOutDuration = 400;  // default to 4 sec    
+    int _timeOutDuration = 400;  // default to 4 sec 
+    // HD
+    unsigned long _HDTime = 0;    
+    unsigned long _HD_Duration = 10800;  // default to 3 hrs
     // IBI     
     unsigned long _IBIDuration = 0;
     int _IBIDurationInit = 0;  // default to no IBI
@@ -346,7 +342,12 @@ void Box::startBlock() {
         _maxTrialNumber = 999;   
       }  
   }
-  if (_protocolNum != 7) startTrial();    // If not Flush
+  if (_protocolNum != 7) {                                // If not Flush
+    if (_protocolNum == 8 || _protocolNum == 9) {
+      startHDTrial();
+    }
+    else startTrial();    
+  }
 }
 
 void Box::endBlock() {   
@@ -369,15 +370,30 @@ void Box::startTrial() {
       _responseCriterion = round((5 * exp(0.2 * _PRstepNum)) - 5);    // Sched = PR
       _PRstepNum++;
    }
-   moveLever(Extend);     // extend lever
+   moveLeverOne(Extend);     // extend lever
    _boxState = L1_ACTIVE;
    //_timeOut = false;      
+}
+
+void Box::startHDTrial() {
+   TStamp tStamp = {_boxNum, 'Z', millis() - _startTime, 0, 9};
+   printQueue.push(&tStamp);
+   moveLeverTwo(Extend);     // extend lever
+   _boxState = L2_HD;
+   _HDTime = 0;
 }
 
 void Box::endTrial() {
    TStamp tStamp = {_boxNum, 't', millis() - _startTime, 0, 9};
    printQueue.push(&tStamp);
-   if (_protocolNum != 5) moveLever(Retract);       // if not TH then retract lever
+   if (_protocolNum != 5) moveLeverOne(Retract);       // if not TH then retract lever
+}
+
+void Box::endHDTrial() {
+   TStamp tStamp = {_boxNum, 'z', millis() - _startTime, 0, 9};
+   printQueue.push(&tStamp);
+   moveLeverTwo(Retract);     // retract lever
+   endBlock();
 }
 
 void Box::startIBI() { 
@@ -385,7 +401,7 @@ void Box::startIBI() {
    printQueue.push(&tStamp); 
    if (_IBIDuration == 0) endIBI();
    else
-   {   moveLever(Retract);
+   {   moveLeverOne(Retract);
        _IBITime = 0;         // tick will handle when to end IBI 
        _boxState = IBI;      // IBI
    }    
@@ -498,7 +514,7 @@ void Box::switchStim2(boolean state) {
     // StimCheckBox is index 4     
 }
 
-void Box::moveInactiveLever(int state) {
+void Box::moveLeverTwo(int state) {
   chip2.digitalWrite(_boxNum,state);  // Extend inactove lever (L2)
   if (state == Extend) {
     TStamp tStamp = {_boxNum, '~', millis() - _startTime, 1, 1};
@@ -510,7 +526,7 @@ void Box::moveInactiveLever(int state) {
   }
 }
 
-void Box::moveLever(int state) {          // boxNum 0..7  maps to pin 0..7 on chip0
+void Box::moveLeverOne(int state) {          // boxNum 0..7  maps to pin 0..7 on chip0
     chip0.digitalWrite(_boxNum,state);
     // HIGH = Retract; LOW = Extend
     if (state) {
@@ -609,16 +625,41 @@ void Box::startSession() {
         _timeOutDuration = _rewardDuration; 
       }
       else if (_protocolNum == 8) {      // L2 HD
-        _blockDuration = _blockDurationInit;
-        _maxBlockNumber = _paramNum;    // Maybe 24
+        _HD_Duration = 6000;             // 1 min?
+        _blockDuration = _HD_Duration +100; // Should make it irrelevant
+        _maxBlockNumber = 1;
         _IBIDuration = 0;
         _schedPR = false;                 
         _schedTH = false;
-        _maxTrialNumber = 999;
-        _responseCriterion = 999;       
+        _maxTrialNumber = 999;          // irrelevant
+        _responseCriterion = 999;       // irrelevant
         _PRstepNum = 1;                 // irrelevant
-        _timeOutDuration = _rewardDuration; 
+        _timeOutDuration = _rewardDuration; // irrelevant
       }
+      else if (_protocolNum == 9) {      // test
+        _HD_Duration = 6000;             // 1 min?
+        _blockDuration = _HD_Duration +100; // Should make it irrelevant
+        _maxBlockNumber = 2;
+        _IBIDuration = 6000;
+        _schedPR = false;                 
+        _schedTH = false;
+        _maxTrialNumber = 999;          // irrelevant
+        _responseCriterion = 999;       // irrelevant
+        _PRstepNum = 1;                 // irrelevant
+        _timeOutDuration = _rewardDuration; // irrelevant
+      }
+      else if (_protocolNum == 10) {      // L2 HD
+        _HD_Duration = 6000;             // 1 min?
+        _blockDuration = _HD_Duration +100; // Should make it irrelevant
+        _maxBlockNumber = 1;
+        _IBIDuration = 0;
+        _schedPR = false;                 
+        _schedTH = false;
+        _maxTrialNumber = 999;          // irrelevant
+        _responseCriterion = 999;       // irrelevant
+        _PRstepNum = 1;                 // irrelevant
+        _timeOutDuration = _rewardDuration; // irrelevant
+      }   
   if (_protocolNum == 0) endSession();
   else {
       _startTime = millis();
@@ -628,13 +669,13 @@ void Box::startSession() {
       TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
       printQueue.push(&tStamp);
       startBlock();
-      if (inactiveLeverExists) moveInactiveLever(Extend);  
+      if (leverTwoExists) moveLeverTwo(Extend);  
   }
 }
 
 void Box::endSession() { 
     // endTrial(); the only thing this did was retract the lever, but see next line. 
-    moveLever(Retract);         
+    moveLeverOne(Retract);         
     switchStim1(Off);
     switchRewardPortOff();
     _rewardTime = 0;
@@ -642,7 +683,7 @@ void Box::endSession() {
     _boxState = FINISHED;    
     TStamp tStamp = {_boxNum, 'E', millis() - _startTime, 0, 9};
     printQueue.push(&tStamp);
-    if (inactiveLeverExists) moveInactiveLever(Retract);
+    if (leverTwoExists) moveLeverTwo(Retract);
 }
 
 void Box::tick() {                        // do stuff every 10 mSec 
@@ -653,6 +694,10 @@ void Box::tick() {                        // do stuff every 10 mSec
     if (_boxState == L1_TIMEOUT) {
        _timeOutTime++;
        if (_timeOutTime == _timeOutDuration) endTimeOut();     
+    }
+    if (_boxState == L2_HD) {
+       _HDTime++;
+       if (_HDTime >= _HD_Duration) endHDTrial();
     }
     _tickCounts++; 
     if (_tickCounts == 100)    {         // do this every second
@@ -937,7 +982,7 @@ void decodeSysVars(byte varCode) {
     Serial.print(sysVarArray[i]);
     }
     Serial.println("9 varCode="+String(varCode));
-  inactiveLeverExists = sysVarArray[2]; 
+  leverTwoExists = sysVarArray[2]; 
 }
 
 void getInputString() {
@@ -985,10 +1030,10 @@ void handleInputString()
      else if (stringCode == "IBI")   boxArray[num1].setIBIDuration(num2);         
      else if (stringCode == "PUMP")  boxArray[num1].setrewardDuration(num2); 
      else if (stringCode == "R")     boxArray[num1].reportParameters();
-     else if (stringCode == "=")     boxArray[num1].moveLever(Extend);   // extend lever1
-     else if (stringCode == ".")     boxArray[num1].moveLever(Retract);    // retract lever1
-     else if (stringCode == "~")     boxArray[num1].moveInactiveLever(Extend);  
-     else if (stringCode == ",")     boxArray[num1].moveInactiveLever(Retract);
+     else if (stringCode == "=")     boxArray[num1].moveLeverOne(Extend);   // extend lever1
+     else if (stringCode == ".")     boxArray[num1].moveLeverOne(Retract);    // retract lever1
+     else if (stringCode == "~")     boxArray[num1].moveLeverTwo(Extend);  
+     else if (stringCode == ",")     boxArray[num1].moveLeverTwo(Retract);
      else if (stringCode == "s")     boxArray[num1].switchStim1(Off);
      else if (stringCode == "S")     boxArray[num1].switchStim1(On);
      else if (stringCode == "c")     boxArray[num1].switchStim2(Off);
@@ -1061,7 +1106,7 @@ void tick()    {
    for (uint8_t i = 0; i < 8; i++) boxArray[i].tick();
    getInputString();
    checkLeverOneBits();
-   if (inactiveLeverExists) checkLeverTwoBits(); 
+   if (leverTwoExists) checkLeverTwoBits(); 
    sendOneTimeStamp();
    delta = micros() - micro1;
    if (delta > maxDelta) maxDelta = delta;   
