@@ -1,6 +1,8 @@
 """
 
-May 9th, 2019
+Aug 4, 2020
+
+Changes to allow HD on Lever two
 
 To Do:
 exception at getInput:  [b'000000009', b'varCode', b'=', b'0']
@@ -35,10 +37,10 @@ def main(argv=None):
 class GuiClass(object):
     def __init__(self):
 
-        self.version = "SA200.20"
+        self.version = "SA300.00"
         self.varCode = 0
         self.verbose = True
-        self.sched = ['0: Do not run', '1: FR(N)', '2: FR1 x 20 trials', '3: FR1 x N trials', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Flush']
+        self.sched = ['0: Do not run', '1: FR(N)', '2: FR1 x 20 trials', '3: FR1 x N trials', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Flush', '8: L2-HD', '9: IntA-HD', '10: 2L-PR-HD']
         self.box1 = Box(1)
         self.box2 = Box(2)
         self.box3 = Box(3)
@@ -943,7 +945,8 @@ class GuiClass(object):
         aLabel =  ttk.Label(INI_Frame, text="(Min)").grid(column=6, row=13)
         aLabel =  ttk.Label(INI_Frame, text="(10 mSec)").grid(column=7, row=13)
 
-        #['0: Do not run', '1: FR(N)', '2: FR1 x 20', '3: FR1 x N', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Flush']
+        #['0: Do not run', '1: FR(N)', '2: FR1 x 20 trials', '3: FR1 x N trials', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Flush', '8: L2-HD', '9: IntA-HD', '10: 2L-PR-HD']
+
 
         aLabel = ttk.Label(INI_Frame, text="0: Do Not Run - enough said").grid(column=1, sticky = W, columnspan=7, row=14)
         aLabel = ttk.Label(INI_Frame, text="1: FR(N) - session length = block length").grid(column=1, sticky = W, columnspan=7, row=15)
@@ -953,7 +956,10 @@ class GuiClass(object):
         aLabel = ttk.Label(INI_Frame, text="5: TH - 12 Trials - uses Block length (typically 10 min) and IBI (Typically 0 min)").grid(column=1, sticky = W, columnspan=7, row=19)
         aLabel = ttk.Label(INI_Frame, text="6: IntA: 5 - 25. Defaults to 5 min trials and 25 min. ").grid(column=1, sticky = W, columnspan=7, row=20)
         aLabel = ttk.Label(INI_Frame, text="7: Flush: N Infusions separated by Block time").grid(column=1, sticky = W, columnspan=7, row=21)
-        aLabel = ttk.Label(INI_Frame, text="* IBI - presently only applies to TH").grid(column=1, sticky = W, columnspan=7, row=22)
+        aLabel = ttk.Label(INI_Frame, text="8: L2-HD - HD on Lever Two for one Block determined by session length").grid(column=1, sticky = W, columnspan=7, row=22)
+        aLabel = ttk.Label(INI_Frame, text="9: IntA-HD. Defaults to 5 min trials and 25 min").grid(column=1, sticky = W, columnspan=7, row=23)
+        aLabel = ttk.Label(INI_Frame, text="10: 2L-PR-HD. Yet to be implemented").grid(column=1, sticky = W, columnspan=7, row=24)
+        aLabel = ttk.Label(INI_Frame, text="* IBI - presently only applies to TH").grid(column=1, sticky = W, columnspan=7, row=25)
 
         self.loadFromINIFile()
         self.readExampleFiles()
@@ -1328,8 +1334,8 @@ class GuiClass(object):
             self.L1ResponsesList[listIndex].set(0)
             self.L2ResponsesList[listIndex].set(0)
             self.InfList[listIndex].set(0)
-            # send Parameters
-            self.outputText("<PROTOCOL "+str(boxIndex)+" "+str(self.schedList[listIndex].get())+">")
+            protocolNum = self.sched.index(self.schedList[listIndex].get())          
+            self.outputText("<PROTOCOL "+str(boxIndex)+" "+str(protocolNum)+">")
             self.outputText("<PARAM "+str(boxIndex)+" "+str(self.paramNumList[listIndex].get())+">")
             self.outputText("<TIME "+str(boxIndex)+" "+str(self.SessionLengthList[listIndex].get()*60)+">")
             self.outputText("<IBI "+str(boxIndex)+" "+str(self.IBILengthList[listIndex].get()*60)+">")
