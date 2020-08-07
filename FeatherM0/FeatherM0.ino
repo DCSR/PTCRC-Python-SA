@@ -8,9 +8,6 @@
  *   _timeOut deleted
  *   inactiveLeverExists renamed to leverTwoExists 
  *   
- *   Test Block time in L2_HD (protocol 8)
- *   
- *   Add boolean unitDose variable
  *   
  *   July 14, 2020
  *   
@@ -267,9 +264,11 @@ class Box  {
     unsigned long _startTime = 0;   // Used for lever timestamnps 
     
     //************
+        
   private:
     int _boxNum;
-    int _protocolNum = 1;  // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', '4: PR', '5: TH', '6: IntA: 5-25', '7: Flush', '8: L2-HD' ]
+    int _protocolNum = 1;  // ['0: Do not run', '1: FR', '2: FR x 20', '3: FR x 40', '4: PR', '5: TH', 
+                           // '6: IntA: 5-25', '7: Flush', '8: L2-HD', '9: IntA-HD', '10: 2L-PR-HD']
     int _paramNum = 1;
     int _pumpOnTime;          // set in StartSession()
     int _pumpOffTime = 20;    // default
@@ -295,17 +294,20 @@ class Box  {
     int _PRstepNum = 1;   
     states _boxState = PRESTART;
     // Block
+    boolean _startOnLeverOne = true;
     unsigned long _blockDuration = 21600;  // default to 6 hrs = 60 * 60 * 6 = 21600 seconds 
     int _blockDurationInit = 21600;        // default to 6 hrs
     unsigned long _blockTime = 0;    // unsigned int would only allow 65,535 seconds = 18.2 hours
     unsigned int _blockNumber = 0;
     unsigned int _maxBlockNumber = 1;  
     // Trial 
+    boolean _2L_PR = false;
     unsigned int _responseCriterion = 1;  // default to FR1
     unsigned int _trialNumber = 0;
     unsigned int _maxTrialNumber = 999;
     unsigned int _trialResponses = 0;
     // Reinforce 
+    boolean _unitDose = true;     // used to direct 2L-PR_HD to startHDTrial
     int _rewardDuration = 400;    // 400 x 10 mSec = 4,000 mSec = 4 seconds;
     int _rewardTime = 0;    
     int _THPumpTimeArray[13] = {316, 316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};
@@ -314,7 +316,7 @@ class Box  {
     int _timeOutDuration = 400;  // default to 4 sec 
     // HD
     unsigned long _HDTime = 0;    
-    unsigned long _HD_Duration = 10800;  // default to 3 hrs
+    unsigned long _HD_Duration = 10800;  // default to 3 hrs (100 * 60 * 3)
     // IBI     
     unsigned long _IBIDuration = 0;
     int _IBIDurationInit = 0;  // default to no IBI
@@ -343,10 +345,8 @@ void Box::startBlock() {
       }  
   }
   if (_protocolNum != 7) {                                // If not Flush
-    if (_protocolNum == 8 || _protocolNum == 9) {
-      startHDTrial();
-    }
-    else startTrial();    
+    if (_startOnLeverOne) startTrial();
+    else startHDTrial();    
   }
 }
 
@@ -357,8 +357,11 @@ void Box::endBlock() {
       _rewardTime = 0;
       switchRewardPortOn(true);
    }   
-   if (_blockNumber < _maxBlockNumber) startIBI();
-   else endSession();
+   else if (_blockNumber == _maxBlockNumber) endSession();
+   else {
+     if (_IBIDuration > 0) startIBI();
+     else startBlock();
+   }
 }
 
 void Box::startTrial() { 
@@ -371,8 +374,7 @@ void Box::startTrial() {
       _PRstepNum++;
    }
    moveLeverOne(Extend);     // extend lever
-   _boxState = L1_ACTIVE;
-   //_timeOut = false;      
+   _boxState = L1_ACTIVE;    
 }
 
 void Box::startHDTrial() {
@@ -392,19 +394,17 @@ void Box::endTrial() {
 void Box::endHDTrial() {
    TStamp tStamp = {_boxNum, 'z', millis() - _startTime, 0, 9};
    printQueue.push(&tStamp);
-   moveLeverTwo(Retract);     // retract lever
-   endBlock();
+   moveLeverTwo(Retract);
+   if (_2L_PR) startTrial();
+   else endBlock(); 
 }
 
 void Box::startIBI() { 
    TStamp tStamp = {_boxNum, 'I', millis() - _startTime, 0, 9}; 
    printQueue.push(&tStamp); 
-   if (_IBIDuration == 0) endIBI();
-   else
-   {   moveLeverOne(Retract);
-       _IBITime = 0;         // tick will handle when to end IBI 
-       _boxState = IBI;      // IBI
-   }    
+   moveLeverOne(Retract);
+   _IBITime = 0;         // tick will handle when to end IBI 
+   _boxState = IBI;          
 }
 
 void Box::endIBI() {
@@ -415,7 +415,10 @@ void Box::endIBI() {
 
 void Box::reinforce() { 
     _rewardTime = 0;
+    // if _unitDose 
     switchRewardPortOn(true);
+    startTimeOut();
+    // else startHDTrial();
 }
 
 void Box::startTimeOut() {
@@ -547,6 +550,7 @@ void Box::startSession() {
   // '4: PR', '5: TH', '6: IntA: 5-25', '7: Debug', '8: L2 HD']
  
       if (_protocolNum == 1) {           // FR(N)
+        _startOnLeverOne = true;
         _blockDuration = _blockDurationInit;
         _maxBlockNumber = 1;
         _IBIDuration = 0;
@@ -558,6 +562,7 @@ void Box::startSession() {
         _timeOutDuration = _rewardDuration;
       }
       else if (_protocolNum == 2) {      // FR1 x 20
+        _startOnLeverOne = true;
         _blockDuration = _blockDurationInit;
         _maxBlockNumber = 1;
         _IBIDuration = 0;
@@ -569,6 +574,7 @@ void Box::startSession() {
         _timeOutDuration = 2000;         // 10 mSec x 2000 = 20 sec
       }
       else if (_protocolNum == 3) {      // FR x N
+        _startOnLeverOne = true;
         _blockDuration = _blockDurationInit;
         _maxBlockNumber = 1;
         _IBIDuration = 0;
@@ -580,6 +586,7 @@ void Box::startSession() {
         _timeOutDuration = _rewardDuration;
       }
       else if (_protocolNum == 4) {      // PR(N)
+        _startOnLeverOne = true;
         _blockDuration = _blockDurationInit;
         _maxBlockNumber = 1;
         _IBIDuration = 0;
@@ -591,6 +598,7 @@ void Box::startSession() {
         _timeOutDuration = _rewardDuration;
       }   
       else if (_protocolNum == 5) {      // TH
+        _startOnLeverOne = true;
         // _blockDuration = 21600;       Set in startBlock()
         // _maxTrialNumber = 4;          Set in startBlock()
         _maxBlockNumber = 13;            // 13 blocks
@@ -603,6 +611,7 @@ void Box::startSession() {
         _timeOutDuration = _rewardDuration;     
       }
       else if (_protocolNum == 6) {      // IntA 5-25 6h
+        _startOnLeverOne = true;
         _blockDuration = 300;            // 60 seconds * 5 min
         _maxBlockNumber = 12;            // 12 blocks        
         _IBIDuration = 1500;             // 25 * 60 sec = 1500 seconds
@@ -613,7 +622,8 @@ void Box::startSession() {
         _PRstepNum = 1;                 // irrelevant
         _timeOutDuration = _rewardDuration; 
       }
-      else if (_protocolNum == 7) {      // Flush
+      else if (_protocolNum == 7) {     // Flush
+        _startOnLeverOne = true;        // irrelevant
         _blockDuration = _blockDurationInit;
         _maxBlockNumber = _paramNum;    // Maybe 24
         _IBIDuration = 0;
@@ -624,11 +634,12 @@ void Box::startSession() {
         _PRstepNum = 1;                 // irrelevant
         _timeOutDuration = _rewardDuration; 
       }
-      else if (_protocolNum == 8) {      // L2 HD
-        _HD_Duration = 6000;             // 1 min?
+      else if (_protocolNum == 8) {      // L2 HD  - one HD session
+        _startOnLeverOne = false;        // Start on HD Lever
+        _HD_Duration = 6000;             // 1 min for now
         _blockDuration = _HD_Duration +100; // Should make it irrelevant
         _maxBlockNumber = 1;
-        _IBIDuration = 0;
+        _IBIDuration = 0;                
         _schedPR = false;                 
         _schedTH = false;
         _maxTrialNumber = 999;          // irrelevant
@@ -636,11 +647,12 @@ void Box::startSession() {
         _PRstepNum = 1;                 // irrelevant
         _timeOutDuration = _rewardDuration; // irrelevant
       }
-      else if (_protocolNum == 9) {      // test
-        _HD_Duration = 6000;             // 1 min?
+      else if (_protocolNum == 9) {      // IntA-HD 
+        _startOnLeverOne = false;        // Start on HD Lever
+        _HD_Duration = 6000;             // 1 min for now
         _blockDuration = _HD_Duration +100; // Should make it irrelevant
-        _maxBlockNumber = 2;
-        _IBIDuration = 6000;
+        _maxBlockNumber = 5;
+        _IBIDuration = 10;              // seconds
         _schedPR = false;                 
         _schedTH = false;
         _maxTrialNumber = 999;          // irrelevant
@@ -648,8 +660,11 @@ void Box::startSession() {
         _PRstepNum = 1;                 // irrelevant
         _timeOutDuration = _rewardDuration; // irrelevant
       }
-      else if (_protocolNum == 10) {      // L2 HD
-        _HD_Duration = 6000;             // 1 min?
+      else if (_protocolNum == 10) {    // 2L-PR-HD
+        _startOnLeverOne = true;
+        _2L_PR = true;
+        _unitDose = false;         
+        _HD_Duration = 20;             // seconds
         _blockDuration = _HD_Duration +100; // Should make it irrelevant
         _maxBlockNumber = 1;
         _IBIDuration = 0;
@@ -714,7 +729,7 @@ void Box::tick() {                        // do stuff every 10 mSec
             _IBITime++;
             TStamp tStamp = {_boxNum, '*', _IBITime, 0, 9};
             printQueue.push(&tStamp);
-            if (_IBITime == _IBIDuration) endIBI(); 
+            if (_IBITime >= _IBIDuration) endIBI(); 
             }      
        }  
 }
@@ -727,11 +742,9 @@ void Box::handle_L1_Response() {
          if (_trialResponses >= _responseCriterion) {
                  endTrial();
                  reinforce();
-                 startTimeOut();
          }
     }  
 }
-
 
 void Box::handle_L2_Response(byte state) {   // HD lever change
   if (_boxState == L2_HD) {
