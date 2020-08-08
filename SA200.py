@@ -233,6 +233,10 @@ class GuiClass(object):
         self.B8_L2Resp   = IntVar(value=0)
         self.B8_Inf    = IntVar(value=0)
         self.B8_SessionTimeStr = StringVar(value="0:0:00")
+
+        self.phantomResponseL1 = IntVar(value=0)
+        self.phantomResponseL2 = IntVar(value=0)
+        
         
 
         # ********************* Menus ********************
@@ -289,14 +293,12 @@ class GuiClass(object):
         stopAllBoxesButton.grid(column = 7, row = 0, padx =10, sticky = (E))
 
 
-        #***************************** Left Frame **********************************************************
+        #***************************** Right Frame **********************************************************
                                                 
-        self.LeftFrame = ttk.Frame(self.root, borderwidth=3, relief="sunken")
-        self.LeftFrame.grid(column = 1, row = 1, sticky = (NS))
+        self.RightFrame = ttk.Frame(self.root, borderwidth=3, relief="sunken")
+        self.RightFrame.grid(column = 1, row = 1, sticky = (NS))
 
-
-        #++++++++++++++++++++++++++++++  Box 1  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        self.counterFrame = ttk.Frame(self.LeftFrame,borderwidth=3, relief="sunken")
+        self.counterFrame = ttk.Frame(self.RightFrame,borderwidth=3, relief="sunken")
         self.counterFrame.grid(column = 0, row = 0, sticky = (N))
 
 
@@ -413,7 +415,16 @@ class GuiClass(object):
         B8_TimeLabel = ttk.Label(self.counterFrame, width=6, textvariable = self.B8_SessionTimeStr)
         B8_TimeLabel.grid(column = 5, row = 8)
 
-
+        
+        PhantomLabel = ttk.Label(self.counterFrame, text = "Phantom Resp L1")
+        PhantomLabel.grid(column = 0, row = 10)
+        PhantomLabel = ttk.Label(self.counterFrame, text = "Phantom Resp L2")
+        PhantomLabel.grid(column = 0, row = 11)
+        PhantomRespL1 = ttk.Label(self.counterFrame, textvariable = str(self.phantomResponseL1))
+        PhantomRespL1.grid(column = 1, row = 10)                          
+        PhantomRespL2 = ttk.Label(self.counterFrame, textvariable = str(self.phantomResponseL2))
+        PhantomRespL2.grid(column = 1, row = 11)
+                                
         # ********************** noteBookFrame *****************************************
 
         noteBookFrame = Frame(self.root, borderwidth=0, relief="sunken")
@@ -787,9 +798,9 @@ class GuiClass(object):
                               self.B5_boolVarList,self.B6_boolVarList,self.B7_boolVarList,self.B8_boolVarList, \
                               self.sysVarList]
         self.L1ResponsesList = [self.B1_L1Resp,self.B2_L1Resp,self.B3_L1Resp,self.B4_L1Resp, \
-                              self.B5_L1Resp,self.B6_L1Resp,self.B7_L1Resp,self.B8_L1Resp]
+                              self.B5_L1Resp,self.B6_L1Resp,self.B7_L1Resp,self.B8_L1Resp, self.phantomResponseL1]
         self.L2ResponsesList = [self.B1_L2Resp,self.B2_L2Resp,self.B3_L2Resp,self.B4_L2Resp, \
-                              self.B5_L2Resp,self.B6_L2Resp,self.B7_L2Resp,self.B8_L2Resp]
+                              self.B5_L2Resp,self.B6_L2Resp,self.B7_L2Resp,self.B8_L2Resp, self.phantomResponseL2]
         self.InfList = [self.B1_Inf,self.B2_Inf,self.B3_Inf,self.B4_Inf, \
                         self.B5_Inf,self.B6_Inf,self.B7_Inf,self.B8_Inf]
 
