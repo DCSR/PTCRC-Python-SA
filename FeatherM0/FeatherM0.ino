@@ -9,6 +9,12 @@
  *   inactiveLeverExists renamed to leverTwoExists 
  *   
  *   
+ *   To Do:
+ *   Ignore (for now) leverTwoExists - set as SYSVAR 
+ *   
+ *   moveLeverTwo(Extend or Retract) as appropriate for protocol 
+ *   
+ *   
  *   July 14, 2020
  *   
  *   First iteration of Ver 300 - rethink of the Box Class and 
@@ -683,8 +689,7 @@ void Box::startSession() {
       _timeOutTime = 0;   
       TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
       printQueue.push(&tStamp);
-      startBlock();
-      if (leverTwoExists) moveLeverTwo(Extend);  
+      startBlock(); 
   }
 }
 
@@ -698,7 +703,7 @@ void Box::endSession() {
     _boxState = FINISHED;    
     TStamp tStamp = {_boxNum, 'E', millis() - _startTime, 0, 9};
     printQueue.push(&tStamp);
-    if (leverTwoExists) moveLeverTwo(Retract);
+    moveLeverTwo(Retract);
 }
 
 void Box::tick() {                        // do stuff every 10 mSec 
@@ -716,9 +721,9 @@ void Box::tick() {                        // do stuff every 10 mSec
     }
     _tickCounts++; 
     if (_tickCounts == 100)    {         // do this every second
-       _tickCounts = 0;
+       _tickCounts = 0;             
        if (_boxState == L1_ACTIVE || _boxState == L1_TIMEOUT || _boxState == L2_HD) {
-            _blockTime++;
+            _blockTime++;         
             TStamp tStamp = {_boxNum, '*', _blockTime, 0, 9};
             printQueue.push(&tStamp);
             if (_blockTime == _blockDuration) {
@@ -931,6 +936,8 @@ void checkLeverOneBits() {
       if (bitRead(portOneValue,i) != (bitRead(oldPortOneValue,i))) diff++;
     }  
     if (diff > diffCriteria) {
+      TStamp tStamp = {10, '<', millis(), 0, 9};
+      printQueue.push(&tStamp); 
       Serial.println("9 diff_L1_"+String(diff));
       Serial.println("9 L1="+String(portOneValue));
       oldPortOneValue = portOneValue;
@@ -962,6 +969,8 @@ void checkLeverTwoBits() {
       if (bitRead(portTwoValue,i) != (bitRead(oldPortTwoValue,i))) diff++;
     }
     if (diff > diffCriteria) {
+      TStamp tStamp = {10, '>', millis(), 0, 9};
+      printQueue.push(&tStamp); 
       Serial.println("9 diff_L2_"+String(diff));
       Serial.println("9 L2="+String(portOneValue));
       oldPortTwoValue = portTwoValue;
@@ -995,7 +1004,7 @@ void decodeSysVars(byte varCode) {
     Serial.print(sysVarArray[i]);
     }
     Serial.println("9 varCode="+String(varCode));
-  leverTwoExists = sysVarArray[2]; 
+  // leverTwoExists = sysVarArray[2]; 
 }
 
 void getInputString() {
@@ -1119,7 +1128,7 @@ void tick()    {
    for (uint8_t i = 0; i < 8; i++) boxArray[i].tick();
    getInputString();
    checkLeverOneBits();
-   if (leverTwoExists) checkLeverTwoBits(); 
+   checkLeverTwoBits(); 
    sendOneTimeStamp();
    delta = micros() - micro1;
    if (delta > maxDelta) maxDelta = delta;   
