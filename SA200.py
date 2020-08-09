@@ -1469,7 +1469,16 @@ class GuiClass(object):
         elif (boxNum == 8): self.boolVarLists[8][boolVarListIndex].set(level)           # update debug checkbox 
         elif (boxNum == 9):
             print(strCode)
-            # self.writeToTextbox(strCode,0)      
+            # self.writeToTextbox(strCode,0)
+        elif (boxNum == 10):
+            if (strCode == ">"):
+                    self.L1ResponsesList[8].set(self.L1ResponsesList[8].get()+1)    # self.phantomResponseL1
+
+
+        # set to zero in startSession    
+        # self.phantomResponseL1 = IntVar(value=0)
+        # self.phantomResponseL2 = IntVar(value=0)
+        
 
     def periodic_check(self):
         if self.arduino0.activeConnection == True:    
