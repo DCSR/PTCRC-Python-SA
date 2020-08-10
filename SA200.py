@@ -1164,16 +1164,19 @@ class GuiClass(object):
         y_zero = self.Y_ZERO
         x_pixel_width = 500
         GraphLib.drawXaxis(aCanvas, x_zero, y_zero, x_pixel_width, max_x_scale, x_divisions)
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-230, x_pixel_width, max_x_scale, dataList, ["L"], "L1")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-205, x_pixel_width, max_x_scale, dataList, ["J"], "L2")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-180, x_pixel_width, max_x_scale, dataList, ["P","p"], "Pump")
+
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-235, x_pixel_width, max_x_scale, dataList, ["T","t"], "L1 Trial")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-215, x_pixel_width, max_x_scale, dataList, ["=","."], "Lever 1")        
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-195, x_pixel_width, max_x_scale, dataList, ["L"], "L1 Resp")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-175, x_pixel_width, max_x_scale, dataList, ["P","p"], "Pump")
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-155, x_pixel_width, max_x_scale, dataList, ["S","s"], "Stim")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-130, x_pixel_width, max_x_scale, dataList, ["=","."], "Lever 1")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-105, x_pixel_width, max_x_scale, dataList, ["~",","], "Lever 2")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-80,  x_pixel_width, max_x_scale, dataList, ["T","t"], "Trial")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-135, x_pixel_width, max_x_scale, dataList, ["O","o"], "TimeOut")        
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-115, x_pixel_width, max_x_scale, dataList, ["Z","z"], "HD Trial") 
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-95,  x_pixel_width, max_x_scale, dataList, ["~",","], "Lever 2")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-75,  x_pixel_width, max_x_scale, dataList, ["J"], "L2 Resp")     
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-55,  x_pixel_width, max_x_scale, dataList, ["B","b"], "Block")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-30,  x_pixel_width, max_x_scale, dataList, ["I","i"], "IBI")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-5,  x_pixel_width, max_x_scale, dataList, ["G","E"], "Session")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-35,  x_pixel_width, max_x_scale, dataList, ["I","i"], "IBI")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-15,  x_pixel_width, max_x_scale, dataList, ["G","E"], "Session")
 
     def sendCode(self, codeStr):
         self.outputText(codeStr)
@@ -1471,8 +1474,10 @@ class GuiClass(object):
             print(strCode)
             # self.writeToTextbox(strCode,0)
         elif (boxNum == 10):
-            if (strCode == ">"):
+            if (strCode == "<"):
                     self.L1ResponsesList[8].set(self.L1ResponsesList[8].get()+1)    # self.phantomResponseL1
+            elif (strCode == ">"):
+                    self.L2ResponsesList[8].set(self.L2ResponsesList[8].get()+1)    # self.phantomResponseL1
 
 
         # set to zero in startSession    

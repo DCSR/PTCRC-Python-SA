@@ -428,6 +428,8 @@ void Box::reinforce() {
 }
 
 void Box::startTimeOut() {
+    TStamp tStamp = {_boxNum, 'O', millis() - _startTime, 0, 9}; 
+    printQueue.push(&tStamp);
     switchStim1(On); 
     _timeOutTime = 0;       // _timeOutTime counts up _timeOutDuration
     _boxState = L1_TIMEOUT;
@@ -435,7 +437,8 @@ void Box::startTimeOut() {
 }
 
 void Box::endTimeOut() {
-    // _timeOut = false;  
+    TStamp tStamp = {_boxNum, 'o', millis() - _startTime, 0, 9}; 
+    printQueue.push(&tStamp); 
     switchStim1(Off);
     if (_trialNumber < _maxTrialNumber) startTrial(); 
     else {
@@ -1060,7 +1063,7 @@ void handleInputString()
      else if (stringCode == "S")     boxArray[num1].switchStim1(On);
      else if (stringCode == "c")     boxArray[num1].switchStim2(Off);
      else if (stringCode == "C")     boxArray[num1].switchStim2(On);
-     else if (stringCode == "V")     Serial.println("9 200.21_Beta");
+     else if (stringCode == "V")     Serial.println("9 300.00");
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "SYSVARS") decodeSysVars(num1); 
      else if (stringCode == "Logic") {
