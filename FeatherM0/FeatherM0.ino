@@ -421,10 +421,11 @@ void Box::endIBI() {
 
 void Box::reinforce() { 
     _rewardTime = 0;
-    // if _unitDose 
-    switchRewardPortOn(true);
-    startTimeOut();
-    // else startHDTrial();
+    if (_unitDose) {
+      switchRewardPortOn(true);
+      startTimeOut();
+    }
+    else startHDTrial();
 }
 
 void Box::startTimeOut() {
@@ -643,10 +644,10 @@ void Box::startSession() {
         _PRstepNum = 1;                 // irrelevant
         _timeOutDuration = _rewardDuration; 
       }
-      else if (_protocolNum == 8) {      // L2 HD  - one HD session
-        _startOnLeverOne = false;        // Start on HD Lever
-        _HD_Duration = 6000;             // 1 min for now
-        _blockDuration = _HD_Duration +100; // Should make it irrelevant
+      else if (_protocolNum == 8) {          // L2 HD  - one HD session
+        _startOnLeverOne = false;            // Start on HD Lever
+        _HD_Duration = _blockDurationInit * 100;   // _HD_Duration is in 10 mSec increments, _HD_Duration is in sec
+        _blockDuration = _blockDurationInit + 1;    // Should make it irrelevant
         _maxBlockNumber = 1;
         _IBIDuration = 0;                
         _schedPR = false;                 
@@ -656,12 +657,12 @@ void Box::startSession() {
         _PRstepNum = 1;                 // irrelevant
         _timeOutDuration = _rewardDuration; // irrelevant
       }
-      else if (_protocolNum == 9) {      // IntA-HD 
-        _startOnLeverOne = false;        // Start on HD Lever
-        _HD_Duration = 6000;             // 1 min for now
-        _blockDuration = _HD_Duration +100; // Should make it irrelevant
-        _maxBlockNumber = 5;
-        _IBIDuration = 10;              // seconds
+      else if (_protocolNum == 9) {     // IntA-HD 
+        _startOnLeverOne = false;       // Start on HD Lever
+        _HD_Duration = 30000;           // 100 interval/sec * 60 sec * 5 min
+        _blockDuration = 301;           // Should make it irrelevant
+        _maxBlockNumber = 12;
+        _IBIDuration = 1500;            // 25 min * 60 sec = 1500 seconds
         _schedPR = false;                 
         _schedTH = false;
         _maxTrialNumber = 999;          // irrelevant
@@ -673,15 +674,15 @@ void Box::startSession() {
         _startOnLeverOne = true;
         _2L_PR = true;
         _unitDose = false;         
-        _HD_Duration = 20;             // seconds
-        _blockDuration = _HD_Duration +100; // Should make it irrelevant
+        _HD_Duration = 2000;             // 20 seconds
+        _blockDuration = _blockDurationInit;  // Session length determined by INI 
         _maxBlockNumber = 1;
         _IBIDuration = 0;
-        _schedPR = false;                 
+        _schedPR = true;                 
         _schedTH = false;
         _maxTrialNumber = 999;          // irrelevant
-        _responseCriterion = 999;       // irrelevant
-        _PRstepNum = 1;                 // irrelevant
+        _responseCriterion = 1;         
+        _PRstepNum = 1;                 
         _timeOutDuration = _rewardDuration; // irrelevant
       }   
   if (_protocolNum == 0) endSession();
