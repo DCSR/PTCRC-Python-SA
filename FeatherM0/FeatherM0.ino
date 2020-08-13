@@ -400,6 +400,7 @@ void Box::endTrial() {
 void Box::endHDTrial() {
    TStamp tStamp = {_boxNum, 'z', millis() - _startTime, 0, 9};
    printQueue.push(&tStamp);
+   switchRewardPortOff();
    moveLeverTwo(Retract);
    if (_2L_PR) startTrial();
    else endBlock(); 
