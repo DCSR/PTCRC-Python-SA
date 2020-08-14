@@ -5,6 +5,10 @@
  *   Added
  *   states { PRESTART, L1_ACTIVE, L1_TIMEOUT, IBI, L2_HD, FINISHED };
  *   
+ *   self.sched = 
+ *   ['0: Do not run', '1: FR(N)', '2: FR1 x 20 trials', '3: FR1 x N trials', '4: PR(step N)', 
+ *   '5: TH', '6: IntA: 5-25', '7: Flush', '8: L2-HD', '9: IntA-HD', '10: 2L-PR-HD']
+ *   
  *   _timeOut deleted
  *   inactiveLeverExists renamed to leverTwoExists 
  *   
@@ -322,7 +326,7 @@ class Box  {
     int _timeOutDuration = 400;  // default to 4 sec 
     // HD
     unsigned long _HDTime = 0;    
-    unsigned long _HD_Duration = 10800;  // default to 3 hrs (100 * 60 * 3)
+    unsigned long _HD_Duration = 20;  // default to 20 sec - used with 2L=PR-HD
     // IBI     
     unsigned long _IBIDuration = 0;
     int _IBIDurationInit = 0;  // default to no IBI
@@ -356,7 +360,7 @@ void Box::startBlock() {
   }
 }
 
-void Box::endBlock() {   
+void Box::endBlock() {  
    TStamp tStamp = {_boxNum, 'b', millis() - _startTime, 0, 9};
    printQueue.push(&tStamp);
    if (_protocolNum == 7) {             // Flush
@@ -647,8 +651,8 @@ void Box::startSession() {
       }
       else if (_protocolNum == 8) {          // L2 HD  - one HD session
         _startOnLeverOne = false;            // Start on HD Lever
-        _HD_Duration = _blockDurationInit * 100;   // _HD_Duration is in 10 mSec increments, _HD_Duration is in sec
-        _blockDuration = _blockDurationInit + 1;    // Should make it irrelevant
+        _HD_Duration = 0;                    // _HD_Duration only used in 2L-PR-HD
+        _blockDuration = _blockDurationInit; // seconds - set by OMNI INI Tab
         _maxBlockNumber = 1;
         _IBIDuration = 0;                
         _schedPR = false;                 
@@ -660,10 +664,11 @@ void Box::startSession() {
       }
       else if (_protocolNum == 9) {     // IntA-HD 
         _startOnLeverOne = false;       // Start on HD Lever
-        _HD_Duration = 30000;           // 100 interval/sec * 60 sec * 5 min
-        _blockDuration = 301;           // Should make it irrelevant
+        _HD_Duration = 0;               // _HD_Duration only used in 2L-PR-HD
+        _blockDuration = _blockDurationInit;  // seconds - set by OMNI in INI Tab
         _maxBlockNumber = 12;
-        _IBIDuration = 1500;            // 25 min * 60 sec = 1500 seconds
+        _IBIDuration = _IBIDurationInit;
+        // _IBIDuration = 1500;            // 25 min * 60 sec = 1500 seconds
         _schedPR = false;                 
         _schedTH = false;
         _maxTrialNumber = 999;          // irrelevant
@@ -675,8 +680,8 @@ void Box::startSession() {
         _startOnLeverOne = true;
         _2L_PR = true;
         _unitDose = false;         
-        _HD_Duration = 2000;             // 20 seconds
-        _blockDuration = _blockDurationInit;  // Session length determined by INI 
+        _HD_Duration = _paramNum * 100;             // 20 seconds
+        _blockDuration = _blockDurationInit;  // Session length set by OMNI in INI Tab 
         _maxBlockNumber = 1;
         _IBIDuration = 0;
         _schedPR = true;                 
@@ -720,10 +725,6 @@ void Box::tick() {                        // do stuff every 10 mSec
        _timeOutTime++;
        if (_timeOutTime == _timeOutDuration) endTimeOut();     
     }
-    if (_boxState == L2_HD) {
-       _HDTime++;
-       if (_HDTime >= _HD_Duration) endHDTrial();
-    }
     _tickCounts++; 
     if (_tickCounts == 100)    {         // do this every second
        _tickCounts = 0;             
@@ -732,7 +733,8 @@ void Box::tick() {                        // do stuff every 10 mSec
             TStamp tStamp = {_boxNum, '*', _blockTime, 0, 9};
             printQueue.push(&tStamp);
             if (_blockTime == _blockDuration) {
-              endBlock();
+              if (_boxState == L2_HD) endHDTrial();
+              else endBlock();
             }
        }
        else if (_boxState == IBI) {
@@ -741,7 +743,11 @@ void Box::tick() {                        // do stuff every 10 mSec
             printQueue.push(&tStamp);
             if (_IBITime >= _IBIDuration) endIBI(); 
             }      
-       }  
+       } 
+       if (_boxState == L2_HD && _2L_PR) {
+          _HDTime++;
+          if (_HDTime >= _HD_Duration) endHDTrial();
+       } 
 }
 
 void Box::handle_L1_Response() { 
@@ -815,6 +821,7 @@ void Box::reportParameters() {
   Serial.println("9 _blockDuration:"+String(_blockDurationInit)+"sec");
   Serial.println("9 _IBIDurationInit:"+String(_IBIDurationInit)+"sec");
   Serial.println("9 _IBIDuration:"+String(_IBIDuration)+"sec");
+  Serial.println("9 _HD_Duration:"+String(_HD_Duration)+"sec");
   Serial.println("9 _rewardDuration:"+String(_rewardDuration)+"0mSec");
   Serial.println("9 _responseCriterion:"+String(_responseCriterion));
   Serial.println("9 _PRstepNum:"+String(_PRstepNum));
