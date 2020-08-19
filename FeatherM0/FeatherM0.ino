@@ -1,6 +1,6 @@
 /*  
  *   
- *   Aug 3, 2020
+ *   Aug 18, 2020
  *   
  *   Added
  *   states { PRESTART, L1_ACTIVE, L1_TIMEOUT, IBI, L2_HD, FINISHED };

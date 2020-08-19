@@ -960,15 +960,15 @@ class GuiClass(object):
 
 
         aLabel = ttk.Label(INI_Frame, text="0: Do Not Run - enough said").grid(column=1, sticky = W, columnspan=7, row=14)
-        aLabel = ttk.Label(INI_Frame, text="1: FR(N) - session length = block length").grid(column=1, sticky = W, columnspan=7, row=15)
-        aLabel = ttk.Label(INI_Frame, text="2: FR1 x 20 - session length = block length. Stops after 20 infusions").grid(column=1, sticky = W, columnspan=7, row=16)
-        aLabel = ttk.Label(INI_Frame, text="3: FR1 x N trials - session length = block length. Stops after N infusions").grid(column=1, sticky = W, columnspan=7, row=17)
-        aLabel = ttk.Label(INI_Frame, text="4: PR starting at step N (usually 1)").grid(column=1, sticky = W, columnspan=7, row=18)
-        aLabel = ttk.Label(INI_Frame, text="5: TH - 12 Trials - uses Block length (typically 10 min) and IBI (Typically 0 min)").grid(column=1, sticky = W, columnspan=7, row=19)
+        aLabel = ttk.Label(INI_Frame, text="1: FR(N) - Session length = block length (min)").grid(column=1, sticky = W, columnspan=7, row=15)
+        aLabel = ttk.Label(INI_Frame, text="2: FR1 x 20 - Session length = block length (min). Stops after 20 infusions").grid(column=1, sticky = W, columnspan=7, row=16)
+        aLabel = ttk.Label(INI_Frame, text="3: FR1 x N trials - Session length = block length (min). Stops after N infusions").grid(column=1, sticky = W, columnspan=7, row=17)
+        aLabel = ttk.Label(INI_Frame, text="4: PR starting at step N (usually 1); Session length = block length (min)").grid(column=1, sticky = W, columnspan=7, row=18)
+        aLabel = ttk.Label(INI_Frame, text="5: TH - 13 Trials - uses Block length (typically 10 min) and IBI (Typically 0 min)").grid(column=1, sticky = W, columnspan=7, row=19)
         aLabel = ttk.Label(INI_Frame, text="6: IntA: 5 - 25. Defaults to 5 min trials and 25 min. ").grid(column=1, sticky = W, columnspan=7, row=20)
         aLabel = ttk.Label(INI_Frame, text="7: Flush: N Infusions separated by Block time").grid(column=1, sticky = W, columnspan=7, row=21)
-        aLabel = ttk.Label(INI_Frame, text="8: L2-HD - HD on Lever Two. Block (min) determines Session length").grid(column=1, sticky = W, columnspan=7, row=22)
-        aLabel = ttk.Label(INI_Frame, text="9: IntA-HD. Determined by Block(min) and IBI(min)").grid(column=1, sticky = W, columnspan=7, row=23)
+        aLabel = ttk.Label(INI_Frame, text="8: L2-HD - HD on Lever Two. Session length = block length (min)").grid(column=1, sticky = W, columnspan=7, row=22)
+        aLabel = ttk.Label(INI_Frame, text="9: IntA-HD. Block(min) and IBI(min); Session length = block length (min)").grid(column=1, sticky = W, columnspan=7, row=23)
         aLabel = ttk.Label(INI_Frame, text="10: 2L-PR-HD. HD access determined by N (sec)").grid(column=1, sticky = W, columnspan=7, row=24)
         aLabel = ttk.Label(INI_Frame, text="* IBI - applies to TH and IntA-HD").grid(column=1, sticky = W, columnspan=7, row=25)
 
