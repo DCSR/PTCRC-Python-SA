@@ -16,6 +16,9 @@
  *   To Do:
  *   Ignore (for now) leverTwoExists - set as SYSVAR 
  *   
+ *   Define boolean variable for FOOD or DRUG and set from SYSVAR 
+ *   The program shouldn't have to look up SYSVAR each time in switcRewardPort()
+ *   
  *   moveLeverTwo(Extend or Retract) as appropriate for protocol 
  *   
  *   
@@ -227,9 +230,11 @@ boolean lastLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 boolean newLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 boolean newResponse[8] = {false,false,false,false,false,false,false,false};
 byte ticks[8] = {0,0,0,0,0,0,0,0};
-int lastLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
-int newLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
+boolean lastLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
+boolean newLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 boolean leverTwoExists = false;
+char pumpCharArray[3] = "pP";  // used for timestamp
+char lever2CharArray[3] = "jJ"; 
 
 volatile boolean tickFlag = false;
 
@@ -270,6 +275,8 @@ class Box  {
     void setIBIDuration(int IBIDuration);
     void reportParameters();
     void getBlockTime();
+    
+    boolean pumpOn = false;
 
     unsigned long _startTime = 0;   // Used for lever timestamnps 
     
@@ -763,7 +770,11 @@ void Box::handle_L1_Response() {
 }
 
 void Box::handle_L2_Response(byte state) {   // HD lever change
-  if (_boxState == L2_HD) {
+  // checkLeverTwoBits passes the state of each bit in the register
+  //
+  // Serial.println("9 pumpOff="+String(testArray[0]));
+  // Serial.println("9 pumpOn="+String(testArray[1]));
+  /*if (_boxState == L2_HD) {
       if (state) {
         chip1.digitalWrite(_boxNum+8,0);
         TStamp tStamp1 = {_boxNum, 'J', millis() - _startTime, 0, 9};
@@ -778,7 +789,21 @@ void Box::handle_L2_Response(byte state) {   // HD lever change
         TStamp tStamp2 = {_boxNum, 'p', millis() - _startTime, 1, 2};
         printQueue.push(&tStamp2);
       }
-  }
+  }*/
+  if (_boxState == L2_HD) {
+      TStamp tStamp1 = {_boxNum, lever2CharArray[state], millis() - _startTime, 0, 9};
+      printQueue.push(&tStamp1);
+      TStamp tStamp2 = {_boxNum, pumpCharArray[state], millis() - _startTime, 1, 2};
+      printQueue.push(&tStamp2);    
+      if (state) {                      // Lever pressed: HIGH (1)
+        chip1.digitalWrite(_boxNum+8,0);
+        pumpOn = true;
+      }
+      else {                            // Lever up
+        chip1.digitalWrite(_boxNum+8,1);
+        pumpOn = false;
+      }
+  }  
 }
 
 void Box::setProtocolNum(int protocolNum) {
@@ -930,11 +955,11 @@ void setup() {
 }
 
 /*
-checkLeverOneBit() was modified to filter out noise. I appears that on
-occassion, a ground spike would flip several bits and the program would
-interpret it as simultaneous responses on several boxes. The sketch
-now scans the input port to see if more than one bit has changed. If
-more than one bit has changed it is logged as a "phantomResp" 
+checkLeverOneBits() and checkLeverOneBits() were modified to filter out noise. 
+I appears that on occassion, a ground spike would flip several bits and the program 
+would interpret it as simultaneous responses on several boxes. The sketch now 
+scans the input port to see if more than one bit has changed. If more than one 
+bit has changed it is logged as a "phantomResp" 
 
 boxArray[i].handle_L1_Response() is called when the lever goes to ground.
 */
@@ -1072,7 +1097,7 @@ void handleInputString()
      else if (stringCode == "S")     boxArray[num1].switchStim1(On);
      else if (stringCode == "c")     boxArray[num1].switchStim2(Off);
      else if (stringCode == "C")     boxArray[num1].switchStim2(On);
-     else if (stringCode == "V")     Serial.println("9 300.00");
+     else if (stringCode == "V")     Serial.println("9 Ver=300.00");
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "SYSVARS") decodeSysVars(num1); 
      else if (stringCode == "Logic") {
@@ -1099,7 +1124,12 @@ void reportDiagnostics() {
    Serial.println("9 maxQueueRecs="+String(maxQueueRecs));
    Serial.println("9 freeRam="+String(freeRam()));
    Serial.println("9 phantomResp="+String(phantomResp));
-   phantomResp = 0;   
+   phantomResp = 0;
+   for (byte i = 0; i < 8; i++) {
+      if (newLeverTwoState[i] == boxArray[i].pumpOn) Serial.print(".");
+      else Serial.print("!");
+   }
+   Serial.println();    
 }
 
 void timeUSB() {
