@@ -148,7 +148,7 @@ void timeOutput(int mode){
       // Serial.print(T);
       // Serial.println(":");
       for (long i = 0; i <= 255; i++){
-          chip1.digitalPort(1,i);
+          chip1.writePort(1,i);
           N++;
           // Serial.println(N);
       }
