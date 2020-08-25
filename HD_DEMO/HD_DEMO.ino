@@ -19,12 +19,11 @@
 //**************************************
 
 const uint8_t chipSelect = 10;  
-MCP23S17 chip0(chipSelect, 1); // L1 retract map to pins 0..7; L1 LEDs map to pins 8..15 
-MCP23S17 chip1(chipSelect, 2); // L1 inputs map to pins 0..7; Pumps map to pins 8..15
-MCP23S17 chip2(chipSelect, 3); // L2 retract map to pins 0..7; LEDs map to pins 8..15
-MCP23S17 chip3(chipSelect, 4); // L2 inputs map to pins 0..7; AUX output map to pins 8..15
-byte pinValues;
-byte portOneValue, portTwoValue;
+MCP23S17 chip0(chipSelect, 0); // L1 retract map to pins 0..7; L1 LEDs map to pins 8..15 
+MCP23S17 chip1(chipSelect, 1); // L1 inputs map to pins 0..7; Pumps map to pins 8..15
+MCP23S17 chip2(chipSelect, 2); // L2 retract map to pins 0..7; LEDs map to pins 8..15
+MCP23S17 chip3(chipSelect, 3); // L2 inputs map to pins 0..7; AUX output map to pins 8..15
+byte portOneValue, portTwoValue, oldPortTwoValue = 255;
 byte cycleMode = 1;
 String instruction;
 const uint8_t ledPin = 5;
@@ -78,26 +77,44 @@ void TC4_Handler()                                // Interrupt Service Routine (
 
 // ******************************************************
 
-void everythingOff(){
-  Serial.println("Turning Everything Off");
-  cycleMode = 0;
-  chip0.writePort(0,0xFFFF);   // L1 retract and L1 LED : Off = HIGH 
-  chip1.writePort(1,0x00);     // Pumps : Off = LOW
-  chip2.writePort(2,0xFFFF);   // L2 retract and L2 LED : Off = HIGH 
-  chip3.writePort(3,0xFF);     // AUX : Off = HIGH
+
+void showMenu () {
+  Serial.println ("MCP23S17_Demo_M0.ino.");
+  Serial.println ("<m> - Show this Menu");
+  Serial.println ("<X> - turns on Pump 1");
+  Serial.println ("<x> - turns off Pump 1"); 
+  Serial.println ("<c 1> - cycle mode 1: each pin");
+  Serial.println ("<c 2> - cycle mode 2: each port");
+  Serial.println ("<c 3> - cycle mode 3: each chip");
+  Serial.println ("<P>   - All Pumps On");
+  Serial.println ("<p> - All Pumps Off");
 }
 
-void everythingOn(){
-  Serial.println("Turning Everything On");
-  cycleMode = 0;
-  chip0.writePort(0,0x0000);   // L1 retract and L1 LED : On = LOW 
+void everythingOff() {
+     chip0.writePort(0,0xFF);   // Retract L1
+     chip0.writePort(1,0xFF);   // L1 LED Off
+     chip1.writePort(1,0x00);   // Pumps Off
+     chip2.writePort(0,0xFF);   // Extend L2
+     chip2.writePort(1,0xFF);   // L2 LED On
+     chip3.writePort(1,0xFF);   // Aux Off
+}
+
+void pumpsOff(){
+  cycleMode = 0;  
+  Serial.println("Turning Pumps Off");
+  chip1.writePort(1,0x00);     // Pumps : Off = LOW
+}
+
+void pumpsOn(){
+  cycleMode = 0;  
+  Serial.println("Turning Pumps On");
   chip1.writePort(1,0xFF);     // Pumps : On = HIGH
-  chip2.writePort(2,0x0000);   // L2 retract and L2 LED : On = LOW 
-  chip3.writePort(3,0x00);     // AUX : Off = LOW
 }
 
 void setup() {
   Serial.begin(115200);
+  delay(1000);
+  Serial.print("Starting HD_Demo");
   chip0.begin();
   chip1.begin();
   chip2.begin();
@@ -114,9 +131,8 @@ void setup() {
      chip1.pinMode(i, OUTPUT);               
      chip3.pinMode(i, OUTPUT);               
   }
-  everythingOn();
-  delay (500);
-  everythingOff();  
+  everythingOff();
+    
   init_10_mSec_Timer();
   portOneValue = chip1.readPort(0);          
   portTwoValue = chip3.readPort(0);
@@ -177,26 +193,29 @@ void timeCheckInputPort(){
 
 void checkInputPort1() { 
    static byte oldPortOneValue = 255; 
-   portOneValue = chip1.readPort(1);
+   portOneValue = chip1.readPort(0);
    if(portOneValue != oldPortOneValue) {   
-      Serial.print("New:");
+      Serial.print("L1:");
       Serial.println(portOneValue,BIN);
       oldPortOneValue = portOneValue; 
       // chip0.writePort(0,pinValues);
    }
 }
 
-void checkInputPort2() { 
-   static byte oldPortTwoValue = 255; 
-   portTwoValue = chip3.readPort(1);
-   if(portTwoValue != oldPortTwoValue) {   
-      Serial.print("New:");
-      Serial.println(portTwoValue,BIN);
-      oldPortTwoValue = portTwoValue; 
-      // chip0.writePort(0,pinValues);
-   }
+void checkInputPort2() {  
+   portTwoValue = chip3.readPort(0);
+   if(portTwoValue != oldPortTwoValue) {
+      Serial.print(portTwoValue);
+      Serial.print(" ");
+      Serial.println(oldPortTwoValue); 
+      for (byte i = 0; i < 8; i++) {
+        if (bitRead(portTwoValue,i) != (bitRead(oldPortTwoValue,i))) Serial.print(i);
+        else Serial.print("?");
+      oldPortTwoValue = portTwoValue;
+      }
+  }
+  chip1.writePort(1,255-portTwoValue);  
 }
-
 
 void handleInstruction()
 {
@@ -217,15 +236,33 @@ void handleInstruction()
      }
      num = code2.toInt();
      // Serial.println(code1+" "+num);
-     if (code1 == "P") chip0.digitalWrite(num,0); 
-     else if (code1 == "p") chip0.digitalWrite(num,1);
-     else if (code1 == "c") cycleMode = num;
+     if (code1 == "X") chip1.digitalWrite(8,0); 
+     else if (code1 == "x") chip1.digitalWrite(8,1);
+     
+     else if (code1 == "1") chip0.writePort(0,0x00);
+     else if (code1 == "2") chip0.writePort(0,0xFF);     
+     else if (code1 == "3") chip0.writePort(1,0x00);    // L1 LED On
+     else if (code1 == "4") chip0.writePort(1,0xFF);    // L1 LED Off
+
+     // else if code1 == "5") chip1.writePort(0,0x00);
+     // else if (code1 == "6") chip1.writePort(0,0xFF);     
+     else if (code1 == "5") chip1.writePort(1,0);    // Pumps Off
+     else if (code1 == "6") chip1.writePort(1,3);    // Pumps  1 and 2 On
+
+     else if (code1 == "7") chip2.writePort(0,0x00);    // L2 Extend
+     else if (code1 == "8") chip2.writePort(0,0xFF);    // L2 Retract
+     else if (code1 == "9") chip2.writePort(1,0x00);    // L2 LED On
+     else if (code1 == "A") chip2.writePort(1,0xFF);    // L2 LED Off
+
+
+     
+     // else if (code1 == "c") cycleMode = num;
      // else if (code1 == "I") timeCheckInputPort();
-     else if (code1 == "1") timeOutput(1);
-     else if (code1 == "2") timeOutput(2);
-     else if (code1 == "m") showMenu();
-     else if (code1 == "E") everythingOn();
-     else if (code1 == "e") everythingOff();
+     // else if (code1 == "8") timeOutput(1);
+     // else if (code1 == "9") timeOutput(2);
+     // else if (code1 == "m") showMenu();
+     else if (code1 == "P") pumpsOn();
+     else if (code1 == "p") pumpsOff();
    }
 }
 
@@ -239,18 +276,6 @@ void getSerialInstruction()
       else if (aChar == '<') instruction = "";         // beginning of instruction
       else instruction += aChar;
     }
-}
-
-void showMenu () {
-  Serial.println ("MCP23S17_Demo_M0.ino.");
-  Serial.println ("<M> - Show this Menu");
-  Serial.println ("<P 0> - turns on pin 0");
-  Serial.println ("<p 0> - turns off pin 0"); 
-  Serial.println ("<c 1> - cycle mode 1: each pin");
-  Serial.println ("<c 2> - cycle mode 2: each port");
-  Serial.println ("<c 3> - cycle mode 3: each chip");
-  Serial.println ("<E>   - Everything On");
-  Serial.println ("<e> - Everything Off");
 }
 
 void cycleOutputs () {
