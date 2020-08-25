@@ -111,6 +111,29 @@ void pumpsOn(){
   chip1.writePort(1,0xFF);     // Pumps : On = HIGH
 }
 
+void showBits(int c) {
+  for (int bits = 7; bits > -1; bits--) {
+    // Compare bits 7-0 in byte
+    if (c & (1 << bits)) {
+      Serial.print("1");
+    }
+    else {
+      Serial.print("0");
+    }
+  }
+  Serial.println(" ");
+}
+
+void compareBits(int a,int b) {
+  showBits(a);
+  showBits(b);
+  for (int bits = 7; bits > -1; bits--) {
+    if ((a & (1 << bits)) != (b & (1 << bits))) {
+       Serial.println(bits); 
+    } 
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
@@ -202,18 +225,24 @@ void checkInputPort1() {
    }
 }
 
-void checkInputPort2() {  
+void checkInputPort2() { 
+  /* 
+   *  (1 << 7) - This shifts 1 to the left seven bits creating 
+   *  a mask = 10000000. Together with the bitwise and (&) it evaluates each 
+   *  bit in the byte.
+   */
    portTwoValue = chip3.readPort(0);
    if(portTwoValue != oldPortTwoValue) {
       Serial.print(portTwoValue);
       Serial.print(" ");
       Serial.println(oldPortTwoValue); 
-      for (byte i = 0; i < 8; i++) {
-        if (bitRead(portTwoValue,i) != (bitRead(oldPortTwoValue,i))) Serial.print(i);
-        else Serial.print("?");
-      oldPortTwoValue = portTwoValue;
+      for (int bits = 7; bits > -1; bits--) {
+        if ((portTwoValue & (1 << bits)) != (oldPortTwoValue & (1 << bits))) {
+        Serial.println("TimeStamp "+String(bits)); 
+        } 
       }
-  }
+      oldPortTwoValue = portTwoValue;
+   }
   chip1.writePort(1,255-portTwoValue);  
 }
 
@@ -260,7 +289,8 @@ void handleInstruction()
      // else if (code1 == "I") timeCheckInputPort();
      // else if (code1 == "8") timeOutput(1);
      // else if (code1 == "9") timeOutput(2);
-     // else if (code1 == "m") showMenu();
+     else if (code1 == "S") compareBits(5,1);
+     else if (code1 == "m") showMenu();
      else if (code1 == "P") pumpsOn();
      else if (code1 == "p") pumpsOff();
    }
