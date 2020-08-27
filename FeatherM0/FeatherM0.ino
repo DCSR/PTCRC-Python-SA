@@ -1125,8 +1125,11 @@ void reportDiagnostics() {
    Serial.println("9 freeRam="+String(freeRam()));
    Serial.println("9 phantomResp="+String(phantomResp));
    phantomResp = 0;
+   portTwoValue = chip3.readPort(0);
+   Serial.println("9 portTwoValue="+String(portTwoValue));
+   Serial.print("9 ");
    for (byte i = 0; i < 8; i++) {
-      if (newLeverTwoState[i] == boxArray[i].pumpOn) Serial.print(".");
+      if (newLeverTwoState[i] != boxArray[i].pumpOn) Serial.print(".");
       else Serial.print("!");
    }
    Serial.println();    
