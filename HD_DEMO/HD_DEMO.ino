@@ -15,26 +15,40 @@
  * chip0.digitalWrite(pinNum,1);   sets pin HIGH
  * 
  */
+
+#include <cppQueue.h>
 #include <SPI.h>        // Arduino Library SPI.h
 #include "MCP23S17.h"   // Majenko MCP23S17 library
-
-//**************************************
 
 const uint8_t chipSelect = 10;  
 MCP23S17 chip0(chipSelect, 0); // L1 retract map to pins 0..7; L1 LEDs map to pins 8..15 
 MCP23S17 chip1(chipSelect, 1); // L1 inputs map to pins 0..7; Pumps map to pins 8..15
 MCP23S17 chip2(chipSelect, 2); // L2 retract map to pins 0..7; LEDs map to pins 8..15
 MCP23S17 chip3(chipSelect, 3); // L2 inputs map to pins 0..7; AUX output map to pins 8..15
+
 byte portOneValue, portTwoValue = 255;
 byte pumpState, pumpStateL1, pumpStateL2 = 0;
 long micro1, micro2;
 long minDelta = 1000;
 long maxDelta = 0;
+byte maxQueueRecs = 0;
 String instruction;
 const uint8_t ledPin = 5;
 boolean sessionRunning = false;
-byte checkMode = 0;
 byte diffCriteria = 1;   // used for bitread() error checking  
+
+typedef struct tagTStamp {
+   // tagTStamp is a structure identifier (or tag). It is not necessary 
+   // to specify the tag except when you need a pointer to the struct 
+   byte boxNum;
+   char code;
+   uint32_t mSecTime;
+   byte state;
+   byte index;
+} TStamp;
+
+Queue printQueue(sizeof(TStamp), 60, FIFO); // Instantiate printQueue, First In First Out
+  // Note: maximum in the queue was 40 when quitting all eight boxes at once (w/o a delay)
 
 // ********** 10 mSec Interrupt Timer ***************** 
 
@@ -96,7 +110,7 @@ void showMenu () {
   Serial.println ("<x> - turns off Pump 1"); 
   Serial.println ("<P num> - Switch Pump On");
   Serial.println ("<p num> - Switch Pump Off");
-  Serial.println ("<C num> - set checkMode 0,1 or 2");
+  Serial.println ("<T num> - run test(num)");
   Serial.println ("<E> - Everything Off");
   Serial.println ("<D> - Show Min and Max Deltas");
 }
@@ -112,10 +126,16 @@ void everythingOff() {
      pumpStateL2 = 0; 
 }
 
-void handleError() {
-    Serial.print ("Error detected");
-
-  
+void handleError(int code) {
+    Serial.println ("Error detected");
+    if (code == 1) {
+      Serial.println ("chip3.readPort(0) = 0x00");
+    }
+    else {
+      Serial.println (String(code)+" different bits changed");
+      Serial.println (portTwoValue,BIN);
+    } 
+    sessionRunning = false;
 }
 
 void showBits(int c) {
@@ -194,8 +214,7 @@ void checkInputPort1() {
 }
 
 void checkInputPort2() { 
-  /* 
-   *  (1 << 7) - This shifts 1 to the left seven bits creating 
+  /*  (1 << 7) - This shifts 1 to the left seven bits creating 
    *  a mask = 10000000. Together with the bitwise and (&) it evaluates each 
    *  bit in the byte.
    */
@@ -204,48 +223,58 @@ void checkInputPort2() {
    long delta;
    static byte oldPortTwoValue = 255;
    portTwoValue = chip3.readPort(0);
-   /* errorCheckMode 
-    *  0: no error checking
-    *  1: check if portTwoValue == 0 - i.e. everything flipped
-    *  2: check if > 1 bits flipped - same FeatherM0
-    *  
-    *  readPort(0)
-    *  if (portTwoValue == 0) handleError()
-    *  else {
-    *     check bit differences and send timestamps
-    *     count diffs
-    *     if (diffs > diffCriteria) handleErrror()
-    *     else
-    *        set pumpStates
-    *        if sessionRunning {
-    *           writePort(1,pumpState);
-    *        }
-    *     }
-    *  deltas etc.
-    *     
-   */
-   if(portTwoValue != oldPortTwoValue) {
-      for (int bits = 7; bits > -1; bits--) {
-        if ((portTwoValue & (1 << bits)) != (oldPortTwoValue & (1 << bits))) {
-          // something happened on this bit.
-          if (portTwoValue & (1 << bits)) Serial.println("HIGH "+String(bits));
-          else Serial.println("LOW "+String(bits)); 
-        } 
+   if (portTwoValue == 0) handleError(1);
+   else {
+      if (oldPortTwoValue != portTwoValue) {           // something changed
+         for (int bits = 7; bits > -1; bits--) {
+            if ((portTwoValue & (1 << bits)) != (oldPortTwoValue & (1 << bits))) {
+               // something happened on this bit.
+               diff = diff+1;                            // count the number of bit differences
+               if (portTwoValue & (1 << bits)) {
+                  TStamp tStamp = {bits, 'h', millis(), 0, 1};
+                  printQueue.push(&tStamp);
+                  //Serial.println("HIGH "+String(bits));
+               }
+               else {
+                  TStamp tStamp = {bits, 'H', millis(), 1, 1};
+                  printQueue.push(&tStamp);
+                  // Serial.println("LOW "+String(bits));
+               }         
+            }
+         }
       }
-      oldPortTwoValue = portTwoValue;
-   }
-   pumpStateL2 = (255-portTwoValue);
-   pumpState = (pumpStateL1 | pumpStateL2);
-   if (sessionRunning) {
-      chip1.writePort(1,pumpState);
-      chip2.writePort(1,portTwoValue);
-   } 
+      // At this point, nothing has been done to switch the pumps 
+      if (diff > 1) handleError(diff);      // abort
+      else {                                // no errors
+           oldPortTwoValue = portTwoValue;
+           pumpStateL2 = (255-portTwoValue);
+           pumpState = (pumpStateL1 | pumpStateL2);
+           if (sessionRunning) {
+               chip1.writePort(1,pumpState);
+               chip2.writePort(1,portTwoValue);
+           } 
+      }
    micro2 = micros();
    delta = micro2 - micro1;
    if (delta > maxDelta) maxDelta = delta;
-   if (delta < minDelta) minDelta = delta; 
+   if (delta < minDelta) minDelta = delta;
+   }
 }
 
+void sendOneTimeStamp() {
+   if (printQueue.isEmpty()==false) {
+      if (printQueue.nbRecs() > maxQueueRecs) maxQueueRecs = printQueue.nbRecs();
+      TStamp tStamp;
+      printQueue.pull(&tStamp);
+      if (tStamp.index == 9) {
+           Serial.println(String(tStamp.boxNum)+" "+tStamp.code+" "+String(tStamp.mSecTime)) ;      
+      }
+      else {
+           Serial.println(String(tStamp.boxNum)+" "+tStamp.code+" "+String(tStamp.mSecTime)
+           +" "+String(tStamp.state)+" "+String(tStamp.index));
+      }
+   }
+}
 void handleInstruction()
 {
    byte spaceIndex;
@@ -267,13 +296,14 @@ void handleInstruction()
      // Serial.println(code1+" "+num);
      if (code1 == "x") chip1.digitalWrite(8,0); 
      else if (code1 == "X") chip1.digitalWrite(8,1);
-     else if (code1 == "C") checkMode = num;     // note: no error checking whether num is 0,1 or 2
      else if (code1 == "G") sessionRunning = true;
      else if (code1 == "Q") sessionRunning = false;
      else if (code1 == "m") showMenu();
      else if (code1 == "P") bitSet(pumpStateL1,num);
      else if (code1 == "p") bitClear(pumpStateL1,num);
      else if (code1 == "E") everythingOff();
+     // else if (code1 == "T") test(num);
+     else if (code1 == "T") handleError(5);
      else if (code1 == "D") showDeltas();
    }
 }
@@ -301,6 +331,7 @@ void tick() {
    checkInputPort1();
    checkInputPort2();
    getSerialInstruction(); 
+   sendOneTimeStamp();
 }
 
 void loop() {
