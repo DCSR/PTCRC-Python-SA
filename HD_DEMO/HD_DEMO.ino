@@ -1,5 +1,7 @@
 
 /*
+ * To Do: showBits(c) might be replaced with Serial.println(c,BIN);
+ * 
  * This tests proof of principle for coupling input and output ports for Hold Down. 
  * 
  * It is adapted from a sketch in Arduino forum:
@@ -30,6 +32,9 @@ long minDelta = 1000;
 long maxDelta = 0;
 String instruction;
 const uint8_t ledPin = 5;
+boolean sessionRunning = false;
+byte checkMode = 0;
+byte diffCriteria = 1;   // used for bitread() error checking  
 
 // ********** 10 mSec Interrupt Timer ***************** 
 
@@ -85,10 +90,13 @@ void TC4_Handler()                                // Interrupt Service Routine (
 void showMenu () {
   Serial.println ("MCP23S17_Demo_M0.ino.");
   Serial.println ("<m> - Show this Menu");
+  Serial.println ("<G> - Start HD Session");
+  Serial.println ("<Q> - End HD Session");
   Serial.println ("<X> - turns on Pump 1");
   Serial.println ("<x> - turns off Pump 1"); 
   Serial.println ("<P num> - Switch Pump On");
   Serial.println ("<p num> - Switch Pump Off");
+  Serial.println ("<C num> - set checkMode 0,1 or 2");
   Serial.println ("<E> - Everything Off");
   Serial.println ("<D> - Show Min and Max Deltas");
 }
@@ -97,11 +105,17 @@ void everythingOff() {
      chip0.writePort(0,0xFF);   // Retract L1
      chip0.writePort(1,0xFF);   // L1 LED Off
      chip1.writePort(1,0x00);   // Pumps Off
-     chip2.writePort(0,0xFF);   // Extend L2
+     chip2.writePort(0,0xFF);   // Retract L2
      chip2.writePort(1,0xFF);   // L2 LED On
      chip3.writePort(1,0xFF);   // Aux Off
      pumpStateL1 = 0;
      pumpStateL2 = 0; 
+}
+
+void handleError() {
+    Serial.print ("Error detected");
+
+  
 }
 
 void showBits(int c) {
@@ -186,13 +200,31 @@ void checkInputPort2() {
    *  bit in the byte.
    */
    micro1 = micros();
+   byte diff = 0;
    long delta;
    static byte oldPortTwoValue = 255;
    portTwoValue = chip3.readPort(0);
+   /* errorCheckMode 
+    *  0: no error checking
+    *  1: check if portTwoValue == 0 - i.e. everything flipped
+    *  2: check if > 1 bits flipped - same FeatherM0
+    *  
+    *  readPort(0)
+    *  if (portTwoValue == 0) handleError()
+    *  else {
+    *     check bit differences and send timestamps
+    *     count diffs
+    *     if (diffs > diffCriteria) handleErrror()
+    *     else
+    *        set pumpStates
+    *        if sessionRunning {
+    *           writePort(1,pumpState);
+    *        }
+    *     }
+    *  deltas etc.
+    *     
+   */
    if(portTwoValue != oldPortTwoValue) {
-      // Serial.print(portTwoValue);
-      // Serial.print(" ");
-      // Serial.println(oldPortTwoValue); 
       for (int bits = 7; bits > -1; bits--) {
         if ((portTwoValue & (1 << bits)) != (oldPortTwoValue & (1 << bits))) {
           // something happened on this bit.
@@ -204,8 +236,10 @@ void checkInputPort2() {
    }
    pumpStateL2 = (255-portTwoValue);
    pumpState = (pumpStateL1 | pumpStateL2);
-   chip1.writePort(1,pumpState);
-   chip2.writePort(1,portTwoValue); 
+   if (sessionRunning) {
+      chip1.writePort(1,pumpState);
+      chip2.writePort(1,portTwoValue);
+   } 
    micro2 = micros();
    delta = micro2 - micro1;
    if (delta > maxDelta) maxDelta = delta;
@@ -233,6 +267,9 @@ void handleInstruction()
      // Serial.println(code1+" "+num);
      if (code1 == "x") chip1.digitalWrite(8,0); 
      else if (code1 == "X") chip1.digitalWrite(8,1);
+     else if (code1 == "C") checkMode = num;     // note: no error checking whether num is 0,1 or 2
+     else if (code1 == "G") sessionRunning = true;
+     else if (code1 == "Q") sessionRunning = false;
      else if (code1 == "m") showMenu();
      else if (code1 == "P") bitSet(pumpStateL1,num);
      else if (code1 == "p") bitClear(pumpStateL1,num);
