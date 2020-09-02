@@ -26,7 +26,7 @@ MCP23S17 chip1(chipSelect, 1); // L1 inputs map to pins 0..7; Pumps map to pins 
 MCP23S17 chip2(chipSelect, 2); // L2 retract map to pins 0..7; LEDs map to pins 8..15
 MCP23S17 chip3(chipSelect, 3); // L2 inputs map to pins 0..7; AUX output map to pins 8..15
 
-byte portOneValue, portTwoValue = 255;
+byte portOneValue = 255, portTwoValue = 255, oldPortTwoValue = 255; 
 byte pumpState, pumpStateL1, pumpStateL2 = 0;
 long micro1, micro2;
 long minDelta = 1000;
@@ -35,7 +35,9 @@ byte maxQueueRecs = 0;
 String instruction;
 const uint8_t ledPin = 5;
 boolean sessionRunning = false;
-byte diffCriteria = 1;   // used for bitread() error checking  
+boolean recoveringFromError = false;
+byte diffCriteria = 1;   // used for bitread() error checking
+  
 
 typedef struct tagTStamp {
    // tagTStamp is a structure identifier (or tag). It is not necessary 
@@ -120,22 +122,38 @@ void everythingOff() {
      chip0.writePort(1,0xFF);   // L1 LED Off
      chip1.writePort(1,0x00);   // Pumps Off
      chip2.writePort(0,0xFF);   // Retract L2
-     chip2.writePort(1,0xFF);   // L2 LED On
+     chip2.writePort(1,0xFF);   // L2 LED Off
      chip3.writePort(1,0xFF);   // Aux Off
      pumpStateL1 = 0;
-     pumpStateL2 = 0; 
+     pumpStateL2 = 0;
+     sessionRunning = false;
 }
 
 void handleError(int code) {
-    Serial.println ("Error detected");
+    Serial.println ("******  !!!! ******");
+    Serial.println ("Error detected at "+String(millis()));
     if (code == 1) {
       Serial.println ("chip3.readPort(0) = 0x00");
     }
     else {
       Serial.println (String(code)+" different bits changed");
+      Serial.print ("portTwoValue at time of error:");
       Serial.println (portTwoValue,BIN);
+      // In FeatherM0, add a timestamp for error detection. "!"
     } 
-    sessionRunning = false;
+    // sessionRunning = false;
+    chip1.writePort(1,0x00);   // Pumps Off
+    chip2.writePort(1,0xFF);   // L2 LED Off
+    recoveringFromError = true;
+}
+
+void recoverFromError() {
+  portTwoValue = chip3.readPort(0);
+  if (portTwoValue == 255) {
+    oldPortTwoValue = portTwoValue;
+    Serial.println ("Recovered at "+String(millis()));
+    recoveringFromError = false;  // start runnning again
+  }
 }
 
 void showBits(int c) {
@@ -221,43 +239,45 @@ void checkInputPort2() {
    micro1 = micros();
    byte diff = 0;
    long delta;
-   static byte oldPortTwoValue = 255;
-   portTwoValue = chip3.readPort(0);
-   if (portTwoValue == 0) handleError(1);
+   if (recoveringFromError) recoverFromError();
    else {
-      if (oldPortTwoValue != portTwoValue) {           // something changed
-         for (int bits = 7; bits > -1; bits--) {
-            if ((portTwoValue & (1 << bits)) != (oldPortTwoValue & (1 << bits))) {
-               // something happened on this bit.
-               diff = diff+1;                            // count the number of bit differences
-               if (portTwoValue & (1 << bits)) {
-                  TStamp tStamp = {bits, 'h', millis(), 0, 1};
-                  printQueue.push(&tStamp);
-                  //Serial.println("HIGH "+String(bits));
-               }
-               else {
-                  TStamp tStamp = {bits, 'H', millis(), 1, 1};
-                  printQueue.push(&tStamp);
-                  // Serial.println("LOW "+String(bits));
-               }         
-            }
-         }
-      }
-      // At this point, nothing has been done to switch the pumps 
-      if (diff > 1) handleError(diff);      // abort
-      else {                                // no errors
-           oldPortTwoValue = portTwoValue;
-           pumpStateL2 = (255-portTwoValue);
-           pumpState = (pumpStateL1 | pumpStateL2);
-           if (sessionRunning) {
-               chip1.writePort(1,pumpState);
-               chip2.writePort(1,portTwoValue);
-           } 
-      }
-   micro2 = micros();
-   delta = micro2 - micro1;
-   if (delta > maxDelta) maxDelta = delta;
-   if (delta < minDelta) minDelta = delta;
+       portTwoValue = chip3.readPort(0);
+       if (portTwoValue == 0) handleError(1);
+       else {
+          if (oldPortTwoValue != portTwoValue) {           // something changed
+             for (int bits = 7; bits > -1; bits--) {
+                if ((portTwoValue & (1 << bits)) != (oldPortTwoValue & (1 << bits))) {
+                   // something happened on this bit.
+                   diff = diff+1;                            // count the number of bit differences
+                   if (portTwoValue & (1 << bits)) {
+                      TStamp tStamp = {bits, 'h', millis(), 0, 1};
+                      printQueue.push(&tStamp);
+                      //Serial.println("HIGH "+String(bits));
+                   }
+                   else {
+                      TStamp tStamp = {bits, 'H', millis(), 1, 1};
+                      printQueue.push(&tStamp);
+                      // Serial.println("LOW "+String(bits));
+                   }         
+                }
+             }
+          }
+          // At this point, nothing has been done to switch the pumps 
+          if (diff > 1) handleError(diff);      // abort
+          else {                                // no errors
+               oldPortTwoValue = portTwoValue;
+               pumpStateL2 = (255-portTwoValue);
+               pumpState = (pumpStateL1 | pumpStateL2);
+               if (sessionRunning) {
+                   chip1.writePort(1,pumpState);
+                   chip2.writePort(1,portTwoValue);
+               } 
+          }
+       micro2 = micros();
+       delta = micro2 - micro1;
+       if (delta > maxDelta) maxDelta = delta;
+       if (delta < minDelta) minDelta = delta;
+       }
    }
 }
 
