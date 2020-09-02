@@ -267,7 +267,7 @@ void checkInputPort2() {
           else {                                // no errors
                oldPortTwoValue = portTwoValue;
                pumpStateL2 = (255-portTwoValue);
-               pumpState = (pumpStateL1 | pumpStateL2);
+               pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
                if (sessionRunning) {
                    chip1.writePort(1,pumpState);
                    chip2.writePort(1,portTwoValue);
