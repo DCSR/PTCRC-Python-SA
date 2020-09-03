@@ -36,6 +36,7 @@ String instruction;
 const uint8_t ledPin = 5;
 boolean sessionRunning = false;
 boolean recoveringFromError = false;
+boolean sendTimeStamp = false;
 byte diffCriteria = 1;   // used for bitread() error checking
   
 
@@ -104,17 +105,27 @@ void TC4_Handler()                                // Interrupt Service Routine (
 
 
 void showMenu () {
-  Serial.println ("MCP23S17_Demo_M0.ino.");
+  Serial.println ("HD_Demo.ino.");
   Serial.println ("<m> - Show this Menu");
   Serial.println ("<G> - Start HD Session");
-  Serial.println ("<Q> - End HD Session");
-  Serial.println ("<X> - turns on Pump 1");
-  Serial.println ("<x> - turns off Pump 1"); 
+  Serial.println ("<Q> - End HD Session"); 
   Serial.println ("<P num> - Switch Pump On");
   Serial.println ("<p num> - Switch Pump Off");
-  Serial.println ("<T num> - run test(num)");
-  Serial.println ("<E> - Everything Off");
-  Serial.println ("<D> - Show Min and Max Deltas");
+  Serial.println ("<E> - everythingOff()"); 
+  Serial.println ("<T> - send timeStamps");
+  Serial.println ("<t> - suppress timeStamps");   
+  Serial.println ("<H> - trigger handleError()");
+  Serial.println ("<D> - Show Diagnostic Data");
+}
+
+void startSession() {
+  chip2.writePort(0,0x00);   // Extend L2
+  sessionRunning = true;
+}
+
+void endSession() {
+  chip2.writePort(0,0xFF);   // Retract L2
+  sessionRunning = false;
 }
 
 void everythingOff() {
@@ -131,7 +142,7 @@ void everythingOff() {
 
 void handleError(int code) {
     Serial.println ("******  !!!! ******");
-    Serial.println ("Error detected at "+String(millis()));
+    Serial.println ("Error detected at "+String(millis())+" mSec");
     if (code == 1) {
       Serial.println ("chip3.readPort(0) = 0x00");
     }
@@ -169,7 +180,8 @@ void showBits(int c) {
   Serial.println(" ");
 }
 
-void showDeltas() {
+void showDiagnosticData() {
+  Serial.print ("***** Diagnostic Data *****")
   Serial.print ("Deltas (min, max):"); 
   Serial.println (String(minDelta)+" "+String(maxDelta));
   minDelta = 1000;
@@ -249,16 +261,18 @@ void checkInputPort2() {
                 if ((portTwoValue & (1 << bits)) != (oldPortTwoValue & (1 << bits))) {
                    // something happened on this bit.
                    diff = diff+1;                            // count the number of bit differences
-                   if (portTwoValue & (1 << bits)) {
-                      TStamp tStamp = {bits, 'h', millis(), 0, 1};
-                      printQueue.push(&tStamp);
-                      //Serial.println("HIGH "+String(bits));
-                   }
-                   else {
-                      TStamp tStamp = {bits, 'H', millis(), 1, 1};
-                      printQueue.push(&tStamp);
-                      // Serial.println("LOW "+String(bits));
-                   }         
+                   if (sendTimeStamp) {
+                       if (portTwoValue & (1 << bits)) {
+                          TStamp tStamp = {bits, 'h', millis(), 0, 1};
+                          printQueue.push(&tStamp);
+                          //Serial.println("HIGH "+String(bits));
+                       }
+                       else {
+                          TStamp tStamp = {bits, 'H', millis(), 1, 1};
+                          printQueue.push(&tStamp);
+                          // Serial.println("LOW "+String(bits));
+                       } 
+                   }        
                 }
              }
           }
@@ -295,6 +309,7 @@ void sendOneTimeStamp() {
       }
    }
 }
+
 void handleInstruction()
 {
    byte spaceIndex;
@@ -314,17 +329,16 @@ void handleInstruction()
      }
      num = code2.toInt();
      // Serial.println(code1+" "+num);
-     if (code1 == "x") chip1.digitalWrite(8,0); 
-     else if (code1 == "X") chip1.digitalWrite(8,1);
-     else if (code1 == "G") sessionRunning = true;
-     else if (code1 == "Q") sessionRunning = false;
-     else if (code1 == "m") showMenu();
+     if (code1 == "m") showMenu();     
+     else if (code1 == "G") startSession();
+     else if (code1 == "Q") endSession();
      else if (code1 == "P") bitSet(pumpStateL1,num);
      else if (code1 == "p") bitClear(pumpStateL1,num);
      else if (code1 == "E") everythingOff();
-     // else if (code1 == "T") test(num);
-     else if (code1 == "T") handleError(5);
-     else if (code1 == "D") showDeltas();
+     else if (code1 == "T") sendTimeStamp = true;
+     else if (code1 == "t") sendTimeStamp = false;
+     else if (code1 == "H") handleError(5);
+     else if (code1 == "D") showDiagnosticData();
    }
 }
 
