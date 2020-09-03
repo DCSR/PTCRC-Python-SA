@@ -181,7 +181,7 @@ void showBits(int c) {
 }
 
 void showDiagnosticData() {
-  Serial.print ("***** Diagnostic Data *****")
+  Serial.println ("***** Diagnostic Data *****");
   Serial.print ("Deltas (min, max):"); 
   Serial.println (String(minDelta)+" "+String(maxDelta));
   minDelta = 1000;
