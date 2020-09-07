@@ -235,8 +235,9 @@ void setup() {
 void checkInputPort1() { 
    static byte oldPortOneValue = 255; 
    portOneValue = chip1.readPort(0);
-   if(portOneValue != oldPortOneValue) {   
-      Serial.print("L1:");
+   if(portOneValue != oldPortOneValue) {
+      Serial.print(millis());   
+      Serial.print(" L1: ");
       Serial.println(portOneValue,BIN);
       oldPortOneValue = portOneValue; 
       // chip0.writePort(0,pinValues);
