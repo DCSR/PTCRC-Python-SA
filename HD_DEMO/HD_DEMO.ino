@@ -116,6 +116,7 @@ void showMenu () {
   Serial.println ("<t> - suppress timeStamps");   
   Serial.println ("<H> - trigger handleError()");
   Serial.println ("<D> - Show Diagnostic Data");
+  Serial.println ("<R> - Read Output Ports");
 }
 
 void startSession() {
@@ -198,6 +199,24 @@ void showDiagnosticData() {
   showBits(chip1.readPort(0));
   Serial.print ("read|Port L2: ");
   showBits(chip3.readPort(0));
+}
+
+void readOutputPorts () {
+  /*
+   * chip0.writePort(0,0xFF);   // Retract L1
+     chip0.writePort(1,0xFF);   // L1 LED Off
+     chip1.writePort(1,0x00);   // Pumps Off
+     chip2.writePort(0,0xFF);   // Retract L2
+     chip2.writePort(1,0xFF);   // L2 LED Off
+     chip3.writePort(1,0xFF);   // Aux Off
+   */
+  byte pumpPort, LEDPort, leverPort;
+  pumpPort = chip1.readPort(1);
+  Serial.print("pumpPort =");
+  // Serial.println(pumpPort,BIN);
+  showBits(chip1.readPort(1));
+  Serial.print("LEDPort =");
+  showBits(chip2.readPort(1));
 }
 
 void setup() {
@@ -340,6 +359,7 @@ void handleInstruction()
      else if (code1 == "t") sendTimeStamp = false;
      else if (code1 == "H") handleError(5);
      else if (code1 == "D") showDiagnosticData();
+     else if (code1 == "R") readOutputPorts();
    }
 }
 
