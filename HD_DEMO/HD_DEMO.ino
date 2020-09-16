@@ -125,8 +125,9 @@ void showMenu () {
   Serial.println ("<T> - send timeStamps");
   Serial.println ("<t> - suppress timeStamps");   
   Serial.println ("<H> - trigger handleError()");
-  Serial.println ("<D> - Show Diagnostic Data");
-  Serial.println ("<R> - Show Output Ports");
+  Serial.println ("<D> - showDiagnosticData()");
+  Serial.println ("<R> - showOutputPorts()");
+  Serial.println ("<O> - outputErrorCheck()");
 }
 
 void startSession() {
@@ -173,34 +174,25 @@ void everythingOff() {
 void handleError(int code) {    
     Serial.println ("******  !!!! ******");
     Serial.println ("Error detected at "+String(millis())+" mSec");
-    if (code == 1) {
-      Serial.println ("chip3.readPort(0) = 0x00");
-    }
-    else {
-      Serial.println (String(code)+" different bits changed");
-      Serial.print ("portTwoValue at time of error:");
-      Serial.println (portTwoValue,BIN);
-      // In FeatherM0, add a timestamp for error detection. "!"
-    } 
+    if (code == 1) Serial.println ("chip3.readPort(0) = 0x00");
+    else Serial.println (String(code)+" different bits changed");
+    // In FeatherM0, add a timestamp for error detection. "!"
     showOutputPorts();
     // Reset Pumps
     pumpState = pumpStateL1;    // Ignore pumpStateL2
     chip1.writePort(1,pumpState);
-
     // Reset L2_LED
     L2_LED_State = 0xFF;
     chip2.writePort(1,L2_LED_State);
-
-    chip1.writePort(1,0x00);   // Pumps Off
-    chip2.writePort(1,0xFF);   // L2 LED Off
     recoveringFromError = true;
 }
 
-void recoverFromError() {
+void recoverFromError() { 
   portTwoValue = chip3.readPort(0);
   if (portTwoValue == 255) {
     oldPortTwoValue = portTwoValue;
     Serial.println ("Recovered at "+String(millis()));
+    outputErrorCheck();
     recoveringFromError = false;  // start runnning again
   }
 }
@@ -224,21 +216,19 @@ void showDiagnosticData() {
   Serial.println (String(minDelta)+" "+String(maxDelta));
   minDelta = 1000;
   maxDelta = 0;
-  Serial.print ("portTwoValue: ");
-  showBits(portTwoValue);
-  Serial.print ("pumpStateL1: ");
-  showBits(pumpStateL1);
-  Serial.print ("pumpStateL2: ");
-  showBits(pumpStateL2);
-  Serial.print ("pumpState: ");
-  showBits(pumpState);
-  Serial.print ("read|Port L1: ");
-  showBits(chip1.readPort(0));
-  Serial.print ("read|Port L2: ");
-  showBits(chip3.readPort(0));
 }
 
-void showOutputPorts () {
+void outputErrorCheck() {
+    boolean errorFound = false;
+    if (L1_Position != chip0.readPort(0)) errorFound = true;
+    if (L1_LED_State != chip0.readPort(1)) errorFound = true;
+    if (pumpState != chip1.readPort(1)) errorFound = true;
+    if (L2_Position != chip2.readPort(0)) errorFound = true;
+    if (L2_LED_State != chip2.readPort(1)) errorFound = true;
+    if (errorFound) showOutputPorts();
+}
+
+void showOutputPorts() {
   byte L1_Position_PortValue, L1_LED_PortValue, pump_PortValue, L2_Position_PortValue, L2_LED_PortValue;
   /*
    * chip0.writePort(0,0xFF);   // Retract L1
@@ -248,6 +238,11 @@ void showOutputPorts () {
      chip2.writePort(1,0xFF);   // L2 LED Off
      chip3.writePort(1,0xFF);   // Aux Off
    */
+
+    Serial.println ("portTwoValue  =");
+    showBits(portTwoValue);
+    Serial.println ("portOneValue  =");
+    showBits(portOneValue);
 
     // Compare L1_Position and L1_Position_PortValue
     Serial.print("L1_Position           =");
@@ -427,6 +422,7 @@ void handleInstruction()
      else if (code1 == "H") handleError(5);
      else if (code1 == "D") showDiagnosticData();
      else if (code1 == "R") showOutputPorts();
+     else if (code1 == "O") outputErrorCheck();
    }
 }
 
