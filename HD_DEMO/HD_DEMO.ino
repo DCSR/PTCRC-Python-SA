@@ -130,22 +130,26 @@ void showMenu () {
 }
 
 void startSession() {
+  L1_Position = 0x00;              // Extend L1
+  chip0.writePort(0,L1_Position);  
   L1_LED_State = 0xFF;             // L1 LED Off
   chip0.writePort(1,L1_LED_State);         
-  L1_Position = 0x00;              // Extend L1
-  chip0.writePort(0,L1_Position);
   L2_Position = 0x00;              // Extend L2
-  chip2.writePort(0,L2_Position);   
+  chip2.writePort(0,L2_Position);
+  L2_LED_State = 0xFF;             // L2 LED Off
+  chip2.writePort(1,L2_LED_State);     
   sessionRunning = true;
 }
 
 void endSession() {
+  L1_Position = 0xFF;              // Retract L1
+  chip0.writePort(0,L1_Position);  
   L1_LED_State = 0xFF;             // L1 LED Off
   chip0.writePort(1,L1_LED_State);
-  L1_Position = 0xFF;              // Retract L1
-  chip0.writePort(0,L1_Position);
   L2_Position = 0xFF;              // Retract L2
-  chip2.writePort(0,L2_Position);   
+  chip2.writePort(0,L2_Position);
+  L2_LED_State = 0xFF;             // L2 LED Off
+  chip2.writePort(1,L2_LED_State);   
   sessionRunning = false;
 }
 
@@ -366,7 +370,8 @@ void checkInputPort2() {
                pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
                if (sessionRunning) {
                    chip1.writePort(1,pumpState);
-                   chip2.writePort(1,portTwoValue);
+                   L2_LED_State = portTwoValue;          // mirror pump state
+                   chip2.writePort(1,L2_LED_State);
                } 
           }
        micro2 = micros();
