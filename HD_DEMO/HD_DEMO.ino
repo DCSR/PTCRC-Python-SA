@@ -1,5 +1,8 @@
 
 /*
+ * See: 
+ * http://www.handsontec.com/dataspecs/module/8Ch-relay.pdf
+ * 
  * To Do: showBits(c) might be replaced with Serial.println(c,BIN);
  * 
  * This tests proof of principle for coupling input and output ports for Hold Down. 
@@ -43,7 +46,6 @@ long minDelta = 1000;
 long maxDelta = 0;
 byte maxQueueRecs = 0;
 String instruction;
-const uint8_t ledPin = 5;
 boolean sessionRunning = false;
 boolean recoveringFromError = false;
 boolean sendTimeStamp = false;
@@ -117,7 +119,7 @@ void TC4_Handler()                                // Interrupt Service Routine (
 void showMenu () {
   Serial.println ("HD_Demo.ino.");
   Serial.println ("<m> - Show this Menu");
-  Serial.println ("<G> - Start HD Session");
+  Serial.println ("<G> - Start HD Session - Feather LED should blink");
   Serial.println ("<Q> - End HD Session"); 
   Serial.println ("<P num> - Switch Pump On");
   Serial.println ("<p num> - Switch Pump Off");
@@ -138,7 +140,8 @@ void startSession() {
   L2_Position = 0x00;              // Extend L2
   chip2.writePort(0,L2_Position);
   L2_LED_State = 0xFF;             // L2 LED Off
-  chip2.writePort(1,L2_LED_State);     
+  chip2.writePort(1,L2_LED_State); 
+  digitalWrite(LED_BUILTIN, HIGH);    
   sessionRunning = true;
 }
 
@@ -150,7 +153,8 @@ void endSession() {
   L2_Position = 0xFF;              // Retract L2
   chip2.writePort(0,L2_Position);
   L2_LED_State = 0xFF;             // L2 LED Off
-  chip2.writePort(1,L2_LED_State);   
+  chip2.writePort(1,L2_LED_State);
+  digitalWrite(LED_BUILTIN, LOW);   
   sessionRunning = false;
 }
 
@@ -212,7 +216,7 @@ void showBits(int c) {
 
 void showDiagnosticData() {
   Serial.println ("***** Diagnostic Data *****");
-  Serial.print ("Deltas (min, max):"); 
+  Serial.print ("Min and Max Deltas in microSec: "); 
   Serial.println (String(minDelta)+" "+String(maxDelta));
   minDelta = 1000;
   maxDelta = 0;
@@ -226,63 +230,61 @@ void outputErrorCheck() {
     if (L2_Position != chip2.readPort(0)) errorFound = true;
     if (L2_LED_State != chip2.readPort(1)) errorFound = true;
     if (errorFound) showOutputPorts();
+    else Serial.println("Output OK");
 }
 
 void showOutputPorts() {
   byte L1_Position_PortValue, L1_LED_PortValue, pump_PortValue, L2_Position_PortValue, L2_LED_PortValue;
-  /*
-   * chip0.writePort(0,0xFF);   // Retract L1
-     chip0.writePort(1,0xFF);   // L1 LED Off
-     chip1.writePort(1,0x00);   // Pumps Off
-     chip2.writePort(0,0xFF);   // Retract L2
-     chip2.writePort(1,0xFF);   // L2 LED Off
-     chip3.writePort(1,0xFF);   // Aux Off
-   */
 
-    Serial.println ("portTwoValue  =");
+    Serial.println ("*******************************");
+    Serial.print ("portOneValue  = ");
+    showBits(portOneValue);    
+    Serial.print ("portTwoValue  = ");
     showBits(portTwoValue);
-    Serial.println ("portOneValue  =");
-    showBits(portOneValue);
 
     // Compare L1_Position and L1_Position_PortValue
-    Serial.print("L1_Position           =");
+    Serial.print("L1_Position           = ");
     showBits(L1_Position);     
     L1_Position_PortValue = chip0.readPort(0);
-    Serial.print("L1_Position_PortValue =");
+    Serial.print("L1_Position_PortValue = ");
     showBits(L1_Position_PortValue);
   
     // Compare L1_LED_State and L1_LED_PortValue
-    Serial.print("L1_LED_State     =");
+    Serial.print("L1_LED_State     = ");
     showBits(L1_LED_State);     
     L1_LED_PortValue = chip0.readPort(1);
-    Serial.print("L1_LED_PortValue =");
+    Serial.print("L1_LED_PortValue = ");
     showBits(L1_LED_PortValue);
  
     // Compare pumpState and pump_PortValue
-    Serial.print("pumpState     =");
+    Serial.print("pumpState      = ");
     showBits(pumpState);    
     pump_PortValue = chip1.readPort(1);
-    Serial.print("pump_PortValue =");
+    Serial.print("pump_PortValue = ");
     showBits(pump_PortValue);
   
     // Compare L2_Position and L2_Position_PortValue
-    Serial.print("L2_Position           =");
+    Serial.print("L2_Position           = ");
     showBits(L2_Position);     
     L2_Position_PortValue = chip2.readPort(0);
-    Serial.print("L2_Position_PortValue =");
+    Serial.print("L2_Position_PortValue = ");
     showBits(L2_Position_PortValue);
   
     // Compare L2_LED_State and L2_LED_PortValue
-    Serial.print("L2_LED_State     =");
+    Serial.print("L2_LED_State     = ");
     showBits(L2_LED_State);     
     L2_LED_PortValue = chip2.readPort(1);
-    Serial.print("L2_LED_PortValue =");
+    Serial.print("L2_LED_PortValue = ");
     showBits(L2_LED_PortValue);
+
+    Serial.println ("*******************************");
 }
 
 void setup() {
   Serial.begin(115200);
-  delay(1000);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB
+  }
   Serial.println("Starting HD_Demo");
   chip0.begin();
   chip1.begin();
@@ -305,10 +307,8 @@ void setup() {
   init_10_mSec_Timer();
   portOneValue = chip1.readPort(0);          
   portTwoValue = chip3.readPort(0);
-
-  Serial.println(portOneValue,BIN);
-  Serial.println(portTwoValue,BIN); 
-  pinMode(ledPin, OUTPUT);                // GPIO 10
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
   showMenu();
 }
 
@@ -440,9 +440,9 @@ void getSerialInstruction()
 void tick() {
    static long tickCounts = 0;
    tickCounts++;
-   if (tickCounts >= 100) {     // every seconds
+   if (tickCounts >= 100) {     // every seconds   
       tickCounts = 0;
-      digitalWrite(ledPin, !digitalRead(ledPin));
+      if (sessionRunning) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
       // Serial.println(millis());
       // Serial.print(".");
    }
