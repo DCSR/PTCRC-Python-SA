@@ -136,7 +136,7 @@ void showMenu () {
   Serial.println ("<H> - trigger handleError()");
   Serial.println ("<D> - showDiagnosticData()");
   Serial.println ("<R> - showPorts()");
-  Serial.println ("<O> - outputErrorCheck()");
+  Serial.println ("<O> - detectOutputError()");
 }
 
 void startSession() {
@@ -182,8 +182,10 @@ void handleError(int errorCode) {
      *       if outputErrorCheck() showPorts();
      */
     boolean recoveredFromError = false;
-    Serial.println ("******  !!!! ******");
+    Serial.println ("***********  !!!! **********");
     Serial.println ("Error detected at "+String(millis())+" mSec");
+    Serial.print ("portTwoValue at time of error: ");
+    showBits(errorCode);
     // In FeatherM0, add a timestamp for error detection. "!"
     showPorts();
     // Try to recover for 100 mSec
@@ -197,7 +199,7 @@ void handleError(int errorCode) {
     L2_LED_State = 0xFF;
     chip2.writePort(1,L2_LED_State);
     
-    for (int x = 0; x < 10; x++) {
+    for (int x = 0; x < 3; x++) {
       portTwoValue = chip3.readPort(0);
       if (portTwoValue != 255 || detectOutputError()) {     // if either error 
         Serial.print("*");
@@ -346,7 +348,7 @@ void checkInputPort2() {
    long delta;
    micro1 = micros();
    portTwoValue = chip3.readPort(0);
-   if (portTwoValue == 0 || detectOutputError()) handleError(0);      // Input OR output Error
+   if (portTwoValue == 0 || detectOutputError()) handleError(portTwoValue);      // Input OR output Error
    else {
       if (oldPortTwoValue != portTwoValue) {           // something changed
          for (int bits = 7; bits > -1; bits--) {
@@ -371,15 +373,14 @@ void checkInputPort2() {
       oldPortTwoValue = portTwoValue;
       pumpStateL2 = (255-portTwoValue);
       pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
-      if (sessionRunning) {
-          chip1.writePort(1,pumpState);
-          L2_LED_State = portTwoValue;          // mirror pump state
-          chip2.writePort(1,L2_LED_State);
-      } 
-   micro2 = micros();
-   delta = micro2 - micro1;
-   if (delta > maxDelta) maxDelta = delta;
-   if (delta < minDelta) minDelta = delta;
+      chip1.writePort(1,pumpState);
+      L2_LED_State = portTwoValue;          // mirror pump state
+      chip2.writePort(1,L2_LED_State);
+ 
+      micro2 = micros();
+      delta = micro2 - micro1;
+      if (delta > maxDelta) maxDelta = delta;
+      if (delta < minDelta) minDelta = delta;
    }
 }
 
@@ -424,7 +425,7 @@ void handleInstruction()
      else if (code1 == "p") bitClear(pumpStateL1,num);
      else if (code1 == "T") sendTimeStamp = true;
      else if (code1 == "t") sendTimeStamp = false;
-     else if (code1 == "H") handleError(5);
+     else if (code1 == "H") handleError(portTwoValue);
      else if (code1 == "D") showDiagnosticData();
      else if (code1 == "R") showPorts();
      else if (code1 == "O") Serial.println (detectOutputError());
@@ -451,8 +452,10 @@ void tick() {
       // Serial.println(millis());
       // Serial.print(".");
    }
-   checkInputPort1();
-   checkInputPort2();
+   if (sessionRunning) {
+      checkInputPort1();
+      checkInputPort2();
+   }
    getSerialInstruction(); 
    sendOneTimeStamp();
 }
