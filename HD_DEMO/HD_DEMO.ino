@@ -171,23 +171,17 @@ void endSession() {
 }
 
 
-void handleError(int errorCode) {  
-    /*  
-     *   If it can recover in a moment - so be it.
-     *   Otherwise, suspend the program, monitor stuff and try
-     *   to recover.
-     *   
-     *   If it can't recover, shut everything down.
-     * 
-     *       if outputErrorCheck() showPorts();
-     */
+void handleError(int L2) {  
     boolean recoveredFromError = false;
-    Serial.println ("***********  !!!! **********");
-    Serial.println ("Error detected at "+String(millis())+" mSec");
-    Serial.print ("portTwoValue at time of error: ");
-    showBits(errorCode);
+    String outPutError;
+
+    if (detectOutputError()) outPutError = " OutPutError";
+    else outPutError = " OutPut OK";
+    
+    Serial.println ("E! "+String(millis())+outPutError+" mSec; L2: "+binString(L2));
+
     // In FeatherM0, add a timestamp for error detection. "!"
-    showPorts();
+    if (detectOutputError()) showPorts();
     // Try to recover for 100 mSec
 
     // Reset Pumps - an abundance of caution. Nothing else will happen while in this loop
@@ -216,6 +210,20 @@ void handleError(int errorCode) {
       Serial.println("Session Ended");
       endSession();
     }
+}
+
+String binString (int c) {
+    String binStr = "";
+    for (int bits = 7; bits > -1; bits--) {
+    // Compare bits 7-0 in byte
+    if (c & (1 << bits)) {
+      binStr = binStr + "1";
+    }
+    else {
+      binStr = binStr + "0";
+    }
+  }
+  return binStr;
 }
 
 void showBits(int c) {
@@ -253,44 +261,33 @@ void showPorts() {
   byte L1_Position_PortValue, L1_LED_PortValue, pump_PortValue, L2_Position_PortValue, L2_LED_PortValue;
 
     Serial.println ("*******************************");
-    Serial.print ("portOneValue  = ");
-    showBits(portOneValue);    
-    Serial.print ("portTwoValue  = ");
-    showBits(portTwoValue);
+    Serial.println ("portOneValue  = "+binString(portOneValue));  
+    Serial.println ("portTwoValue  = "+binString(portTwoValue));
 
     // Compare L1_Position and L1_Position_PortValue
-    Serial.print("L1_Position           = ");
-    showBits(L1_Position);     
+    Serial.println("L1_Position           = "+binString(L1_Position));  
     L1_Position_PortValue = chip0.readPort(0);
-    Serial.print("L1_Position_PortValue = ");
-    showBits(L1_Position_PortValue);
+    Serial.print("L1_Position_PortValue = "+binString(L1_Position_PortValue));
   
     // Compare L1_LED_State and L1_LED_PortValue
-    Serial.print("L1_LED_State     = ");
-    showBits(L1_LED_State);     
+    Serial.println("L1_LED_State     = "+binString(L1_LED_State));    
     L1_LED_PortValue = chip0.readPort(1);
-    Serial.print("L1_LED_PortValue = ");
-    showBits(L1_LED_PortValue);
+    Serial.println("L1_LED_PortValue = "+binString(L1_LED_PortValue));
  
     // Compare pumpState and pump_PortValue
-    Serial.print("pumpState      = ");
-    showBits(pumpState);    
+    Serial.println("pumpState      = "+binString(pumpState));   
     pump_PortValue = chip1.readPort(1);
-    Serial.print("pump_PortValue = ");
-    showBits(pump_PortValue);
-  
+    Serial.println("pump_PortValue = "+binString(pump_PortValue));
+
     // Compare L2_Position and L2_Position_PortValue
-    Serial.print("L2_Position           = ");
-    showBits(L2_Position);     
+    Serial.println("L2_Position           = "+binString(L2_Position));   
     L2_Position_PortValue = chip2.readPort(0);
-    Serial.print("L2_Position_PortValue = ");
-    showBits(L2_Position_PortValue);
+    Serial.println("L2_Position_PortValue = "+binString(L2_Position_PortValue));
   
     // Compare L2_LED_State and L2_LED_PortValue
-    Serial.print("L2_LED_State     = ");
-    showBits(L2_LED_State);     
+    Serial.println("L2_LED_State     = "+binString(L2_LED_State));  
     L2_LED_PortValue = chip2.readPort(1);
-    Serial.print("L2_LED_PortValue = ");
+    Serial.println("L2_LED_PortValue = "+binString(L2_LED_PortValue));
     showBits(L2_LED_PortValue);
 
     Serial.println ("*******************************");
