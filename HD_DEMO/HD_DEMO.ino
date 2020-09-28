@@ -27,10 +27,7 @@
         Time how long that would take each cycle - assuming no errors.
 
         Would it be possible to get a false positve error due to I2C and speed of the port expander chip?
-
         
-
-         
  * 
  * 
  * 
@@ -161,7 +158,20 @@ void TC4_Handler()                                // Interrupt Service Routine (
 
 // ******************************************************
 
-
+void configureChips() {
+   for (uint8_t i = 0; i <= 15; i++) {
+      chip0.pinMode(i,OUTPUT);             // Set chip0 to OUTPUT
+      chip2.pinMode(i,OUTPUT);             // Set chip2 to OUTPUT
+  }
+  for (uint8_t i = 0; i <= 7; i++)  {
+     chip1.pinMode(i,INPUT_PULLUP);          
+     chip3.pinMode(i,INPUT_PULLUP);          
+  }
+  for (uint8_t i = 8; i <= 15; i++) {
+     chip1.pinMode(i, OUTPUT);               
+     chip3.pinMode(i, OUTPUT);               
+  }
+}
 
 void showMenu () {
   Serial.println ("HD_Demo.ino.");
@@ -178,9 +188,28 @@ void showMenu () {
   Serial.println ("<O> - checkOutputPorts()");
   Serial.println ("<C> - checkOutputPorts every second");
   Serial.println ("<c> - don't checkOutputPorts every second");
+  Serial.println ("<!> - disableOutputs()");
+
+
 }
 
+
+void disableOutputs() {
+  Serial.println("Disabling Outputs and ending Session");
+  for (uint8_t i = 0; i <= 15; i++) {
+      chip0.pinMode(i,INPUT);             // Set chip0 to OUTPUT
+      chip2.pinMode(i,INPUT);             // Set chip2 to OUTPUT
+  }
+  for (uint8_t i = 8; i <= 15; i++) {
+     chip1.pinMode(i, INPUT);               
+     chip3.pinMode(i, INPUT);               
+  }
+  endSession();
+}
+
+
 void startSession() {
+  configureChips();
   checkOutputsEachSecond = false;
   inputErrors = 0;
   outputErrors = 0;
@@ -229,14 +258,6 @@ void endSession() {
   Serial.println("Session Ended");  
 }
 
-void handleInputError(byte leverNum, byte portValue) {  
-
-    inputErrors++;
-    // Print the error that got us here.
-    Serial.print (String(millis()-startTime)+" E! Port ");
-    Serial.print (String(leverNum)+" "+binString(portValue)); 
-}
-
 String binString (byte c) {
     String binStr = "";
     for (int bits = 7; bits > -1; bits--) {
@@ -262,7 +283,6 @@ void showDiagnosticData() {
   minDelta = 1000;
   maxDelta = 0;
 }
-
 
 void showPorts() {
   // byte L1_Position_PortValue, L1_LED_PortValue, pump_PortValue, L2_Position_PortValue, L2_LED_PortValue;
@@ -293,18 +313,7 @@ void setup() {
   chip1.begin();
   chip2.begin();
   chip3.begin();
-  for (uint8_t i = 0; i <= 15; i++) {
-    chip0.pinMode(i,OUTPUT);             // Set chip0 to OUTPUT
-    chip2.pinMode(i,OUTPUT);             // Set chip2 to OUTPUT
-  }
-  for (uint8_t i = 0; i <= 7; i++)  {
-     chip1.pinMode(i,INPUT_PULLUP);          
-     chip3.pinMode(i,INPUT_PULLUP);          
-  }
-  for (uint8_t i = 8; i <= 15; i++) {
-     chip1.pinMode(i, OUTPUT);               
-     chip3.pinMode(i, OUTPUT);               
-  }
+  configureChips();
   endSession();  // everything off
     
   init_10_mSec_Timer();
@@ -314,11 +323,52 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);
   showMenu();
 }
+void handleInputError(byte leverNum, byte portValue) {
+  boolean recoveredFromError = false;   
+  byte _portValue; 
+
+  inputErrors++;
+  // Print the error that got us here.
+  Serial.print (String(millis()-startTime)+" I! Port ");
+  Serial.print (String(leverNum)+" "+binString(portValue)); 
+
+  for (int x = 0; x < 10; x++) {
+    if (leverNum == 1) _portValue = chip1.readPort(0);
+    else _portValue = chip3.readPort(0);
+    if (_portValue == 0) Serial.print("I! ");         // Still has error
+    else {
+        recoveredFromError = true;
+        break;
+    }
+  }
+  if (!recoveredFromError) {
+      Serial.println();
+      Serial.println("Trying to reconfigure Input Ports");
+      for (uint8_t i = 0; i <= 7; i++)  {
+        chip1.pinMode(i,INPUT_PULLUP);          
+        chip3.pinMode(i,INPUT_PULLUP);          
+      }
+      if (chip3.readPort(0) == 255 && chip3.readPort(0) == 255) {
+         Serial.println("Recovered from InputError");
+      }
+      else {      
+        Serial.println();
+        Serial.println("Ending Session Because of Input Errors");
+        endSession();
+      }
+  }
+  else {
+      Serial.println();
+      Serial.println("Recovered from InputError");
+  }    
+}
 
 void handleOutputError(){
   /* Report output errors; then check ten times to see if it can recover.  
      If it can't recover then endSession. Otherwise carry on...
   */
+  boolean errorFound = false;
+  boolean recoveredFromError = false;
   
   outputErrors++;
   Serial.println("OutputPorts Error ... Checking");
@@ -333,21 +383,41 @@ void handleOutputError(){
   L2_LED_State = 0xFF;
   chip2.writePort(1,L2_LED_State);
   */
-  boolean recoveredFromError = false;
+  
 
-  for (int x = 0; x < 10; x++) {                      // Repeat ten times
-      if (checkOutputPorts()) Serial.print("E! ");    // Returns true on error
-      else {
+  for (int x = 0; x < 10; x++) {
+    boolean errorFound = false;
+    if (L1_Position  != chip0.readPort(0)) {
+      errorFound = true;
+      chip0.writePort(0,L1_Position);
+    }
+    if (L1_LED_State != chip0.readPort(1)) {
+      errorFound = true;
+      chip0.writePort(1,L1_LED_State);
+    }
+    if (pumpState    != chip1.readPort(1)) {
+      errorFound = true;
+      chip1.writePort(1,pumpState);
+    }
+    if (L2_Position  != chip2.readPort(0)) {
+      errorFound = true;
+      chip2.writePort(0,L2_Position);
+    }
+    if (L2_LED_State != chip2.readPort(1)) {
+      errorFound = true;
+      chip2.writePort(1,L2_LED_State);
+    }
+    if (errorFound) Serial.print("O! ");    // Returns true on error
+    else {
         recoveredFromError = true;
         break;
       }
-      delay(10);
-    }
-    if (!recoveredFromError) {
+  }
+  if (!recoveredFromError) {
       Serial.println();
       Serial.println("Ending Session Because of Output Errors");
       endSession();
-    } 
+  } 
 }
 
 void reportOutputErrors() {
@@ -500,6 +570,7 @@ void handleInstruction()
                             else Serial.println("Output Ports OK");
      else if (code1 == "C") checkOutputsEachSecond = true;
      else if (code1 == "c") checkOutputsEachSecond = false;
+     else if (code1 == "!") disableOutputs();
     }
 }
 
