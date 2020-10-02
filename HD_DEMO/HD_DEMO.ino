@@ -14,7 +14,8 @@
  *    reportOutputErrors() - Show the ports with errors.
  *    handleOutputError() - retry a few times then abort. 
  *    
- *    
+ *    October 1, 2020
+ *    checkOutput
  *    
  * 
  * Tick:
@@ -89,7 +90,6 @@ byte maxQueueRecs = 0;
 String instruction;
 boolean sessionRunning = false;
 boolean sendTimeStamp = false;
-boolean checkOutputsEachSecond = false;
 long startTime;
 int inputErrors = 0;
 int outputErrors = 0;
@@ -173,6 +173,21 @@ void configureChips() {
   }
 }
 
+boolean resetAndRecover() {
+  boolean recovered = false;
+  chip0.begin();
+  chip1.begin();
+  chip2.begin();
+  chip3.begin();
+  configureChips();
+  chip0.writePort(0,L1_Position);  
+  chip0.writePort(1,L1_LED_State);         
+  chip2.writePort(0,L2_Position);
+  chip2.writePort(1,L2_LED_State); 
+  if (!checkOutputPorts()) recovered = true; // no error found.
+  return recovered;
+}
+
 void showMenu () {
   Serial.println ("HD_Demo.ino.");
   Serial.println ("<m> - Show this Menu");
@@ -186,11 +201,8 @@ void showMenu () {
   Serial.println ("<D> - showDiagnosticData()");
   Serial.println ("<R> - showPorts()");
   Serial.println ("<O> - checkOutputPorts()");
-  Serial.println ("<C> - checkOutputPorts every second");
-  Serial.println ("<c> - don't checkOutputPorts every second");
+  Serial.println ("<X> - resetAndRecover()");
   Serial.println ("<!> - disableOutputs()");
-
-
 }
 
 
@@ -210,7 +222,6 @@ void disableOutputs() {
 
 void startSession() {
   configureChips();
-  checkOutputsEachSecond = false;
   inputErrors = 0;
   outputErrors = 0;
   L1_responses = 0;
@@ -348,7 +359,7 @@ void handleInputError(byte leverNum, byte portValue) {
         chip1.pinMode(i,INPUT_PULLUP);          
         chip3.pinMode(i,INPUT_PULLUP);          
       }
-      if (chip3.readPort(0) == 255 && chip3.readPort(0) == 255) {
+      if (chip1.readPort(0) == 255 && chip3.readPort(0) == 255) {
          Serial.println("Recovered from InputError");
       }
       else {      
@@ -383,8 +394,6 @@ void handleOutputError(){
   L2_LED_State = 0xFF;
   chip2.writePort(1,L2_LED_State);
   */
-  
-
   for (int x = 0; x < 10; x++) {
     boolean errorFound = false;
     if (L1_Position  != chip0.readPort(0)) {
@@ -414,6 +423,13 @@ void handleOutputError(){
       }
   }
   if (!recoveredFromError) {
+      Serial.println();
+      Serial.println("Attempting to reset output chips");
+      
+
+      
+
+    
       Serial.println();
       Serial.println("Ending Session Because of Output Errors");
       endSession();
@@ -566,12 +582,16 @@ void handleInstruction()
      else if (code1 == "H") handleInputError(2,portTwoValue);
      else if (code1 == "D") showDiagnosticData();
      else if (code1 == "R") showPorts();
-     else if (code1 == "O") if (checkOutputPorts()) handleOutputError();
-                            else Serial.println("Output Ports OK");
-     else if (code1 == "C") checkOutputsEachSecond = true;
-     else if (code1 == "c") checkOutputsEachSecond = false;
+     else if (code1 == "O") {
+          if (checkOutputPorts()) handleOutputError();
+          else Serial.println("Output Ports OK");
+          }
+     else if (code1 == "X") {
+          if (resetAndRecover()) Serial.println ("Reset and Recovery successful");
+          else Serial.println ("Reset and Recovery failed");
+          }                             
      else if (code1 == "!") disableOutputs();
-    }
+   }
 }
 
 void getSerialInstruction()
@@ -592,9 +612,7 @@ void tick() {
       tickCounts = 0;
       if (sessionRunning) {
         digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-        if (checkOutputsEachSecond) {
-          if (checkOutputPorts()) handleOutputError();;
-        }
+        if (checkOutputPorts()) handleOutputError();;
       }
    }
    if (sessionRunning) {
