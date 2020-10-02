@@ -174,6 +174,7 @@ void configureChips() {
 }
 
 boolean resetAndRecover() {
+  // Returns true if reset and no output errors detected
   boolean recovered = false;
   chip0.begin();
   chip1.begin();
@@ -349,29 +350,24 @@ void handleInputError(byte leverNum, byte portValue) {
     if (_portValue == 0) Serial.print("I! ");         // Still has error
     else {
         recoveredFromError = true;
+        Serial.println(" ... recovered after "+String(x+1)+" attempt(s)");
         break;
     }
   }
   if (!recoveredFromError) {
       Serial.println();
-      Serial.println("Trying to reconfigure Input Ports");
-      for (uint8_t i = 0; i <= 7; i++)  {
-        chip1.pinMode(i,INPUT_PULLUP);          
-        chip3.pinMode(i,INPUT_PULLUP);          
-      }
-      if (chip1.readPort(0) == 255 && chip3.readPort(0) == 255) {
-         Serial.println("Recovered from InputError");
+      Serial.print("Trying to Reset Chips ... ");
+      if (resetAndRecover()) Serial.println ("Reset");
+      else Serial.println ("Failed on Output Error");
+      if (chip1.readPort(0) != 0 && chip3.readPort(0) != 0) {
+         Serial.println("Recovered from Input Error");
       }
       else {      
         Serial.println();
         Serial.println("Ending Session Because of Input Errors");
         endSession();
       }
-  }
-  else {
-      Serial.println();
-      Serial.println("Recovered from InputError");
-  }    
+  }   
 }
 
 void handleOutputError(){
@@ -424,16 +420,14 @@ void handleOutputError(){
   }
   if (!recoveredFromError) {
       Serial.println();
-      Serial.println("Attempting to reset output chips");
-      
-
-      
-
-    
-      Serial.println();
-      Serial.println("Ending Session Because of Output Errors");
-      endSession();
-  } 
+      Serial.print("Attempting to reset output chips ... ");
+      if (resetAndRecover()) Serial.println ("successful");
+      else {
+        Serial.println ("failed");
+        Serial.println("Ending Session Because of Output Errors");
+        endSession();
+      } 
+  }
 }
 
 void reportOutputErrors() {
