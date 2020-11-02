@@ -1,6 +1,6 @@
 
 /*
- * November 1
+ * November 1 - Version 1.0.1
  * 
  * Priority:
  *    1. Detect and report... OK but needs Steven to break it.
@@ -319,7 +319,7 @@ void setup() {
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB
   }
-  Serial.println("Starting HD_Demo");
+  Serial.println("Starting HD_Demo Version 1.0.1");
   chip0.begin();
   chip1.begin();
   chip2.begin();
