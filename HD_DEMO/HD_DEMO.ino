@@ -1,21 +1,18 @@
 
 /*
- * Septemeber 
+ * November 1
  * 
  * Priority:
  *    1. Detect and report... OK but needs Steven to break it.
  *    2. Try to recover with a function
  *    3. Integrate recovery of inputPorts with tick function so that timing of pumps etc
  *    can be maintaied.
- *    4. If all else fails, which output ports to inputs which would (presumably) turn off pumps etc.
+ *    4. If all else fails, switch output ports to inputs which would (presumably) turn off pumps etc.
  *    
  *    showPorts() - Show all ports. No error checking 
  *    checkOutputPorts() - Compare registers. Print Errors, No recovery attempted.
  *    reportOutputErrors() - Show the ports with errors.
  *    handleOutputError() - retry a few times then abort. 
- *    
- *    October 1, 2020
- *    checkOutput
  *    
  * 
  * Tick:
@@ -92,7 +89,9 @@ boolean sessionRunning = false;
 boolean sendTimeStamp = false;
 long startTime;
 int inputErrors = 0;
+int inputRecoveries = 0;
 int outputErrors = 0;
+int outputRecoveries = 0;
 int L1_responses = 0;
 int L2_responses = 0;  
 
@@ -203,12 +202,10 @@ void showMenu () {
   Serial.println ("<R> - showPorts()");
   Serial.println ("<O> - checkOutputPorts()");
   Serial.println ("<X> - resetAndRecover()");
-  Serial.println ("<!> - disableOutputs()");
 }
 
-
 void disableOutputs() {
-  Serial.println("Disabling Outputs and ending Session");
+  Serial.println("Disabling Outputs");
   for (uint8_t i = 0; i <= 15; i++) {
       chip0.pinMode(i,INPUT);             // Set chip0 to OUTPUT
       chip2.pinMode(i,INPUT);             // Set chip2 to OUTPUT
@@ -217,14 +214,14 @@ void disableOutputs() {
      chip1.pinMode(i, INPUT);               
      chip3.pinMode(i, INPUT);               
   }
-  endSession();
 }
-
 
 void startSession() {
   configureChips();
   inputErrors = 0;
+  inputRecoveries = 0;
   outputErrors = 0;
+  outputRecoveries = 0;
   L1_responses = 0;
   L2_responses = 0; 
   startTime = millis();
@@ -267,7 +264,9 @@ void endSession() {
   chip3.writePort(1,0xFF);           // Aux Off
   digitalWrite(LED_BUILTIN, LOW);   
   sessionRunning = false;
-  Serial.println("Session Ended");  
+  Serial.println("Session Ended");
+  disableOutputs();  
+  showDiagnosticData(); 
 }
 
 String binString (byte c) {
@@ -288,8 +287,8 @@ void showDiagnosticData() {
   Serial.println ("***** Diagnostic Data *****");
   Serial.print ("Min and Max Deltas in microSec: "); 
   Serial.println (String(minDelta)+" "+String(maxDelta));
-  Serial.println ("inputErrors = "+String(inputErrors));
-  Serial.println ("outputErrors = "+String(outputErrors));
+  Serial.println ("inputErrors / inputRecoveries = "+String(inputErrors)+" "+String(inputRecoveries));
+  Serial.println ("outputErrors / outputRecoveries = "+String(outputErrors)+" "+String(inputRecoveries)); 
   Serial.println ("L1 responses = "+String(L1_responses));
   Serial.println ("L2 responses = "+String(L2_responses));
   minDelta = 1000;
@@ -335,6 +334,7 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);
   showMenu();
 }
+
 void handleInputError(byte leverNum, byte portValue) {
   boolean recoveredFromError = false;   
   byte _portValue; 
@@ -350,6 +350,7 @@ void handleInputError(byte leverNum, byte portValue) {
     if (_portValue == 0) Serial.print("I! ");         // Still has error
     else {
         recoveredFromError = true;
+        inputRecoveries++;
         Serial.println(" ... recovered after "+String(x+1)+" attempt(s)");
         break;
     }
@@ -360,7 +361,8 @@ void handleInputError(byte leverNum, byte portValue) {
       if (resetAndRecover()) Serial.println ("Reset");
       else Serial.println ("Failed on Output Error");
       if (chip1.readPort(0) != 0 && chip3.readPort(0) != 0) {
-         Serial.println("Recovered from Input Error");
+         Serial.println("Recovered from Input Error after resetAndRecover()");
+         inputRecoveries++;
       }
       else {      
         Serial.println();
@@ -424,7 +426,7 @@ void handleOutputError(){
       if (resetAndRecover()) Serial.println ("successful");
       else {
         Serial.println ("failed");
-        Serial.println("Ending Session Because of Output Errors");
+        Serial.println("Ending Session because of Output Errors");
         endSession();
       } 
   }
@@ -584,7 +586,6 @@ void handleInstruction()
           if (resetAndRecover()) Serial.println ("Reset and Recovery successful");
           else Serial.println ("Reset and Recovery failed");
           }                             
-     else if (code1 == "!") disableOutputs();
    }
 }
 
@@ -599,10 +600,11 @@ void getSerialInstruction()
       else instruction += aChar;
     }
 }
+
 void tick() {
    static long tickCounts = 0;
    tickCounts++;
-   if (tickCounts >= 100) {     // every seconds   
+   if (tickCounts >= 100) {     // each second   
       tickCounts = 0;
       if (sessionRunning) {
         digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
