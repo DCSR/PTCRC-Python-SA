@@ -1,66 +1,25 @@
 
 /*
- * November 1 - Version 1.0.1
+ * HD_Demo.ino tests proof of principle for coupling input and output ports for Hold Down. 
  * 
- * Priority:
- *    1. Detect and report... OK but needs Steven to break it.
- *    2. Try to recover with a function
- *    3. Integrate recovery of inputPorts with tick function so that timing of pumps etc
- *    can be maintaied.
- *    4. If all else fails, switch output ports to inputs which would (presumably) turn off pumps etc.
- *    
- *    showPorts() - Show all ports. No error checking 
- *    checkOutputPorts() - Compare registers. Print Errors, No recovery attempted.
- *    reportOutputErrors() - Show the ports with errors.
- *    handleOutputError() - retry a few times then abort. 
- *    
- * 
- * Tick:
- *    checkInputPort1() -> handleInputError(1)
-      checkInputPort2() -> handleInputError(2)
-      checkOutputPorts() -> handleOutputError(printStuff)
-        check and report errors
-        and shut stuff down if necessary
-
-        Time how long that would take each cycle - assuming no errors.
-
-        Would it be possible to get a false positve error due to I2C and speed of the port expander chip?
-        
- * 
- * 
- * 
- * 
- * 
- * 
- * everythingOff() deleted
- * 
- * checkInputPort2() 
- *    - No longer detects diffs
- *    - checks outputs
- *    - timing = 
- *    
- * 
- * 
- * 
- * To Do: showBits(c) might be replaced with Serial.println(c,BIN);
- * 
- * This tests proof of principle for coupling input and output ports for Hold Down. 
- * 
- * It is adapted from a sketch in Arduino forum:
+ * The code for the port expanders is adapted from a sketch in Arduino forum:
  * http://arduino.stackexchange.com/questions/28488/arduino-mcp23s17-i-o-expander-spi
  * Uses library from: github.com/MajenkoLibraries/MCP23S17
  * 
  * Note that there are new versions in the MajenkoLibraries
  * 
- * chip0.writePort(0xFFFF);        sets all 16 pins HIGH
- * chip1.writePort(1,0xFF);        sets all 8 pins on Port 1 HIGH
- * chip0.digitalWrite(pinNum,1);   sets pin HIGH
+ * Version 1.0.2
+ * 
  * 
  */
 
 #include <cppQueue.h>
-#include <SPI.h>        // Arduino Library SPI.h
-#include "MCP23S17.h"   // Majenko MCP23S17 library
+#include <SPI.h>               // Arduino Library SPI.h
+#include "MCP23S17.h"          // Majenko MCP23S17 library
+
+String thisVersion = "1.0.2";  // Reported in setup()
+boolean Verbose = true;
+boolean sendTimeStamp = false;
 
 const uint8_t chipSelect = 10;  
 MCP23S17 chip0(chipSelect, 0); // L1 retract map to pins 0..7; L1 LEDs map to pins 8..15 
@@ -75,10 +34,10 @@ byte portOneValue = 255, portTwoValue = 255, oldPortTwoValue = 255;
 byte L1_Position = 0xFF;
 byte L1_LED_State = 0xFF;      
 byte pumpState = 0x00; 
-byte pumpStateL1 = 0x00;
-byte pumpStateL2 = 0x00;
-byte L2_Position = 0xFF;
-byte L2_LED_State = 0xFF; 
+byte pumpStateL1 = 0x00;        // Determined by lever 1
+byte pumpStateL2 = 0x00;        // Determined by lever 2 (HD)
+byte L2_Position = 0xFF;        // Retracted
+byte L2_LED_State = 0xFF;       // Off
 
 long micro1, micro2;
 long minDelta = 1000;
@@ -86,7 +45,6 @@ long maxDelta = 0;
 byte maxQueueRecs = 0;
 String instruction;
 boolean sessionRunning = false;
-boolean sendTimeStamp = false;
 long startTime;
 int inputErrors = 0;
 int inputRecoveries = 0;
@@ -107,6 +65,9 @@ typedef struct tagTStamp {
 
 Queue printQueue(sizeof(TStamp), 60, FIFO); // Instantiate printQueue, First In First Out
   // Note: maximum in the queue was 40 when quitting all eight boxes at once (w/o a delay)
+
+boolean lastLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
+boolean newLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 
 // ********** 10 mSec Interrupt Timer ***************** 
 
@@ -145,7 +106,6 @@ void init_10_mSec_Timer() {
 }
 //************************* End Timer stuff ***********************************************
 
-
 void TC4_Handler()                                // Interrupt Service Routine (ISR) for timer TC4
 {     
   // Check for overflow (OVF) interrupt
@@ -155,37 +115,30 @@ void TC4_Handler()                                // Interrupt Service Routine (
   }
 }
 
-// ******************************************************
+// ****************************************************************************************
 
-void configureChips() {
+void resetChips() {
+   chip0.begin();
+   chip1.begin();
+   chip2.begin();
+   chip3.begin();
+   if (Verbose) Serial.println("Resetting Port Expander Chips");
    for (uint8_t i = 0; i <= 15; i++) {
       chip0.pinMode(i,OUTPUT);             // Set chip0 to OUTPUT
       chip2.pinMode(i,OUTPUT);             // Set chip2 to OUTPUT
-  }
-  for (uint8_t i = 0; i <= 7; i++)  {
-     chip1.pinMode(i,INPUT_PULLUP);          
-     chip3.pinMode(i,INPUT_PULLUP);          
-  }
-  for (uint8_t i = 8; i <= 15; i++) {
-     chip1.pinMode(i, OUTPUT);               
-     chip3.pinMode(i, OUTPUT);               
-  }
-}
-
-boolean resetAndRecover() {
-  // Returns true if reset and no output errors detected
-  boolean recovered = false;
-  chip0.begin();
-  chip1.begin();
-  chip2.begin();
-  chip3.begin();
-  configureChips();
-  chip0.writePort(0,L1_Position);  
-  chip0.writePort(1,L1_LED_State);         
-  chip2.writePort(0,L2_Position);
-  chip2.writePort(1,L2_LED_State); 
-  if (!checkOutputPorts()) recovered = true; // no error found.
-  return recovered;
+   }
+   for (uint8_t i = 0; i <= 7; i++)  {
+      chip1.pinMode(i,INPUT_PULLUP);          
+      chip3.pinMode(i,INPUT_PULLUP);          
+   }
+   for (uint8_t i = 8; i <= 15; i++) {
+      chip1.pinMode(i, OUTPUT);               
+      chip3.pinMode(i, OUTPUT);               
+   }
+   chip0.writePort(0,L1_Position);         // To whatever state has previously been assigned
+   chip0.writePort(1,L1_LED_State);         
+   chip2.writePort(0,L2_Position);
+   chip2.writePort(1,L2_LED_State); 
 }
 
 void showMenu () {
@@ -201,54 +154,13 @@ void showMenu () {
   Serial.println ("<D> - showDiagnosticData()");
   Serial.println ("<R> - showPorts()");
   Serial.println ("<O> - checkOutputPorts()");
-  Serial.println ("<X> - resetAndRecover()");
+  Serial.println ("<X> - resetChips()");
 }
 
 void disableOutputs() {
-  Serial.println("Disabling Outputs");
-  for (uint8_t i = 0; i <= 15; i++) {
-      chip0.pinMode(i,INPUT);             // Set chip0 to OUTPUT
-      chip2.pinMode(i,INPUT);             // Set chip2 to OUTPUT
-  }
-  for (uint8_t i = 8; i <= 15; i++) {
-     chip1.pinMode(i, INPUT);               
-     chip3.pinMode(i, INPUT);               
-  }
-}
-
-void startSession() {
-  configureChips();
-  inputErrors = 0;
-  inputRecoveries = 0;
-  outputErrors = 0;
-  outputRecoveries = 0;
-  L1_responses = 0;
-  L2_responses = 0; 
-  startTime = millis();
-  Serial.println("Starting Session");
-  L1_Position = 0x00;              // Extend L1
-  chip0.writePort(0,L1_Position);  
-  L1_LED_State = 0xFF;             // L1 LED Off
-  chip0.writePort(1,L1_LED_State);         
-  L2_Position = 0x00;              // Extend L2
-  chip2.writePort(0,L2_Position);
-  L2_LED_State = 0xFF;             // L2 LED Off
-  chip2.writePort(1,L2_LED_State); 
-  digitalWrite(LED_BUILTIN, HIGH);    
-
-  if (checkOutputPorts()) {
-    Serial.println("*********** Failed on OutPutError **************");
-    reportOutputErrors();
-    Serial.println("*** Try Restarting Feather and Circuit Board *** ");
-    endSession();
-  }
-  else {
-    Serial.println("... Started");
-    sessionRunning = true;
-  }
-}
-
-void endSession() {
+  if (Verbose) Serial.println("Disabling Outputs");
+   
+  // ***** Switch all output ports OFF *****
   L1_Position = 0xFF;              // Retract L1
   chip0.writePort(0,L1_Position);  
   L1_LED_State = 0xFF;             // L1 LED Off
@@ -262,10 +174,62 @@ void endSession() {
   pumpStateL2 = 0x00;
   chip1.writePort(1,pumpState);      // Pumps Off
   chip3.writePort(1,0xFF);           // Aux Off
+
+  // ***** Configure all output ports to inputs *****  
+
+  for (uint8_t i = 0; i <= 15; i++) {
+      chip0.pinMode(i,INPUT);             // Set chip0 to OUTPUT
+      chip2.pinMode(i,INPUT);             // Set chip2 to OUTPUT
+  }
+  for (uint8_t i = 8; i <= 15; i++) {
+     chip1.pinMode(i, INPUT);               
+     chip3.pinMode(i, INPUT);               
+  }
+}
+
+void startSession() {
+  startTime = millis();
+  if (Verbose) Serial.println("Starting Session");
+  if (sendTimeStamp) {
+     TStamp tStamp = {0, 'G', millis() - startTime, 0, 9}; 
+     printQueue.push(&tStamp); 
+  }
+   L1_Position = 0x00;              // Extend L1
+   L1_LED_State = 0xFF;             // L1 LED Off       
+   L2_Position = 0x00;              // Extend L2
+   L2_LED_State = 0xFF;             // L2 LED Off    
+   pumpState = 0x00; 
+   pumpStateL1 = 0x00;
+   pumpStateL2 = 0x00;
+   resetChips(); 
+   inputErrors = 0;
+   inputRecoveries = 0;
+   outputErrors = 0;
+   outputRecoveries = 0;
+   L1_responses = 0;
+   L2_responses = 0; 
+   digitalWrite(LED_BUILTIN, HIGH);    
+   if (checkOutputPorts()) {
+     Serial.println("*********** Failed on OutPutError **************");
+     reportOutputErrors();
+     Serial.println("*** Try Restarting Feather and Circuit Board ***");
+     endSession();
+   }
+   else {
+     if (Verbose) Serial.print("... Started");
+     sessionRunning = true;
+   }
+}
+
+void endSession() {
+  disableOutputs(); 
   digitalWrite(LED_BUILTIN, LOW);   
   sessionRunning = false;
-  Serial.println("Session Ended");
-  disableOutputs();  
+  if (sendTimeStamp) {
+     TStamp tStamp = {0, 'E', millis() - startTime, 0, 9}; 
+     printQueue.push(&tStamp); 
+  }
+  if (Verbose) Serial.println("Session Ended"); 
   showDiagnosticData(); 
 }
 
@@ -291,6 +255,7 @@ void showDiagnosticData() {
   Serial.println ("outputErrors / outputRecoveries = "+String(outputErrors)+" "+String(inputRecoveries)); 
   Serial.println ("L1 responses = "+String(L1_responses));
   Serial.println ("L2 responses = "+String(L2_responses));
+  Serial.println ("Max timeStamps in Queue = "+String(maxQueueRecs));
   minDelta = 1000;
   maxDelta = 0;
 }
@@ -319,20 +284,28 @@ void setup() {
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB
   }
-  Serial.println("Starting HD_Demo Version 1.0.1");
+  if (Verbose) Serial.println("Starting HD_Demo Version " + thisVersion);
+  if (Verbose) Serial.println("Initializing chips as input only");
   chip0.begin();
   chip1.begin();
   chip2.begin();
   chip3.begin();
-  configureChips();
-  endSession();  // everything off
-    
+  for (uint8_t i = 0; i <= 15; i++) {
+      chip0.pinMode(i,INPUT);             
+      chip2.pinMode(i,INPUT);             
+  }
+  for (uint8_t i = 8; i <= 15; i++) {
+     chip1.pinMode(i, INPUT);               
+     chip3.pinMode(i, INPUT);               
+  }
+   
   init_10_mSec_Timer();
   portOneValue = chip1.readPort(0);          
   portTwoValue = chip3.readPort(0);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
   showMenu();
+  if (Verbose) Serial.println("Waiting for <G> to start session");
 }
 
 void handleInputError(byte leverNum, byte portValue) {
@@ -341,27 +314,25 @@ void handleInputError(byte leverNum, byte portValue) {
 
   inputErrors++;
   // Print the error that got us here.
-  Serial.print (String(millis()-startTime)+" I! Port ");
-  Serial.print (String(leverNum)+" "+binString(portValue)); 
+  if (Verbose) Serial.print (String(millis()-startTime)+" I! Port ");
+  if (Verbose) Serial.print (String(leverNum)+" "+binString(portValue)); 
 
-  for (int x = 0; x < 10; x++) {
+  for (int x = 0; x < 10; x++) {                      // Try ten times
     if (leverNum == 1) _portValue = chip1.readPort(0);
     else _portValue = chip3.readPort(0);
-    if (_portValue == 0) Serial.print("I! ");         // Still has error
+    if (_portValue == 0) Serial.print("! ");         // Still has error
     else {
         recoveredFromError = true;
         inputRecoveries++;
-        Serial.println(" ... recovered after "+String(x+1)+" attempt(s)");
+        if (Verbose) Serial.println(" ... recovered after "+String(x+1)+" attempt(s)");
         break;
     }
-  }
+  }                                                  // If error after 10 tries 
   if (!recoveredFromError) {
       Serial.println();
-      Serial.print("Trying to Reset Chips ... ");
-      if (resetAndRecover()) Serial.println ("Reset");
-      else Serial.println ("Failed on Output Error");
+      resetChips(); 
       if (chip1.readPort(0) != 0 && chip3.readPort(0) != 0) {
-         Serial.println("Recovered from Input Error after resetAndRecover()");
+         if (Verbose) Serial.println("Recovered from Input Error after chip reset");
          inputRecoveries++;
       }
       else {      
@@ -380,18 +351,9 @@ void handleOutputError(){
   boolean recoveredFromError = false;
   
   outputErrors++;
-  Serial.println("OutputPorts Error ... Checking");
+  if (Verbose) Serial.println("OutputPorts Error ... Checking");
   reportOutputErrors();
       
-  /* Reset Pumps - an abundance of caution. Nothing else will happen while in this loop
-  pumpState = 0x00; 
-  pumpStateL1 = 0x00;
-  pumpStateL2 = 0x00;
-  chip1.writePort(1,pumpState);
-  // Reset L2_LED
-  L2_LED_State = 0xFF;
-  chip2.writePort(1,L2_LED_State);
-  */
   for (int x = 0; x < 10; x++) {
     boolean errorFound = false;
     if (L1_Position  != chip0.readPort(0)) {
@@ -414,20 +376,23 @@ void handleOutputError(){
       errorFound = true;
       chip2.writePort(1,L2_LED_State);
     }
-    if (errorFound) Serial.print("O! ");    // Returns true on error
+    if (errorFound) Serial.print(" ! ");    // Returns true on error
     else {
+       if (Verbose) Serial.println("Recovered from Output Error");  
         recoveredFromError = true;
         break;
       }
   }
   if (!recoveredFromError) {
       Serial.println();
-      Serial.print("Attempting to reset output chips ... ");
-      if (resetAndRecover()) Serial.println ("successful");
+      if (Verbose) Serial.println("Error persists ...");
+      resetChips();
+      if (checkOutputPorts()) {
+         Serial.println("Ending Session because of Output Errors");
+         endSession();        
+      }
       else {
-        Serial.println ("failed");
-        Serial.println("Ending Session because of Output Errors");
-        endSession();
+         Serial.println("Recovered from Output Error after reset");
       } 
   }
 }
@@ -476,15 +441,21 @@ boolean checkOutputPorts() {
 void checkInputPort1() { 
    static byte oldPortOneValue = 255; 
    portOneValue = chip1.readPort(0);
-   if (portTwoValue == 0) handleInputError(1,portOneValue);      // Input OR output Error
-   else {
-      if(portOneValue != oldPortOneValue) {
-         L1_responses++; 
-         Serial.print(millis());   
-         Serial.print(" L1: ");
-         Serial.println(portOneValue,BIN);
-         oldPortOneValue = portOneValue; 
-         // chip0.writePort(0,pinValues);
+   if (portOneValue == 0) handleInputError(1,portOneValue);      // Input OR output Error
+   else if(portOneValue != oldPortOneValue) {                    // something new
+      oldPortOneValue = portOneValue; 
+      for (byte i = 0; i < 8; i++) {
+         newLeverOneState[i] = bitRead(portOneValue,i);
+         if (newLeverOneState[i] != lastLeverOneState[i]) {          
+            lastLeverOneState[i] = newLeverOneState[i]; 
+            if (newLeverOneState[i] == 0) {
+               L1_responses++;
+               if (sendTimeStamp) {
+                  TStamp tStamp = {i, 'L', millis() - startTime, 0, 9};
+                  printQueue.push(&tStamp);  
+               }
+            }
+         }
       }
    }
 }
@@ -505,16 +476,16 @@ void checkInputPort2() {
             if ((portTwoValue & (1 << bits)) != (oldPortTwoValue & (1 << bits))) {
                // something happened on this bit.
                if (sendTimeStamp) {
-                   if (portTwoValue & (1 << bits)) {
-                      TStamp tStamp = {bits, 'h', millis(), 0, 1};
-                      printQueue.push(&tStamp);
-                      //Serial.println("HIGH "+String(bits));
-                   }
-                   else {
-                      TStamp tStamp = {bits, 'H', millis(), 1, 1};
-                      printQueue.push(&tStamp);
-                      // Serial.println("LOW "+String(bits));
-                   } 
+                  if (portTwoValue & (1 << bits)) {
+                     TStamp tStamp = {bits, 'h', millis() - startTime, 0, 1};
+                     printQueue.push(&tStamp);
+                     //Serial.println("HIGH "+String(bits));
+                  }
+                  else {
+                     TStamp tStamp = {bits, 'H', millis()- startTime, 1, 1};
+                     printQueue.push(&tStamp);
+                     // Serial.println("LOW "+String(bits));
+                  } 
                }        
             }
          }
@@ -536,7 +507,8 @@ void checkInputPort2() {
 
 void sendOneTimeStamp() {
    if (printQueue.isEmpty()==false) {
-      if (printQueue.nbRecs() > maxQueueRecs) maxQueueRecs = printQueue.nbRecs();
+      if (printQueue.nbRecs() > maxQueueRecs) maxQueueRecs = printQueue.nbRecs(); 
+      // maxQueueRecs is used in FeatherM0 to monitor the maximum size of the queue during a session.
       TStamp tStamp;
       printQueue.pull(&tStamp);
       if (tStamp.index == 9) {
@@ -575,6 +547,8 @@ void handleInstruction()
      else if (code1 == "p") bitClear(pumpStateL1,num);
      else if (code1 == "T") sendTimeStamp = true;
      else if (code1 == "t") sendTimeStamp = false;
+     else if (code1 == "V") Verbose = true;
+     else if (code1 == "v") Verbose = false;    
      else if (code1 == "H") handleInputError(2,portTwoValue);
      else if (code1 == "D") showDiagnosticData();
      else if (code1 == "R") showPorts();
@@ -583,8 +557,8 @@ void handleInstruction()
           else Serial.println("Output Ports OK");
           }
      else if (code1 == "X") {
-          if (resetAndRecover()) Serial.println ("Reset and Recovery successful");
-          else Serial.println ("Reset and Recovery failed");
+          resetChips(); 
+          if (checkOutputPorts()) handleOutputError();
           }                             
    }
 }
