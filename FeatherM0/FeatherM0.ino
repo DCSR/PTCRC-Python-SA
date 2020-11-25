@@ -1,6 +1,63 @@
 /*  
  *   
- *   Aug 18, 2020
+ *   Nov 23, 2020 
+ *   
+ *   Temp Diary
+ *   Configure outputs first. In order by chip number. 
+ *   
+ *   Major difference: 
+ *   -  Old way: bits were flipped using chip0.digitalWrite(bit,state) 
+ *   -  New way: flip bit in variable (eg. L1_Position) then chip0.writePort(0, L1_Position)
+ *   
+ *   Procedures rewritten:
+ *   Box::moveLeverOne(int state) 
+ *   Box::moveLeverTwo(int state)
+ *   
+ *   
+ *   Issues: 
+ *   Can Box object access port variables?
+ *   
+ *   replace turnStuffOff() with disableOutputs()  ????
+ *   
+ *   HD_DEMO.ino uses startSesssion() and endSession()
+ *   Here, _startSession is local to Box
+ *   -  Move stuff to startup() ?
+ *   
+ *   Rewrite every writePort() statement to incorporate  
+ *   byte L1_Position = 0xFF;
+ *   
+
+ *   
+ *   
+ *   
+ *   
+ *   byte L1_LED_State = 0xFF;      
+ *   byte pumpState = 0x00; 
+ *        bitSet(pumpStateL1,num); ON
+ *        bitClear(pumpStateL1, num) OFF
+ *   
+ *   byte pumpStateL1 = 0x00;        // Determined by lever 1
+ *   byte pumpStateL2 = 0x00;        // Determined by lever 2 (HD)
+ *   byte L2_Position = 0xFF;        // Retracted
+ *   byte L2_LED_State = 0xFF;       // Off
+ *   
+ *   
+ *   
+ *   
+ *   
+ *   Send System timestamps - eg. "!" input or output error
+ *   - Python should add it to every datafile.
+ *   - Raises issue of system time vs box time
+ *   
+ *   Println statements (if Verbose) need to be changed to some sort
+ *   of timestamp
+ *   
+ *   lastLeverTwoState and newLeverTwoState still needed? 
+ *   
+ *   rename "Verbose" - "verbose" is a reserved word
+ *   
+ *   To Do:
+ *   Clean up this mess. If necessary, move stuff to Documentation
  *   
  *   Added
  *   states { PRESTART, L1_ACTIVE, L1_TIMEOUT, IBI, L2_HD, FINISHED };
@@ -195,11 +252,30 @@ MCP23S17 chip1(chipSelect, 1);
 MCP23S17 chip2(chipSelect, 2);    
 MCP23S17 chip3(chipSelect, 3); 
 
+byte portOneValue = 255, portTwoValue = 255;
+
+// Variables needed for error detection - from HD_DEMO.ino
+// The following variables are used to track the state of each output port
+
+boolean Verbose = true;   // note that "verbose" (small v) is a reserved word
+
+// Output Ports Values
+byte L1_Position = 0xFF;
+byte L1_LED_State = 0xFF;      
+byte pumpState = 0x00; 
+byte pumpStateL1 = 0x00;        // Determined by lever 1
+byte pumpStateL2 = 0x00;        // Determined by lever 2 (HD)
+byte L2_Position = 0xFF;        // Retracted
+byte L2_LED_State = 0xFF;       // Off
+int inputErrors = 0;
+int inputRecoveries = 0;
+int outputErrors = 0;
+int outputRecoveries = 0;
+
 boolean sysVarArray[8] = {false,false,false,false,false,false,false,false};
 // sysVarArray[0] used for reward type; 0 = Drug, 1 = Food
 // sysVarArray[1] used for logic type: 0 = 5VDC switches On, 1 = GND switches On
 // sysVarArray[2] used for leverTwoExists
-
 
 #define On true
 #define Off false
@@ -223,7 +299,6 @@ Queue printQueue(sizeof(TStamp), 60, FIFO); // Instantiate printQueue, First In 
 
 const uint8_t ledPin = 5;
 extern "C" char *sbrk(int i);   // used in FreeRam()
-byte portOneValue, portTwoValue;
 String instruction;
 
 boolean lastLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
@@ -265,10 +340,10 @@ class Box  {
     void setProtocolNum(int protocalNum);
     void switchRewardPortOn(boolean timed);
     void switchRewardPortOff();
+    void moveLeverOne(int state);    
+    void moveLeverTwo(int state);    
     void switchStim1(boolean state);
     void switchStim2(boolean state);
-    void moveLeverOne(int state);    
-    void moveLeverTwo(int state);
     void setrewardDuration(int rewardDuration);
     void setParamNum(int paramNum);
     void setBlockDuration(int blockDuration); 
@@ -507,64 +582,93 @@ void Box::switchRewardPortOff() {
     // The Pump CheckBox is index 2 
 }
 
-void Box::switchStim1(boolean state) {
-    boolean level;
-    level = !state;                        // On = true -> level goes low 
-    chip0.digitalWrite(_boxNum+8,level);   // boxNum 0..7 maps to pin 8..15 on chip0
-    // HIGH = OFF
-    if (state) {
-          TStamp tStamp = {_boxNum, 'S', millis() - _startTime, 1, 3};
-          printQueue.push(&tStamp);
-    }
-    else {
-          TStamp tStamp = {_boxNum, 's', millis() - _startTime, 0, 3};
-          printQueue.push(&tStamp);
-    }
-    // StimCheckBox is index 3     
-}
-
-void Box::switchStim2(boolean state) {
-    boolean level;
-    level = !state;                        // On = true -> level goes low    
-    chip2.digitalWrite(_boxNum+8,level);   // boxNum 0..7  maps to pin 8..15 on chip2
-    // HIGH = OFF
-    if (state) {
-          TStamp tStamp = {_boxNum, 'C', millis() - _startTime, 1, 4};
-          printQueue.push(&tStamp);
-    }
-    else {
-          TStamp tStamp = {_boxNum, 'c', millis() - _startTime, 0, 4};
-          printQueue.push(&tStamp);
-    }
-    // StimCheckBox is index 4     
+void Box::moveLeverOne(int state) { 
+   /*  chip0, pins 0..7 map to boxNum 0..7 to extend/retract Lever 1
+    *  Lever1 (active) CheckBox is index 0
+    *   Previous version: chip0.digitalWrite(_boxNum,state);
+    *   Revision: set bit in L1_Position then chip0.writePort(0,L1_Position);
+    */
+   
+   if (state == Extend) {                 // Defined HIGH = Retract = 1 
+      bitSet(L1_Position,_boxNum);   
+      TStamp tStamp = {_boxNum, '.', millis() - _startTime, 0, 0};
+      printQueue.push(&tStamp); 
+   }
+   else {                              // Defined LOW = Extend = 0
+      bitSet(L1_Position,_boxNum);
+      TStamp tStamp = {_boxNum, '=', millis() - _startTime, 1, 0};
+      printQueue.push(&tStamp);
+   }
+   chip0.writePort(0,L1_Position); 
 }
 
 void Box::moveLeverTwo(int state) {
-  chip2.digitalWrite(_boxNum,state);  // Extend inactove lever (L2)
-  if (state == Extend) {
-    TStamp tStamp = {_boxNum, '~', millis() - _startTime, 1, 1};
-    printQueue.push(&tStamp);    
-  }
-  else {
-    TStamp tStamp = {_boxNum, ',', millis() - _startTime, 0, 1};
-    printQueue.push(&tStamp);
-  }
+   /*   chip2, pins 0..7 map to boxNum 0..7 to extend/retract Lever 2
+    *   Lever2 (HD) CheckBox is index 1
+    *   Previous version: chip2.digitalWrite(_boxNum,state);
+    *   Revision: set bit in L2_Position then chip2.writePort(0,L2_Position);
+    */
+
+   if (state == Extend) {                    // Defined HIGH = Retract = 1
+      bitSet(L2_Position,_boxNum);
+      TStamp tStamp = {_boxNum, '~', millis() - _startTime, 1, 1};
+      printQueue.push(&tStamp);    
+   }
+   else {
+      bitSet(L2_Position,_boxNum);
+      TStamp tStamp = {_boxNum, ',', millis() - _startTime, 0, 1};
+      printQueue.push(&tStamp);
+   }
+   chip2.writePort(0,L2_Position);
 }
 
-void Box::moveLeverOne(int state) {          // boxNum 0..7  maps to pin 0..7 on chip0
-    chip0.digitalWrite(_boxNum,state);
-    // HIGH = Retract; LOW = Extend
-    if (state) {
-           TStamp tStamp = {_boxNum, '.', millis() - _startTime, 0, 0};
-           printQueue.push(&tStamp); 
-    }
-    else {
-          TStamp tStamp = {_boxNum, '=', millis() - _startTime, 1, 0};
+void Box::switchStim1(boolean state) {
+   /*   chip0, pins 8..15 map to boxNum 0..7 Lever 1 LED
+    *   L1 LED CheckBox is index 3
+    *   Defined On = true; Off = false
+    */
+
+    // Junk
+    // boolean level;
+    // level = !state;                        // Defined On = true -> level goes low 
+    // chip0.digitalWrite(_boxNum+8,level);   // boxNum 0..7 maps to pin 8..15 on chip0
+
+    if (state == On) {                        // Defined On = true = 1
+          bitClear(L1_LED_State,_boxNum);     // LED is on when bit = 0 
+          TStamp tStamp = {_boxNum, 'S', millis() - _startTime, 1, 3};
           printQueue.push(&tStamp);
     }
-    // Lever1 (active) CheckBox is index 0 
+    else {                                    // Defined Off = false = 0
+          bitSet(L1_LED_State,_boxNum);       // LED os off when bit is 1
+          TStamp tStamp = {_boxNum, 's', millis() - _startTime, 0, 3};
+          printQueue.push(&tStamp);
+    }
+    chip0.writePort(1,L1_LED_State); 
 }
 
+void Box::switchStim2(boolean state) {
+   /*   chip2, pins 8..15 map to boxNum 0..7 Lever 2 LED
+    *   L2 LED CheckBox is index 4
+    *   Defined On = true; Off = false
+    */
+    
+    // Junk
+    // boolean level;
+    // level = !state;                        // On = true -> level goes low    
+    // chip2.digitalWrite(_boxNum+8,level);   // boxNum 0..7  maps to pin 8..15 on chip2
+
+   if (state == On) {                        // Defined On = true = 1
+      bitClear(L2_LED_State,_boxNum);        // LED is on when bit = 0
+      TStamp tStamp = {_boxNum, 'C', millis() - _startTime, 1, 4};
+      printQueue.push(&tStamp);
+   }
+   else {                                   // Defined Off = false = 0
+      bitSet(L2_LED_State,_boxNum);       // LED os off when bit is 1
+      TStamp tStamp = {_boxNum, 'c', millis() - _startTime, 0, 4};
+      printQueue.push(&tStamp);
+   }
+   chip2.writePort(1,L2_LED_State);
+}
 
 void Box::startSession() {
   // Python protocol list:  
@@ -917,6 +1021,61 @@ void TC4_Handler()                                // Interrupt Service Routine (
 }
 // **************************  End Timer stuff ****************************
 
+void resetChips() {
+   chip0.begin();
+   chip1.begin();
+   chip2.begin();
+   chip3.begin();
+   if (Verbose) Serial.println("Resetting Port Expander Chips");
+   for (uint8_t i = 0; i <= 15; i++) {
+      chip0.pinMode(i,OUTPUT);             // Set chip0 to OUTPUT
+      chip2.pinMode(i,OUTPUT);             // Set chip2 to OUTPUT
+   }
+   for (uint8_t i = 0; i <= 7; i++)  {
+      chip1.pinMode(i,INPUT_PULLUP);          
+      chip3.pinMode(i,INPUT_PULLUP);          
+   }
+   for (uint8_t i = 8; i <= 15; i++) {
+      chip1.pinMode(i, OUTPUT);               
+      chip3.pinMode(i, OUTPUT);               
+   }
+   chip0.writePort(0,L1_Position);         // To whatever state has previously been assigned
+   chip0.writePort(1,L1_LED_State);         
+   chip2.writePort(0,L2_Position);
+   chip2.writePort(1,L2_LED_State); 
+}
+
+void disableOutputs() {
+  if (Verbose) Serial.println("Disabling Outputs");
+   
+  // ***** Switch all output ports OFF *****
+  L1_Position = 0xFF;              // Retract L1
+  chip0.writePort(0,L1_Position);  
+  L1_LED_State = 0xFF;             // L1 LED Off
+  chip0.writePort(1,L1_LED_State);
+  L2_Position = 0xFF;              // Retract L2
+  chip2.writePort(0,L2_Position);
+  L2_LED_State = 0xFF;             // L2 LED Off
+  chip2.writePort(1,L2_LED_State);
+  pumpState = 0x00; 
+  pumpStateL1 = 0x00;
+  pumpStateL2 = 0x00;
+  chip1.writePort(1,pumpState);      // Pumps Off
+  chip3.writePort(1,0xFF);           // Aux Off
+
+  // ***** Configure all output ports to inputs *****  
+
+  for (uint8_t i = 0; i <= 15; i++) {
+      chip0.pinMode(i,INPUT);             // Set chip0 to OUTPUT
+      chip2.pinMode(i,INPUT);             // Set chip2 to OUTPUT
+  }
+  for (uint8_t i = 8; i <= 15; i++) {
+     chip1.pinMode(i, INPUT);               
+     chip3.pinMode(i, INPUT);               
+  }
+}
+
+
 void turnStuffOff(){
   chip0.writePort(0xFFFF);
   if (sysVarArray[1]) chip1.writePort(1,0xFF);    // Pumps or hoppers on chip1 Off
@@ -961,10 +1120,14 @@ would interpret it as simultaneous responses on several boxes. The sketch now
 scans the input port to see if more than one bit has changed. If more than one 
 bit has changed it is logged as a "phantomResp" 
 
-boxArray[i].handle_L1_Response() is called when the lever goes to ground.
+
 */
 
 void checkLeverOneBits() {
+/*
+ * boxArray[i].handle_L1_Response() is called when the lever goes to ground.
+ */
+  
     byte diff = 0;
     static byte oldPortOneValue = 255;       
     portOneValue = chip1.readPort(0);

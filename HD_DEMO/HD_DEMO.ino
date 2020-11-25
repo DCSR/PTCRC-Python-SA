@@ -8,7 +8,9 @@
  * 
  * Note that there are new versions in the MajenkoLibraries
  * 
- * Version 1.0.2
+ * Version 1.0.3
+ * 
+ * Strategy is to check every line against FeatherM0
  * 
  * 
  */
@@ -17,7 +19,7 @@
 #include <SPI.h>               // Arduino Library SPI.h
 #include "MCP23S17.h"          // Majenko MCP23S17 library
 
-String thisVersion = "1.0.2";  // Reported in setup()
+String thisVersion = "1.0.3";  // Reported in setup()
 boolean Verbose = true;
 boolean sendTimeStamp = false;
 
@@ -28,9 +30,9 @@ MCP23S17 chip2(chipSelect, 2); // L2 retract map to pins 0..7; LEDs map to pins 
 MCP23S17 chip3(chipSelect, 3); // L2 inputs map to pins 0..7; AUX output map to pins 8..15
 
 // Input Port Values
-byte portOneValue = 255, portTwoValue = 255, oldPortTwoValue = 255; 
+byte portOneValue = 255, portTwoValue = 255;
 
-// Output Ports Values
+// Output Ports Values      New to FeatherM0
 byte L1_Position = 0xFF;
 byte L1_LED_State = 0xFF;      
 byte pumpState = 0x00; 
@@ -39,19 +41,19 @@ byte pumpStateL2 = 0x00;        // Determined by lever 2 (HD)
 byte L2_Position = 0xFF;        // Retracted
 byte L2_LED_State = 0xFF;       // Off
 
-long micro1, micro2;
-long minDelta = 1000;
-long maxDelta = 0;
-byte maxQueueRecs = 0;
-String instruction;
-boolean sessionRunning = false;
-long startTime;
-int inputErrors = 0;
-int inputRecoveries = 0;
-int outputErrors = 0;
-int outputRecoveries = 0;
-int L1_responses = 0;
-int L2_responses = 0;  
+long micro1, micro2;            // These are local in FeatherM0
+long minDelta = 1000;           // Not used in FeatherMo
+long maxDelta = 0;              // Defined previously in FeatherM0
+byte maxQueueRecs = 0;          //     "
+String instruction;             //     "
+boolean sessionRunning = false; // Not used in FeatherMO
+long startTime;                 // _startTime defined within Box
+int inputErrors = 0;            // Added to FeatherM0
+int inputRecoveries = 0;        //   "
+int outputErrors = 0;           //   "
+int outputRecoveries = 0;       //   "
+int L1_responses = 0;           //   "
+int L2_responses = 0;           //   "
 
 typedef struct tagTStamp {
    // tagTStamp is a structure identifier (or tag). It is not necessary 
@@ -64,7 +66,6 @@ typedef struct tagTStamp {
 } TStamp;
 
 Queue printQueue(sizeof(TStamp), 60, FIFO); // Instantiate printQueue, First In First Out
-  // Note: maximum in the queue was 40 when quitting all eight boxes at once (w/o a delay)
 
 boolean lastLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 boolean newLeverOneState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
@@ -104,7 +105,6 @@ void init_10_mSec_Timer() {
                    TC_CTRLA_ENABLE;               // Enable TC4
   while (TC4->COUNT16.STATUS.bit.SYNCBUSY);       // Wait for synchronization 
 }
-//************************* End Timer stuff ***********************************************
 
 void TC4_Handler()                                // Interrupt Service Routine (ISR) for timer TC4
 {     
@@ -115,7 +115,7 @@ void TC4_Handler()                                // Interrupt Service Routine (
   }
 }
 
-// ****************************************************************************************
+// ************************ End Timer stuff ********************************************
 
 void resetChips() {
    chip0.begin();
@@ -216,7 +216,7 @@ void startSession() {
      endSession();
    }
    else {
-     if (Verbose) Serial.print("... Started");
+     if (Verbose) Serial.println("... Started");
      sessionRunning = true;
    }
 }
@@ -252,7 +252,7 @@ void showDiagnosticData() {
   Serial.print ("Min and Max Deltas in microSec: "); 
   Serial.println (String(minDelta)+" "+String(maxDelta));
   Serial.println ("inputErrors / inputRecoveries = "+String(inputErrors)+" "+String(inputRecoveries));
-  Serial.println ("outputErrors / outputRecoveries = "+String(outputErrors)+" "+String(inputRecoveries)); 
+  Serial.println ("outputErrors / outputRecoveries = "+String(outputErrors)+" "+String(outputRecoveries)); 
   Serial.println ("L1 responses = "+String(L1_responses));
   Serial.println ("L2 responses = "+String(L2_responses));
   Serial.println ("Max timeStamps in Queue = "+String(maxQueueRecs));
@@ -465,6 +465,7 @@ void checkInputPort2() {
    *  a mask = 10000000. Together with the bitwise and (&) it evaluates each 
    *  bit in the byte.
    */
+   static byte oldPortTwoValue = 255;
    long delta;
    micro1 = micros();
    portTwoValue = chip3.readPort(0);
