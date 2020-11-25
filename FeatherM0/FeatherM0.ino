@@ -588,13 +588,16 @@ void Box::moveLeverOne(int state) {
     *   Previous version: chip0.digitalWrite(_boxNum,state);
     *   Revision: set bit in L1_Position then chip0.writePort(0,L1_Position);
     */
+
+   // define Extend LOW
+   // define Retract HIGH
    
    if (state == Extend) {                 // Defined HIGH = Retract = 1 
-      bitSet(L1_Position,_boxNum);   
+      bitClear(L1_Position,_boxNum);   
       TStamp tStamp = {_boxNum, '.', millis() - _startTime, 0, 0};
       printQueue.push(&tStamp); 
    }
-   else {                              // Defined LOW = Extend = 0
+   else {                                 // Defined LOW = Extend = 0
       bitSet(L1_Position,_boxNum);
       TStamp tStamp = {_boxNum, '=', millis() - _startTime, 1, 0};
       printQueue.push(&tStamp);
@@ -609,13 +612,16 @@ void Box::moveLeverTwo(int state) {
     *   Revision: set bit in L2_Position then chip2.writePort(0,L2_Position);
     */
 
-   if (state == Extend) {                    // Defined HIGH = Retract = 1
-      bitSet(L2_Position,_boxNum);
+   // define Extend LOW
+   // define Retract HIGH
+
+   if (state == Extend) {                    // Defined LOW = Extend = 0
+      bitClear(L2_Position,_boxNum);         // Set bit to 0
       TStamp tStamp = {_boxNum, '~', millis() - _startTime, 1, 1};
       printQueue.push(&tStamp);    
    }
-   else {
-      bitSet(L2_Position,_boxNum);
+   else {                                    // Defined HIGH = Retract = 1
+      bitSet(L2_Position,_boxNum);           // Set bit to 1
       TStamp tStamp = {_boxNum, ',', millis() - _startTime, 0, 1};
       printQueue.push(&tStamp);
    }
