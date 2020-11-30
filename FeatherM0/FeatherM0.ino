@@ -37,7 +37,7 @@
  *   Box::deliverFoodPellet() stub added 
  *      see notes for future To Do
  *      
- *   "M" timestamp is the millis() at session _startTime
+ *   "M" timestamp is the millis() at session _startTime. Check - OK
  *   
  *   handleInputError() sends "!" with millis() timestamp 
  *   Presumably, Analysis can use "M" and "!" to display input errors. 
@@ -48,41 +48,36 @@
  *   
  *        
  *   ISSUES and Priorities
- *   
- *   Check "M" and "G" timestamps. 
  *  
  *   Check Documentation, SA200.py Programmers Guide, API, codes 
  *   
- *   
- *   
  *   Rename SA200.py to SA300.py
+ *   
+ *   SA300.py - if timestamp boxNum == 10 then add timestamp to all boxes (that are running)
+ *   
+ *   Need timestamp for an unrecovered error that displays a message box in Python. 
+ *   
+ *   Clean up if not used:
+ *        char pumpCharArray[3] = "pP";  // used for timestamp
+ *        char lever2CharArray[3] = "jJ"; 
+ *   
  *   Clean up this mess. If necessary, move stuff to Documentation
  *   
  *   add chip1.writePort(1,pumpState) to tick()
  *   
  *   
- *   1. Re-assess 
- *      Old version: 
- *      checkLeverOneBits() calls Box::handle_L1_Response();
- *      checkLeverTwoBits() calls Box::handle_L2_Response(byte state);
- *      
- *      For better or worse, checkLeverTwoBits() handles pump and timestamps for
- *        the HD lever.
- *        
- *      Think this through and document it in Powerpoint flow chart
- *   
- *   2. Configure pumpState, pumpStateL1 and pumpStatel2  
- *   
- *      Get a handle on pumpstate etc.
- *   
- *    pumpStateL1                             <- determined in Box::switchRewardPortON / Off()
- *    pumpStateL2 = (255-portTwoValue);       <- deteremined in Box::checkLeverTwoBits()
- *   
- *    pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
- *    chip1.writePort(1,pumpState);           <- could happen at end of every tick.
+ *   The way HD is handled has been totally rethought in this version.
+ *      checkLeverTwoBits() handles pump, LEDs and timestamps for the HD lever.  
+ *      It calls Box::handle_L2_Response(byte state) to send the timeStamps 
+ *      'H' and 'h'     
  *   
  *   
- *   3. rewrite checkLeverOneBits() checkLeverTwoBits()
+ *   pumpState and L2_LED_State written to ports every tick() 
+ *   eg chip1.writePort(1,pumpState);
+ *   
+ *   
+ *   ********************   HERE ************************
+ *   
  *   
  *   4. Need leverTwoExists??
  *      The issue is when and whether to call checkLeverTwoBits() 
@@ -170,8 +165,6 @@
  *   
  *   Block ending retracts lever etc. but no Trial end timestamp. 
  *   endBlock() should endTrial() 
- *   
-  
  *   
  *   Check 5-25 - should it override all parameters?
  *   
@@ -933,12 +926,21 @@ void Box::handle_L1_Response() {
     }  
 }
 
-void Box::handle_L2_Response(byte state) {   // HD lever change
-  // checkLeverTwoBits passes the state of each bit in the register
-  //
-  // Serial.println("9 pumpOff="+String(testArray[0]));
-  // Serial.println("9 pumpOn="+String(testArray[1]));
-  /*if (_boxState == L2_HD) {
+void Box::handle_L2_Response(byte state) {
+
+   if (state == 1) {
+      TStamp tStamp = {_boxNum, 'H', millis() - _startTime, 0, 9};
+      printQueue.push(&tStamp);
+   }
+   else {
+      TStamp tStamp = {_boxNum, 'h', millis() - _startTime, 0, 9};
+      printQueue.push(&tStamp);
+   }
+
+  /*  checkLeverTwoBits passes the state of each bit in the register
+
+    Older version:
+    if (_boxState == L2_HD) {
       if (state) {
         chip1.digitalWrite(_boxNum+8,0);
         TStamp tStamp1 = {_boxNum, 'J', millis() - _startTime, 0, 9};
@@ -953,7 +955,8 @@ void Box::handle_L2_Response(byte state) {   // HD lever change
         TStamp tStamp2 = {_boxNum, 'p', millis() - _startTime, 1, 2};
         printQueue.push(&tStamp2);
       }
-  }*/
+
+   Newer version:
   if (_boxState == L2_HD) {
       TStamp tStamp1 = {_boxNum, lever2CharArray[state], millis() - _startTime, 0, 9};
       printQueue.push(&tStamp1);
@@ -967,7 +970,8 @@ void Box::handle_L2_Response(byte state) {   // HD lever change
         chip1.digitalWrite(_boxNum+8,1);
         pumpOn = false;
       }
-  }  
+  }
+  */  
 }
 
 void Box::setProtocolNum(int protocolNum) {
@@ -1187,13 +1191,17 @@ handleInputError(byte leverNum, byte portValue)
 
 void handleInputError(byte leverNum, byte portValue) {
    boolean recoveredFromError = false;   
-   byte _portValue; 
+   byte _portValue;
+   char stampChar; 
 
    inputErrors++;
    // Print the error that got us here.
-   if (Verbose) Serial.print ("9 ! "+String(millis())+" Port "+String(leverNum));
+   if (Verbose) Serial.print ("9 "+String(millis())+" Port "+String(leverNum));
+
+   if (leverNum == 1) stampChar = '!';
+   else stampChar = '^';
    
-   TStamp tStamp = {10, '!', millis(), 0, 9};
+   TStamp tStamp = {10, stampChar, millis(), 0, 9};
    printQueue.push(&tStamp);
 
    for (int x = 0; x < 10; x++) {                      // Try ten times
@@ -1248,34 +1256,40 @@ void checkLeverOneBits() {
 }
 
 void checkLeverTwoBits() {
-    byte diff = 0;
-    static byte oldPortTwoValue = 255;      
-    portTwoValue = chip3.readPort(0);
-    // **********  compareBits
-    for (int i = 7; i > -1; i--) {
-      if (bitRead(portTwoValue,i) != (bitRead(oldPortTwoValue,i))) diff++;
-    }
-    if (diff > diffCriteria) {
-      TStamp tStamp = {10, '>', millis(), 0, 9};
-      printQueue.push(&tStamp); 
-      Serial.println("9 diff_L2_"+String(diff));
-      Serial.println("9 L2="+String(portOneValue));
-      oldPortTwoValue = portTwoValue;
-      // phantomResp++;
-    }   
-    else if (diff == 1) {
-        oldPortTwoValue = portTwoValue;
-         // Serial.println (portTwoValue,BIN);
-         for (byte i = 0; i < 8; i++) {
-             newLeverTwoState[i] = bitRead(portTwoValue,i);
-             if (newLeverTwoState[i] != lastLeverTwoState[i]) {          
-                  lastLeverTwoState[i] = newLeverTwoState[i]; 
-                  boxArray[i].handle_L2_Response(newLeverTwoState[i]);
-             }
+  /*  (1 << 7) - This shifts 1 to the left seven bits creating 
+   *  a mask = 10000000. Together with the bitwise and (&) it evaluates each 
+   *  bit in the byte.
+   */
+   static byte oldPortTwoValue = 255;
+   byte bitValue;
+   portTwoValue = chip3.readPort(0);
+   if (portTwoValue == 0) handleInputError(2,portTwoValue);      // Input OR output Error
+   else {
+      if (oldPortTwoValue != portTwoValue) {                     // something changed
+         for (int bits = 7; bits > -1; bits--) {
+            if ((portTwoValue & (1 << bits)) != (oldPortTwoValue & (1 << bits))) {
+               bitValue = (portTwoValue & (1 << bits));
+               if (bitValue == 1) {
+                  boxArray[bits].handle_L2_Response(bitValue);
+                  Serial.println("bit "+String(bits)+" = 1");
+               }
+               else {
+                  boxArray[bits].handle_L2_Response(bitValue);
+                  Serial.println("bit "+String(bits)+" = 0");
+               }                                  
+            }        
          }
-    }    
-}           
-
+      }
+   }
+   // At this point, nothing has been done to switch the pumps 
+   oldPortTwoValue = portTwoValue;
+   pumpStateL2 = (255-portTwoValue);
+   pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
+   chip1.writePort(1,pumpState);
+   L2_LED_State = portTwoValue;              // mirror pump state
+   chip2.writePort(1,L2_LED_State);
+}   
+ 
 /*
 void decodeSysVars(byte varCode) {
   byte mask;
@@ -1423,6 +1437,10 @@ void tick()    {
    getInputString();
    checkLeverOneBits();
    checkLeverTwoBits(); 
+   pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
+   chip1.writePort(1,pumpState);
+   L2_LED_State = portTwoValue;              // mirror pump state
+   chip2.writePort(1,L2_LED_State);
    sendOneTimeStamp();
    delta = micros() - micro1;
    if (delta > maxDelta) maxDelta = delta;   
