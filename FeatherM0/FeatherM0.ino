@@ -2,47 +2,107 @@
  *   
  *   Nov 23, 2020 
  *   
- *   Temp Diary
- *   Configure outputs first. In order by chip number. 
+ *   Changes to this version (after testing it will be version 301.00)
  *   
- *   Major difference: 
+ *   Changes to the way outputs are controlled: 
  *   -  Old way: bits were flipped using chip0.digitalWrite(bit,state) 
  *   -  New way: flip bit in variable (eg. L1_Position) then chip0.writePort(0, L1_Position)
  *   
  *   Procedures rewritten:
  *   Box::moveLeverOne(int state) 
  *   Box::moveLeverTwo(int state)
+ *   Box::switchStim1(boolean state)
+ *   Box::switchStim2(boolean state)
+ *   Box::switchTimedPump(On / Off)
+ *   
+ *   handleInputError(byte leverNum, byte portValue)
+ *   checkLeverOneBits() updated and now calls handleInputError()
+ *   
+ *   Box::switchRewardPortOn(boolean timed) RENAMED to switchTimedPump(On)
+ *        _timedRewardOn RENAMED _timedPumpOn
+ *        _rewardTime RENAMED to _pumpTime
+ *        _rewardDuration RENAMED to _pumpDuration
+ *        rewardDuration RENAMED to pumpDuration
+ *   
+ *   sysVar - not need for at the moment; DecodeSySVars(num) commented out
+ *       <SYSVARS num> and DecodeSySVars(num) sets eight sysVars
+ *       Change labels for sysVars0-2 in Python
+ *       0 Reward Port - Pumps (0) AUX (1)
+ *       1 Reward Logic - 5VDC on (0) GND On (1)
+ *       2 Check Lever 2 - False (0) True (1)
+ *       3 - 7 unused
+ *       
+ *   SA200.py - sysVar labels removed
+ *   
+ *   Box::deliverFoodPellet() stub added 
+ *      see notes for future To Do
+ *      
+ *   "M" timestamp is the millis() at session _startTime
+ *   
+ *   handleInputError() sends "!" with millis() timestamp 
+ *   Presumably, Analysis can use "M" and "!" to display input errors. 
+ *   "!", "^"     < timestamps for input and output errors
+ *   
+ *   handleOutputError() will send "^"
  *   
  *   
- *   Issues: 
- *   Can Box object access port variables?
+ *        
+ *   ISSUES and Priorities
+ *   
+ *   Check "M" and "G" timestamps. 
+ *  
+ *   Check Documentation, SA200.py Programmers Guide, API, codes 
+ *   
+ *   
+ *   
+ *   Rename SA200.py to SA300.py
+ *   Clean up this mess. If necessary, move stuff to Documentation
+ *   
+ *   add chip1.writePort(1,pumpState) to tick()
+ *   
+ *   
+ *   1. Re-assess 
+ *      Old version: 
+ *      checkLeverOneBits() calls Box::handle_L1_Response();
+ *      checkLeverTwoBits() calls Box::handle_L2_Response(byte state);
+ *      
+ *      For better or worse, checkLeverTwoBits() handles pump and timestamps for
+ *        the HD lever.
+ *        
+ *      Think this through and document it in Powerpoint flow chart
+ *   
+ *   2. Configure pumpState, pumpStateL1 and pumpStatel2  
+ *   
+ *      Get a handle on pumpstate etc.
+ *   
+ *    pumpStateL1                             <- determined in Box::switchRewardPortON / Off()
+ *    pumpStateL2 = (255-portTwoValue);       <- deteremined in Box::checkLeverTwoBits()
+ *   
+ *    pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
+ *    chip1.writePort(1,pumpState);           <- could happen at end of every tick.
+ *   
+ *   
+ *   3. rewrite checkLeverOneBits() checkLeverTwoBits()
+ *   
+ *   4. Need leverTwoExists??
+ *      The issue is when and whether to call checkLeverTwoBits() 
+ *      Define global variable that is set by any box running HD
  *   
  *   replace turnStuffOff() with disableOutputs()  ????
  *   
  *   HD_DEMO.ino uses startSesssion() and endSession()
  *   Here, _startSession is local to Box
  *   -  Move stuff to startup() ?
- *   
- *   Rewrite every writePort() statement to incorporate  
- *   byte L1_Position = 0xFF;
- *   
-
+ *       
  *   
  *   
+ *   If not running HD and therefore not checking InputPort2) there is little 
+ *   overhead to worry about. 
  *   
- *   
- *   byte L1_LED_State = 0xFF;      
- *   byte pumpState = 0x00; 
- *        bitSet(pumpStateL1,num); ON
- *        bitClear(pumpStateL1, num) OFF
- *   
- *   byte pumpStateL1 = 0x00;        // Determined by lever 1
- *   byte pumpStateL2 = 0x00;        // Determined by lever 2 (HD)
- *   byte L2_Position = 0xFF;        // Retracted
- *   byte L2_LED_State = 0xFF;       // Off
- *   
- *   
- *   
+ *   This is done every 10 mSec in checkInputPort2()
+ *   - Issue - will this be called regardless of schedule?
+ *      Or only when L2 is extended? 
+ *    
  *   
  *   
  *   Send System timestamps - eg. "!" input or output error
@@ -56,8 +116,6 @@
  *   
  *   rename "Verbose" - "verbose" is a reserved word
  *   
- *   To Do:
- *   Clean up this mess. If necessary, move stuff to Documentation
  *   
  *   Added
  *   states { PRESTART, L1_ACTIVE, L1_TIMEOUT, IBI, L2_HD, FINISHED };
@@ -69,12 +127,6 @@
  *   _timeOut deleted
  *   inactiveLeverExists renamed to leverTwoExists 
  *   
- *   
- *   To Do:
- *   Ignore (for now) leverTwoExists - set as SYSVAR 
- *   
- *   Define boolean variable for FOOD or DRUG and set from SYSVAR 
- *   The program shouldn't have to look up SYSVAR each time in switcRewardPort()
  *   
  *   moveLeverTwo(Extend or Retract) as appropriate for protocol 
  *   
@@ -136,35 +188,26 @@
  *   So we need _blockDurationInit and _IBIDurationInit which can be 
  *   used or not in specific protocols. 
  *   
- *   <SYSVARS num> and DecodeSySVars(num) sets eight sysVars
- *   
+ * 
+ *    
+ *    
  *   To Do:
  *   SwitchRewardDevice(On) etc. 
  *    Time stamp could reflect Pump (P,p) or Hopper (H,h)
  *    But that would require updates to graphs
  *   
- *   Change labels for sysVars0-2 in Python
+ *  
  *   
  *   Done on April 7th
  *   Defined an array of eight boolena variables.
  *   twoLever removed
  *   debugBoolVarList removed
- *   setRewardType removed
- *   rewardType defined globally  Drug = 0, Food = 1
  *   sysVarArray[1] substituted for pumpOnHigh
  *   
  *   Document how the timing is done and relate it to the PowerPoint slide.
  *    Reinforce() changes _timeOut = true which is checked in tick() each 10 mSec.
- *   - use only one _rewardTimer
- *   - _timeOut can be different and longer than rewardDuration
- *   
- *   Test: 
- *   Programm was changed from decrementing a timer value to incrementing.
- *   Why? It seems more intuitive to count down.
- *   if (_rewardTime > 0) {
- *      _rewardTime--;
- *      if (_rewardTime == 0) switchOff
- *   }
+ *   - use only one _rewardTime
+ *   - _timeOut can be different and longer than pumpDuration
  *   
  *   Test:
  *   - The Python time should reflect _blockTime or _IBITime
@@ -191,7 +234,6 @@
  *      _inputPort = inputPort;
  *   *************************************************************
  *   
- *   rewardType is now a global variable that determines Drug or Food
  *   
  *   1. The lever shouldn't care whether it is a pump 
  *   or hopper is switched. It could be coupled to only one device and the way the
@@ -209,21 +251,16 @@
  *   Timestamp codes will have to be instantiated differently for lever1 and lever2 
  *   
  *   TIMEOUT and LED = timeOutDuration
- *   rewardDuration may be shorter
+ *   pumpDuration may be shorter
  *   
  *   Changes: 
- *   _rewardTime++ until equals rewardDuration
+ *   _pumpTime++ until equals pumpDuration
  *   _blockTime++ until equals _blockDuration
  *   _IBILength changed to _IBIDuration
- *   _pumpTimer changed to _rewardTime
  *   states _boxState = PRESTART; 
  *   
  *   _blockTime was used for IBI as well - created _IBITime
- *   
- *   Previous (commented out) checkLeverOneBits() requires input to go LOW for two ticks 
- *   in order to trigger a response.
- *   In theory, this should filter out a brief spike (noise?) from triggering a response. 
- *   
+ *     
  * This should handle eight boxes with or without an inactive lever.
  * 
  * Two MCP23S17 port expanders are controled by the MCP23S17 library 
@@ -318,7 +355,6 @@ String inputString;
 boolean echoInput = false;
 unsigned long maxDelta = 0;
 byte maxQueueRecs = 0;
-int phantomResp = 0;
 byte diffCriteria = 1;
 
 // enum  states { PRESTART, BLOCK, IBI, L2_HD, FINISHED };
@@ -338,13 +374,17 @@ class Box  {
     void handle_L1_Response();
     void handle_L2_Response(byte state);
     void setProtocolNum(int protocalNum);
-    void switchRewardPortOn(boolean timed);
-    void switchRewardPortOff();
+    void deliverFoodPellet();                   // stub
+    void switchTimedPump(int state); 
+    
+    // void switchRewardPortOn(boolean timed);
+    // void switchRewardPortOff();
+    
     void moveLeverOne(int state);    
     void moveLeverTwo(int state);    
     void switchStim1(boolean state);
     void switchStim2(boolean state);
-    void setrewardDuration(int rewardDuration);
+    void setPumpDuration(int pumpDuration);
     void setParamNum(int paramNum);
     void setBlockDuration(int blockDuration); 
     void setIBIDuration(int IBIDuration);
@@ -380,7 +420,7 @@ class Box  {
     void endTimeOut(); 
     
     // boolean _timeOut = false; 
-    boolean _timedRewardOn = false;                    
+    boolean _timedPumpOn = false;                    
     boolean _schedPR = false;
     boolean _schedTH = false; 
     int _PRstepNum = 1;   
@@ -400,8 +440,8 @@ class Box  {
     unsigned int _trialResponses = 0;
     // Reinforce 
     boolean _unitDose = true;     // used to direct 2L-PR_HD to startHDTrial
-    int _rewardDuration = 400;    // 400 x 10 mSec = 4,000 mSec = 4 seconds;
-    int _rewardTime = 0;    
+    int _pumpDuration = 400;    // 400 x 10 mSec = 4,000 mSec = 4 seconds;
+    int _pumpTime = 0;    
     int _THPumpTimeArray[13] = {316, 316, 200, 126, 79, 50, 32, 20, 13, 8, 5, 3, 2};
     // int _THPumpTimeArray[13] = {100, 100, 50, 40, 30, 20, 10, 9, 8, 7, 5, 3, 2};    
     int _timeOutTime = 0;
@@ -425,8 +465,8 @@ void Box::startBlock() {
   _trialNumber = 0;
   _blockNumber++;  
   if (_schedTH == true){                                       // TH
-      _rewardDuration = _THPumpTimeArray[_blockNumber - 1];    // zero indexed array; block 1 = index 0
-      _timeOutDuration = _rewardDuration;
+      _pumpDuration = _THPumpTimeArray[_blockNumber - 1];    // zero indexed array; block 1 = index 0
+      _timeOutDuration = _pumpDuration;
       if (_blockNumber == 1) {
         _blockDuration = 21600;          // 60 * 60 * 6 = 21600 seconds = 6 hrs;
         _maxTrialNumber = 4;
@@ -446,8 +486,8 @@ void Box::endBlock() {
    TStamp tStamp = {_boxNum, 'b', millis() - _startTime, 0, 9};
    printQueue.push(&tStamp);
    if (_protocolNum == 7) {             // Flush
-      _rewardTime = 0;
-      switchRewardPortOn(true);
+      _pumpTime = 0;
+      switchTimedPump(On);
    }   
    else if (_blockNumber == _maxBlockNumber) endSession();
    else {
@@ -486,7 +526,7 @@ void Box::endTrial() {
 void Box::endHDTrial() {
    TStamp tStamp = {_boxNum, 'z', millis() - _startTime, 0, 9};
    printQueue.push(&tStamp);
-   switchRewardPortOff();
+   switchTimedPump(Off);
    moveLeverTwo(Retract);
    if (_2L_PR) startTrial();
    else endBlock(); 
@@ -507,9 +547,9 @@ void Box::endIBI() {
 }
 
 void Box::reinforce() { 
-    _rewardTime = 0;
+    _pumpTime = 0;
     if (_unitDose) {
-      switchRewardPortOn(true);
+      switchTimedPump(On);
       startTimeOut();
     }
     else startHDTrial();
@@ -534,29 +574,45 @@ void Box::endTimeOut() {
     }  
 }
 
-void Box::switchRewardPortOn(boolean timed) { 
-    // boxNum 0..7 maps to pin 0..7 on chip1 or chip3 
-    // Normally: On (true) switches the bit to HIGH
-    //       and Off (false) switches the bit to LOW
-    // BUT if sysVarArray[1] == true -> then the reverse happens
-   
-    boolean level;
-    // sysVarArray[1] selects if the device goes on with 5VDC or GND
-    // sysVarArray[1] 5VDC On = 0; GND On = 1  
-    if (sysVarArray[1]) level = LOW;          // if "GND On" go low to turn on 
-    else level = HIGH;                        // else '5VDC On" go high to turn on
-
-    // sysVarArray[0] selects either Pump Port or AUX Port
-    if (sysVarArray[0] == 0) chip1.digitalWrite(_boxNum+8,level);
-    else chip3.digitalWrite(_boxNum+8,level); 
-              
-    // ON or true      
-    TStamp tStamp = {_boxNum, 'P', millis() - _startTime, 1, 2};
-    printQueue.push(&tStamp);
-    if (timed) _timedRewardOn = true;
-    
-    // The Pump CheckBox is index 2 
+void Box::deliverFoodPellet() {
+   /* This is a stub.
+      Need to define timing varaibles for feeder: feederTime, feederDuration etc
+      chip3, pins 8..15 map to boxNum 0..7 to AUX output   
+      Need to define gobal variable - feederState and mimic how it is done
+      in Box::switchStim1(boolean state)
+      feederState = 0xFF   <- OFF;  Feeders discharge when supplied with GND
+      Originally sysVarArray[1] was designed to select drug vs food
+      Note that drug vs food uses different ports and 5VDC vs GND to switch ON
+      Future use will likely depend on a protocol and local variables 
+      determining whether to call switchPumpOn() or deliverFoodPellet() 
+      timestamp Hopper (H,h)
+   */  
 }
+
+void Box::switchTimedPump(int state) { 
+    // boxNum 0..7 maps to pin 0..7 on chip1, pins 8..15 paps to Pumps
+    // Pump CheckBox is index 2
+    // pumpState = 0x00    <- OFF
+    // Pump off with bitClear()
+    // Pump On with bitSet() 
+    // Old way: chip1.digitalWrite(_boxNum+8,level);
+    
+    if (state == On) {
+          _timedPumpOn = true;
+          bitSet(pumpStateL1,_boxNum);        // Pump is on when bit = 1 
+          TStamp tStamp = {_boxNum, 'P', millis() - _startTime, 1, 2};
+          printQueue.push(&tStamp);
+    }
+    else {                                    // OFF
+          _timedPumpOn = false;
+          bitClear(pumpStateL1,_boxNum);      // Pump is off when bit = 0
+          TStamp tStamp = {_boxNum, 'p', millis() - _startTime, 0, 2};
+          printQueue.push(&tStamp);
+    }
+    // chip1.writePort(1,pumpStateL1State);  <- called in Tick() 
+}
+
+/*
 
 void Box::switchRewardPortOff() { 
     // boxNum 0..7 maps to pin 0..7 on chip1 or chip3 
@@ -577,28 +633,27 @@ void Box::switchRewardPortOff() {
     TStamp tStamp = {_boxNum, 'p', millis() - _startTime, 0, 2};
     printQueue.push(&tStamp);
 
-    _timedRewardOn = false;
+    _timedPumpOn = false;
     
     // The Pump CheckBox is index 2 
 }
 
+*/
+
 void Box::moveLeverOne(int state) { 
    /*  chip0, pins 0..7 map to boxNum 0..7 to extend/retract Lever 1
     *  Lever1 (active) CheckBox is index 0
-    *   Previous version: chip0.digitalWrite(_boxNum,state);
-    *   Revision: set bit in L1_Position then chip0.writePort(0,L1_Position);
+    *  Previous version: chip0.digitalWrite(_boxNum,state);
+    *  Revision: set bit in L1_Position then chip0.writePort(0,L1_Position);
     */
-
-   // define Extend LOW
-   // define Retract HIGH
    
-   if (state == Extend) {                 // Defined HIGH = Retract = 1 
-      bitClear(L1_Position,_boxNum);   
+   if (state == Extend) {                 // Defined LOW = Extend = 0 
+      bitClear(L1_Position,_boxNum);      // Set bit to 0
       TStamp tStamp = {_boxNum, '.', millis() - _startTime, 0, 0};
       printQueue.push(&tStamp); 
    }
    else {                                 // Defined LOW = Extend = 0
-      bitSet(L1_Position,_boxNum);
+      bitSet(L1_Position,_boxNum);        // Set bit to 1
       TStamp tStamp = {_boxNum, '=', millis() - _startTime, 1, 0};
       printQueue.push(&tStamp);
    }
@@ -611,9 +666,6 @@ void Box::moveLeverTwo(int state) {
     *   Previous version: chip2.digitalWrite(_boxNum,state);
     *   Revision: set bit in L2_Position then chip2.writePort(0,L2_Position);
     */
-
-   // define Extend LOW
-   // define Retract HIGH
 
    if (state == Extend) {                    // Defined LOW = Extend = 0
       bitClear(L2_Position,_boxNum);         // Set bit to 0
@@ -691,7 +743,7 @@ void Box::startSession() {
         _maxTrialNumber = 999;           
         _responseCriterion = _paramNum;
         _PRstepNum = 1;                 // irrelevant
-        _timeOutDuration = _rewardDuration;
+        _timeOutDuration = _pumpDuration;
       }
       else if (_protocolNum == 2) {      // FR1 x 20
         _startOnLeverOne = true;
@@ -715,7 +767,7 @@ void Box::startSession() {
         _maxTrialNumber = _paramNum;
         _responseCriterion = 1;
         _PRstepNum = 1;                 // irrelevant
-        _timeOutDuration = _rewardDuration;
+        _timeOutDuration = _pumpDuration;
       }
       else if (_protocolNum == 4) {      // PR(N)
         _startOnLeverOne = true;
@@ -727,7 +779,7 @@ void Box::startSession() {
         _maxTrialNumber = 999;
         // _responseCriterion  set in startTrial()
         _PRstepNum  = _paramNum;
-        _timeOutDuration = _rewardDuration;
+        _timeOutDuration = _pumpDuration;
       }   
       else if (_protocolNum == 5) {      // TH
         _startOnLeverOne = true;
@@ -740,7 +792,7 @@ void Box::startSession() {
         _maxTrialNumber = 4;             // Max injections in trial one
         _responseCriterion = 1;
         _PRstepNum = 1;                  // irrelevant
-        _timeOutDuration = _rewardDuration;     
+        _timeOutDuration = _pumpDuration;     
       }
       else if (_protocolNum == 6) {      // IntA 5-25 6h
         _startOnLeverOne = true;
@@ -752,7 +804,7 @@ void Box::startSession() {
         _maxTrialNumber = 999;
         _responseCriterion = 1;
         _PRstepNum = 1;                 // irrelevant
-        _timeOutDuration = _rewardDuration; 
+        _timeOutDuration = _pumpDuration; 
       }
       else if (_protocolNum == 7) {     // Flush
         _startOnLeverOne = true;        // irrelevant
@@ -764,7 +816,7 @@ void Box::startSession() {
         _maxTrialNumber = 999;
         _responseCriterion = 999;       
         _PRstepNum = 1;                 // irrelevant
-        _timeOutDuration = _rewardDuration; 
+        _timeOutDuration = _pumpDuration; 
       }
       else if (_protocolNum == 8) {          // L2 HD  - one HD session
         _startOnLeverOne = false;            // Start on HD Lever
@@ -777,7 +829,7 @@ void Box::startSession() {
         _maxTrialNumber = 999;          // irrelevant
         _responseCriterion = 999;       // irrelevant
         _PRstepNum = 1;                 // irrelevant
-        _timeOutDuration = _rewardDuration; // irrelevant
+        _timeOutDuration = _pumpDuration; // irrelevant
       }
       else if (_protocolNum == 9) {     // IntA-HD 
         _startOnLeverOne = false;       // Start on HD Lever
@@ -791,7 +843,7 @@ void Box::startSession() {
         _maxTrialNumber = 999;          // irrelevant
         _responseCriterion = 999;       // irrelevant
         _PRstepNum = 1;                 // irrelevant
-        _timeOutDuration = _rewardDuration; // irrelevant
+        _timeOutDuration = _pumpDuration; // irrelevant
       }
       else if (_protocolNum == 10) {    // 2L-PR-HD
         _startOnLeverOne = true;
@@ -806,15 +858,17 @@ void Box::startSession() {
         _maxTrialNumber = 999;          // irrelevant
         _responseCriterion = 1;         
         _PRstepNum = 1;                 
-        _timeOutDuration = _rewardDuration; // irrelevant
+        _timeOutDuration = _pumpDuration; // irrelevant
       }   
   if (_protocolNum == 0) endSession();
   else {
       _startTime = millis();
+      TStamp tStamp = {_boxNum, 'M', millis(), 0, 9}; 
+      printQueue.push(&tStamp);
       _blockNumber = 0;  
-      _rewardTime = 0; 
+      _pumpTime = 0; 
       _timeOutTime = 0;   
-      TStamp tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
+      tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
       printQueue.push(&tStamp);
       startBlock(); 
   }
@@ -824,8 +878,8 @@ void Box::endSession() {
     // endTrial(); the only thing this did was retract the lever, but see next line. 
     moveLeverOne(Retract);         
     switchStim1(Off);
-    switchRewardPortOff();
-    _rewardTime = 0;
+    switchTimedPump(Off);
+    _pumpTime = 0;
     _timeOutTime = 0;
     _boxState = FINISHED;    
     TStamp tStamp = {_boxNum, 'E', millis() - _startTime, 0, 9};
@@ -834,9 +888,9 @@ void Box::endSession() {
 }
 
 void Box::tick() {                        // do stuff every 10 mSec 
-    if (_timedRewardOn) {
-       _rewardTime++;
-       if (_rewardTime >= _rewardDuration) switchRewardPortOff();
+    if (_timedPumpOn) {
+       _pumpTime++;
+       if (_pumpTime >= _pumpDuration) switchTimedPump(Off);
     }  
     if (_boxState == L1_TIMEOUT) {
        _timeOutTime++;
@@ -920,8 +974,8 @@ void Box::setProtocolNum(int protocolNum) {
   _protocolNum = protocolNum;
 }
 
-void Box::setrewardDuration(int rewardDuration) {
-  _rewardDuration = rewardDuration;
+void Box::setPumpDuration(int pumpDuration) {
+  _pumpDuration = pumpDuration;
 }
 
 void Box::setParamNum(int paramNum) {
@@ -942,7 +996,7 @@ void Box::reportParameters() {
  *   _paramNum
  *   _blockDurationInit
  *   _IBIDurationInit
- *   _rewardDuration
+ *   _pumpDuration
  *   _maxTrialNumber 
  *   
  *   _responseCriterion
@@ -957,7 +1011,7 @@ void Box::reportParameters() {
   Serial.println("9 _IBIDurationInit:"+String(_IBIDurationInit)+"sec");
   Serial.println("9 _IBIDuration:"+String(_IBIDuration)+"sec");
   Serial.println("9 _HD_Duration:"+String(_HD_Duration)+"sec");
-  Serial.println("9 _rewardDuration:"+String(_rewardDuration)+"0mSec");
+  Serial.println("9 _pumpDuration:"+String(_pumpDuration)+"0mSec");
   Serial.println("9 _responseCriterion:"+String(_responseCriterion));
   Serial.println("9 _PRstepNum:"+String(_PRstepNum));
   Serial.println("9 _timeOutDuration:"+String(_timeOutDuration)+"0mSec");
@@ -1086,6 +1140,9 @@ void turnStuffOff(){
   chip0.writePort(0xFFFF);
   if (sysVarArray[1]) chip1.writePort(1,0xFF);    // Pumps or hoppers on chip1 Off
   else chip1.writePort(1,0x00);
+
+  // chip1.writePort(1,pumpState);      // Pumps Off
+  
   chip2.writePort(0xFFFF);
   chip3.writePort(1,0x00);    // Off  
 }
@@ -1119,50 +1176,74 @@ void setup() {
   Serial.println("9 Beta");
 }
 
-/*
+
+/*    ********************** Checking Inputs *********************************
 checkLeverOneBits() and checkLeverOneBits() were modified to filter out noise. 
-I appears that on occassion, a ground spike would flip several bits and the program 
-would interpret it as simultaneous responses on several boxes. The sketch now 
-scans the input port to see if more than one bit has changed. If more than one 
-bit has changed it is logged as a "phantomResp" 
-
-
+I appears that on occassion, a ground spike would flip all bits and the program 
+would interpret it as simultaneous responses on all boxes. The sketch now 
+scans the input port to see if the register has gone to 0x00. If so, it calls 
+handleInputError(byte leverNum, byte portValue)
 */
+
+void handleInputError(byte leverNum, byte portValue) {
+   boolean recoveredFromError = false;   
+   byte _portValue; 
+
+   inputErrors++;
+   // Print the error that got us here.
+   if (Verbose) Serial.print ("9 ! "+String(millis())+" Port "+String(leverNum));
+   
+   TStamp tStamp = {10, '!', millis(), 0, 9};
+   printQueue.push(&tStamp);
+
+   for (int x = 0; x < 10; x++) {                      // Try ten times
+      if (leverNum == 1) _portValue = chip1.readPort(0);
+      else _portValue = chip3.readPort(0);
+      if (_portValue == 0) Serial.print("! ");         // Still has error
+      else {
+         recoveredFromError = true;
+         inputRecoveries++;
+         if (Verbose) Serial.println(" ... recovered after "+String(x+1)+" attempt(s)");
+         break;
+      }
+   }                                                  // If error after 10 tries 
+   if (!recoveredFromError) {
+      Serial.println();
+      resetChips(); 
+      if (chip1.readPort(0) != 0 && chip3.readPort(0) != 0) {
+        if (Verbose) Serial.println("Recovered from Input Error after chip reset");
+           inputRecoveries++;
+      }
+      else {      
+        Serial.println();
+        Serial.println("Ending Session Because of Input Errors");
+        for (int boxNum = 0; boxNum < 8; boxNum++) 
+           boxArray[boxNum].endSession();
+      }
+   }   
+}
+
 
 void checkLeverOneBits() {
 /*
  * boxArray[i].handle_L1_Response() is called when the lever goes to ground.
  */
   
-    byte diff = 0;
-    static byte oldPortOneValue = 255;       
-    portOneValue = chip1.readPort(0);
-    // **********  compareBits
-    for (int i = 7; i > -1; i--) {
-      if (bitRead(portOneValue,i) != (bitRead(oldPortOneValue,i))) diff++;
-    }  
-    if (diff > diffCriteria) {
-      TStamp tStamp = {10, '<', millis(), 0, 9};
-      printQueue.push(&tStamp); 
-      Serial.println("9 diff_L1_"+String(diff));
-      Serial.println("9 L1="+String(portOneValue));
+   static byte oldPortOneValue = 255;       
+   portOneValue = chip1.readPort(0);
+   if (portOneValue == 0) handleInputError(1,portOneValue);     
+   else if(portOneValue != oldPortOneValue) {                 // something new
       oldPortOneValue = portOneValue;
-      phantomResp++;
-    }
-    else if (diff == 1) {
-         oldPortOneValue = portOneValue;
-         // Serial.println (portOneValue,BIN);
-         for (byte i = 0; i < 8; i++) {
-             newLeverOneState[i] = bitRead(portOneValue,i);
-             if (newLeverOneState[i] != lastLeverOneState[i]) {          
-                  lastLeverOneState[i] = newLeverOneState[i]; 
-                  if (newLeverOneState[i] == 0) {
-                     boxArray[i].handle_L1_Response();
-                     // String tempStr = "9 L1_Response:pin_"+String(i); 
-                     // Serial.println(tempStr);
-                  }
-             }
-         }    
+      // Serial.println (portOneValue,BIN);
+      for (byte i = 0; i < 8; i++) {
+         newLeverOneState[i] = bitRead(portOneValue,i);
+            if (newLeverOneState[i] != lastLeverOneState[i]) {          
+                lastLeverOneState[i] = newLeverOneState[i]; 
+                if (newLeverOneState[i] == 0) {
+                   boxArray[i].handle_L1_Response();
+                }
+            }
+        }    
     }           
 }
 
@@ -1180,7 +1261,7 @@ void checkLeverTwoBits() {
       Serial.println("9 diff_L2_"+String(diff));
       Serial.println("9 L2="+String(portOneValue));
       oldPortTwoValue = portTwoValue;
-      phantomResp++;
+      // phantomResp++;
     }   
     else if (diff == 1) {
         oldPortTwoValue = portTwoValue;
@@ -1195,6 +1276,7 @@ void checkLeverTwoBits() {
     }    
 }           
 
+/*
 void decodeSysVars(byte varCode) {
   byte mask;
   byte result; 
@@ -1212,6 +1294,7 @@ void decodeSysVars(byte varCode) {
     Serial.println("9 varCode="+String(varCode));
   // leverTwoExists = sysVarArray[2]; 
 }
+*/
 
 void getInputString() {
     while (Serial.available() > 0) {               // repeat while something in the buffer
@@ -1250,13 +1333,13 @@ void handleInputString()
      else if (stringCode == "G")     boxArray[num1].startSession();
      else if (stringCode == "Q")     boxArray[num1].endSession();
      else if (stringCode == "L1")    boxArray[num1].handle_L1_Response(); 
-     else if (stringCode == "P")     boxArray[num1].switchRewardPortOn(false);  // not timed
-     else if (stringCode == "p")     boxArray[num1].switchRewardPortOff();
+     else if (stringCode == "P")     boxArray[num1].switchTimedPump(On);
+     // else if (stringCode == "p")     boxArray[num1].switchTimedPump(Off);
      else if (stringCode == "PROTOCOL") boxArray[num1].setProtocolNum(num2);
      else if (stringCode == "PARAM") boxArray[num1].setParamNum(num2);
      else if (stringCode == "TIME")  boxArray[num1].setBlockDuration(num2);  
      else if (stringCode == "IBI")   boxArray[num1].setIBIDuration(num2);         
-     else if (stringCode == "PUMP")  boxArray[num1].setrewardDuration(num2); 
+     else if (stringCode == "PUMP")  boxArray[num1].setPumpDuration(num2); 
      else if (stringCode == "R")     boxArray[num1].reportParameters();
      else if (stringCode == "=")     boxArray[num1].moveLeverOne(Extend);   // extend lever1
      else if (stringCode == ".")     boxArray[num1].moveLeverOne(Retract);    // retract lever1
@@ -1266,13 +1349,8 @@ void handleInputString()
      else if (stringCode == "S")     boxArray[num1].switchStim1(On);
      else if (stringCode == "c")     boxArray[num1].switchStim2(Off);
      else if (stringCode == "C")     boxArray[num1].switchStim2(On);
-     else if (stringCode == "V")     Serial.println("9 Ver=300.00");
+     else if (stringCode == "V")     Serial.println("9 Ver=301.00");
      else if (stringCode == "D")     reportDiagnostics(); 
-     else if (stringCode == "SYSVARS") decodeSysVars(num1); 
-     else if (stringCode == "Logic") {
-      Serial.println(sysVarArray[num1]);
-      Serial.println(sysVarArray[0]);
-     }
      /*
      // debug stuff 
      else if (stringCode == "i")     timeUSB();
@@ -1292,8 +1370,10 @@ void reportDiagnostics() {
    maxDelta = 0;
    Serial.println("9 maxQueueRecs="+String(maxQueueRecs));
    Serial.println("9 freeRam="+String(freeRam()));
-   Serial.println("9 phantomResp="+String(phantomResp));
-   phantomResp = 0;
+   Serial.println("9 inputErrors="+String(inputErrors));
+   Serial.println("9 inputRecoveries="+String(inputRecoveries));
+   Serial.println("9 outputErrors="+String(outputErrors));
+   Serial.println("9 outputRecoveries="+String(outputRecoveries));
    portTwoValue = chip3.readPort(0);
    Serial.println("9 portTwoValue="+String(portTwoValue));
    Serial.print("9 ");
