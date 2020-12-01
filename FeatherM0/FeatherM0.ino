@@ -19,10 +19,15 @@
  *   checkLeverOneBits() updated and now calls handleInputError()
  *   
  *   Box::switchRewardPortOn(boolean timed) RENAMED to switchTimedPump(On)
+ *        _pumpTime = 0;  <- moved to switchTimedPump(On)
  *        _timedRewardOn RENAMED _timedPumpOn
  *        _rewardTime RENAMED to _pumpTime
  *        _rewardDuration RENAMED to _pumpDuration
  *        rewardDuration RENAMED to pumpDuration
+ *        
+ *   Box::switchStim2(boolean state)  
+ *   -    Configured to respond to checkbox in Python 
+ *   -    Otherwise HD lever LED is controlled by handle_L2_Response()
  *   
  *   sysVar - not need for at the moment; DecodeSySVars(num) commented out
  *       <SYSVARS num> and DecodeSySVars(num) sets eight sysVars
@@ -56,6 +61,15 @@
  *   SA300.py - if timestamp boxNum == 10 then add timestamp to all boxes (that are running)
  *   
  *   Need timestamp for an unrecovered error that displays a message box in Python. 
+ *   
+ *   Make consistent: all boolean
+ *       moveLeverOne(int state);    
+ *       moveLeverTwo(int state);    
+ *       switchStim1(boolean state);
+ *       switchStim2(boolean state);
+ *       
+ *       handle_L2_Response(byte state);
+ *   
  *   
  *   Clean up if not used:
  *        char pumpCharArray[3] = "pP";  // used for timestamp
@@ -479,7 +493,6 @@ void Box::endBlock() {
    TStamp tStamp = {_boxNum, 'b', millis() - _startTime, 0, 9};
    printQueue.push(&tStamp);
    if (_protocolNum == 7) {             // Flush
-      _pumpTime = 0;
       switchTimedPump(On);
    }   
    else if (_blockNumber == _maxBlockNumber) endSession();
@@ -540,7 +553,6 @@ void Box::endIBI() {
 }
 
 void Box::reinforce() { 
-    _pumpTime = 0;
     if (_unitDose) {
       switchTimedPump(On);
       startTimeOut();
@@ -591,6 +603,7 @@ void Box::switchTimedPump(int state) {
     // Old way: chip1.digitalWrite(_boxNum+8,level);
     
     if (state == On) {
+          _pumpTime = 0;
           _timedPumpOn = true;
           bitSet(pumpStateL1,_boxNum);        // Pump is on when bit = 1 
           TStamp tStamp = {_boxNum, 'P', millis() - _startTime, 1, 2};
@@ -701,12 +714,15 @@ void Box::switchStim2(boolean state) {
    /*   chip2, pins 8..15 map to boxNum 0..7 Lever 2 LED
     *   L2 LED CheckBox is index 4
     *   Defined On = true; Off = false
+    *   
+    *   The LED on lever two (HD) is entirely controlled in checkLeverTwoBits(). 
+    *   For all intents and purposes, L2_LED_State mirrors portTwoValue.
+    *   
+    *   The only exception is when checking or unchecking the checkboxes on the 
+    *   Diagnostics page in SA300.py whereupon the following 
+    *   code is called.
+    *   
     */
-    
-    // Junk
-    // boolean level;
-    // level = !state;                        // On = true -> level goes low    
-    // chip2.digitalWrite(_boxNum+8,level);   // boxNum 0..7  maps to pin 8..15 on chip2
 
    if (state == On) {                        // Defined On = true = 1
       bitClear(L2_LED_State,_boxNum);        // LED is on when bit = 0
@@ -929,11 +945,11 @@ void Box::handle_L1_Response() {
 void Box::handle_L2_Response(byte state) {
 
    if (state == 1) {
-      TStamp tStamp = {_boxNum, 'H', millis() - _startTime, 0, 9};
+      TStamp tStamp = {_boxNum, 'h', millis() - _startTime, 0, 9};
       printQueue.push(&tStamp);
    }
    else {
-      TStamp tStamp = {_boxNum, 'h', millis() - _startTime, 0, 9};
+      TStamp tStamp = {_boxNum, 'H', millis() - _startTime, 0, 9};
       printQueue.push(&tStamp);
    }
 
@@ -1285,9 +1301,9 @@ void checkLeverTwoBits() {
    oldPortTwoValue = portTwoValue;
    pumpStateL2 = (255-portTwoValue);
    pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
-   chip1.writePort(1,pumpState);
    L2_LED_State = portTwoValue;              // mirror pump state
    chip2.writePort(1,L2_LED_State);
+   // chip1.writePort(1,pumpState);          // Called as next instruction in tick()
 }   
  
 /*
@@ -1355,14 +1371,14 @@ void handleInputString()
      else if (stringCode == "IBI")   boxArray[num1].setIBIDuration(num2);         
      else if (stringCode == "PUMP")  boxArray[num1].setPumpDuration(num2); 
      else if (stringCode == "R")     boxArray[num1].reportParameters();
-     else if (stringCode == "=")     boxArray[num1].moveLeverOne(Extend);   // extend lever1
+     else if (stringCode == "=")     boxArray[num1].moveLeverOne(Extend);     // extend lever1
      else if (stringCode == ".")     boxArray[num1].moveLeverOne(Retract);    // retract lever1
      else if (stringCode == "~")     boxArray[num1].moveLeverTwo(Extend);  
      else if (stringCode == ",")     boxArray[num1].moveLeverTwo(Retract);
      else if (stringCode == "s")     boxArray[num1].switchStim1(Off);
      else if (stringCode == "S")     boxArray[num1].switchStim1(On);
      else if (stringCode == "c")     boxArray[num1].switchStim2(Off);
-     else if (stringCode == "C")     boxArray[num1].switchStim2(On);
+     else if (stringCode == "C")     boxArray[num1].switchStim2(On);     
      else if (stringCode == "V")     Serial.println("9 Ver=301.00");
      else if (stringCode == "D")     reportDiagnostics(); 
      /*
@@ -1439,8 +1455,7 @@ void tick()    {
    checkLeverTwoBits(); 
    pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
    chip1.writePort(1,pumpState);
-   L2_LED_State = portTwoValue;              // mirror pump state
-   chip2.writePort(1,L2_LED_State);
+
    sendOneTimeStamp();
    delta = micros() - micro1;
    if (delta > maxDelta) maxDelta = delta;   
