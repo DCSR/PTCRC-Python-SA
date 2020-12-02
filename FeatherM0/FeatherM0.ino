@@ -1212,7 +1212,7 @@ void handleInputError(byte leverNum, byte portValue) {
 
    inputErrors++;
    // Print the error that got us here.
-   if (Verbose) Serial.print ("9 "+String(millis())+" Port "+String(leverNum));
+   if (Verbose) Serial.println("9 !_"+String(millis())+"_Port"+String(leverNum));
 
    if (leverNum == 1) stampChar = '!';
    else stampChar = '^';
@@ -1223,11 +1223,11 @@ void handleInputError(byte leverNum, byte portValue) {
    for (int x = 0; x < 10; x++) {                      // Try ten times
       if (leverNum == 1) _portValue = chip1.readPort(0);
       else _portValue = chip3.readPort(0);
-      if (_portValue == 0) Serial.print("! ");         // Still has error
+      if (_portValue == 0) Serial.println("9 !");         // Still has error
       else {
          recoveredFromError = true;
          inputRecoveries++;
-         if (Verbose) Serial.println(" ... recovered after "+String(x+1)+" attempt(s)");
+         if (Verbose) Serial.println("9 Recovered_after_"+String(x+1)+"_attempt(s)");
          break;
       }
    }                                                  // If error after 10 tries 
@@ -1235,12 +1235,12 @@ void handleInputError(byte leverNum, byte portValue) {
       Serial.println();
       resetChips(); 
       if (chip1.readPort(0) != 0 && chip3.readPort(0) != 0) {
-        if (Verbose) Serial.println("Recovered from Input Error after chip reset");
+        if (Verbose) Serial.println("9 Recovered_after_reset");
            inputRecoveries++;
       }
       else {      
         Serial.println();
-        Serial.println("Ending Session Because of Input Errors");
+        Serial.println("9 Aborting_Session");
         for (int boxNum = 0; boxNum < 8; boxNum++) 
            boxArray[boxNum].endSession();
       }
@@ -1287,23 +1287,23 @@ void checkLeverTwoBits() {
                bitValue = (portTwoValue & (1 << bits));
                if (bitValue == 1) {
                   boxArray[bits].handle_L2_Response(bitValue);
-                  Serial.println("bit "+String(bits)+" = 1");
+                  Serial.println("9 bit_"+String(bits)+"=1");
                }
                else {
                   boxArray[bits].handle_L2_Response(bitValue);
-                  Serial.println("bit "+String(bits)+" = 0");
+                  Serial.println("9 bit_"+String(bits)+"=0");
                }                                  
             }        
          }
+      L2_LED_State = portTwoValue;              // mirror pump state
+      chip2.writePort(1,L2_LED_State); 
       }
+      // Configure pumpState 
+      oldPortTwoValue = portTwoValue;
+      pumpStateL2 = (255-portTwoValue);
+      pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
+      // chip1.writePort(1,pumpState);          // Called as next instruction in tick()
    }
-   // At this point, nothing has been done to switch the pumps 
-   oldPortTwoValue = portTwoValue;
-   pumpStateL2 = (255-portTwoValue);
-   pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
-   L2_LED_State = portTwoValue;              // mirror pump state
-   chip2.writePort(1,L2_LED_State);
-   // chip1.writePort(1,pumpState);          // Called as next instruction in tick()
 }   
  
 /*
