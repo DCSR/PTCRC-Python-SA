@@ -1,12 +1,8 @@
 """
 
-Aug 4, 2020
+December 2, 2020
 
-Changes to allow HD on Lever two
-
-To Do:
-exception at getInput:  [b'000000009', b'varCode', b'=', b'0']
-
+input and output errors shown on Diagnostic tab
 
 """
 
@@ -234,10 +230,12 @@ class GuiClass(object):
         self.B8_Inf    = IntVar(value=0)
         self.B8_SessionTimeStr = StringVar(value="0:0:00")
 
-        self.phantomResponseL1 = IntVar(value=0)
-        self.phantomResponseL2 = IntVar(value=0)
-        
-        
+        self.errorsL1 = IntVar(value=0)
+        self.errorsL2 = IntVar(value=0)
+        self.recoveriesL1 = IntVar(value=0)
+        self.recoveriesL2 = IntVar(value=0)
+        self.outputErrors = IntVar(value=0)
+        self.outputRecoveries = IntVar(value=0)
 
         # ********************* Menus ********************
         
@@ -415,16 +413,32 @@ class GuiClass(object):
         B8_TimeLabel = ttk.Label(self.counterFrame, width=6, textvariable = self.B8_SessionTimeStr)
         B8_TimeLabel.grid(column = 5, row = 8)
 
-        
-        PhantomLabel = ttk.Label(self.counterFrame, text = "Phantom Resp L1")
-        PhantomLabel.grid(column = 0, row = 10)
-        PhantomLabel = ttk.Label(self.counterFrame, text = "Phantom Resp L2")
-        PhantomLabel.grid(column = 0, row = 11)
-        PhantomRespL1 = ttk.Label(self.counterFrame, textvariable = str(self.phantomResponseL1))
-        PhantomRespL1.grid(column = 1, row = 10)                          
-        PhantomRespL2 = ttk.Label(self.counterFrame, textvariable = str(self.phantomResponseL2))
-        PhantomRespL2.grid(column = 1, row = 11)
-                                
+        columnLabel1 = ttk.Label(self.counterFrame, text = "Errors")
+        columnLabel1.grid(column = 1, row = 10, sticky = (EW))
+        columnLabel2 = ttk.Label(self.counterFrame, text = "Recoveries")
+        columnLabel2.grid(column = 2, row = 10, sticky = (EW))
+
+        L1Label = ttk.Label(self.counterFrame, text = "Lever 1")
+        L1Label.grid(column = 0, row = 11)
+        errorsL1Label = ttk.Label(self.counterFrame, textvariable = str(self.errorsL1))
+        errorsL1Label.grid(column = 1, row = 11)
+        recoveriesL1Label = ttk.Label(self.counterFrame, textvariable = str(self.recoveriesL1))
+        recoveriesL1Label.grid(column = 2, row = 11)        
+
+        L2Label = ttk.Label(self.counterFrame, text = "Lever 2")
+        L2Label.grid(column = 0, row = 12)
+        errorsL2Label = ttk.Label(self.counterFrame, textvariable = str(self.errorsL2))
+        errorsL2Label.grid(column = 1, row = 12)
+        recoveriesL2Label = ttk.Label(self.counterFrame, textvariable = str(self.recoveriesL2))
+        recoveriesL2Label.grid(column = 2, row = 12) 
+
+        outputLabel = ttk.Label(self.counterFrame, text = "Outputs")
+        outputLabel.grid(column = 0, row = 13)
+        outputErrorsLabel = ttk.Label(self.counterFrame, textvariable = str(self.outputErrors))
+        outputErrorsLabel.grid(column = 1, row = 13)
+        outputRecoveriesLabel = ttk.Label(self.counterFrame, textvariable = str(self.outputRecoveries))
+        outputRecoveriesLabel.grid(column = 2, row = 13) 
+                               
         # ********************** noteBookFrame *****************************************
 
         noteBookFrame = Frame(self.root, borderwidth=0, relief="sunken")
@@ -683,21 +697,21 @@ class GuiClass(object):
         """
         # Eight tkinter boolean vars widgets
 
-        sys0label = ttk.Label(self.diagnosticButtonFrame, text="Reward Port")
+        sys0label = ttk.Label(self.diagnosticButtonFrame, text="Label0")
         sys0label.grid(column = 0, row = 5, sticky = (W))
-        sys0FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="Pumps", variable=self.sys0CheckVar, value=0)
+        sys0FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys0CheckVar, value=0)
         sys0FalseRadiobutton.grid(column = 1, row = 5, sticky = (W))
-        sys0TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="Aux 1-8", variable=self.sys0CheckVar, value=1)
+        sys0TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys0CheckVar, value=1)
         sys0TrueRadiobutton.grid(column = 2, row = 5, sticky = (W))
 
-        sys1label = ttk.Label(self.diagnosticButtonFrame, text="Reward Logic")
+        sys1label = ttk.Label(self.diagnosticButtonFrame, text="Label1")
         sys1label.grid(column = 0, row = 6, sticky = (W))
-        sys1FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="5VDC On", variable=self.sys1CheckVar, value=0)
+        sys1FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys1CheckVar, value=0)
         sys1FalseRadiobutton.grid(column = 1, row = 6, sticky = (W))
-        sys1TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="GND On", variable=self.sys1CheckVar, value=1)
+        sys1TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys1CheckVar, value=1)
         sys1TrueRadiobutton.grid(column = 2, row = 6, sticky = (W))
 
-        sys2label = ttk.Label(self.diagnosticButtonFrame, text="Check Lever 2")
+        sys2label = ttk.Label(self.diagnosticButtonFrame, text="Label2")
         sys2label.grid(column = 0, row = 7, sticky = (W))
         sys2FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys2CheckVar, value=0)
         sys2FalseRadiobutton.grid(column = 1, row = 7, sticky = (W))
@@ -798,9 +812,9 @@ class GuiClass(object):
                               self.B5_boolVarList,self.B6_boolVarList,self.B7_boolVarList,self.B8_boolVarList, \
                               self.sysVarList]
         self.L1ResponsesList = [self.B1_L1Resp,self.B2_L1Resp,self.B3_L1Resp,self.B4_L1Resp, \
-                              self.B5_L1Resp,self.B6_L1Resp,self.B7_L1Resp,self.B8_L1Resp, self.phantomResponseL1]
+                              self.B5_L1Resp,self.B6_L1Resp,self.B7_L1Resp,self.B8_L1Resp]
         self.L2ResponsesList = [self.B1_L2Resp,self.B2_L2Resp,self.B3_L2Resp,self.B4_L2Resp, \
-                              self.B5_L2Resp,self.B6_L2Resp,self.B7_L2Resp,self.B8_L2Resp, self.phantomResponseL2]
+                              self.B5_L2Resp,self.B6_L2Resp,self.B7_L2Resp,self.B8_L2Resp]
         self.InfList = [self.B1_Inf,self.B2_Inf,self.B3_Inf,self.B4_Inf, \
                         self.B5_Inf,self.B6_Inf,self.B7_Inf,self.B8_Inf]
 
@@ -1462,23 +1476,27 @@ class GuiClass(object):
                 if (boolVarListIndex >= 0):
                     self.boolVarLists[listIndex][boolVarListIndex].set(level)           # update checkbox                   
                 if (strCode == "L"):
-                    self.L1ResponsesList[listIndex].set(self.L1ResponsesList[listIndex].get()+1)    # update response label
-                if (strCode == "J"):
-                    self.L2ResponsesList[listIndex].set(self.L2ResponsesList[listIndex].get()+1)    # update Dummy response label
-                if (strCode == "P"):
-                    self.InfList[listIndex].set(self.InfList[listIndex].get()+1)                # update response label
+                    self.L1ResponsesList[listIndex].set(self.L1ResponsesList[listIndex].get()+1)    # update L1 label
+                elif (strCode == "H"):
+                    self.L2ResponsesList[listIndex].set(self.L2ResponsesList[listIndex].get()+1)    # update HD label
+                elif (strCode == "P"):
+                    self.InfList[listIndex].set(self.InfList[listIndex].get()+1)                # update infusion label
                 elif (strCode == "E"):
                     self.boxes[listIndex].sessionEnded()
         elif (boxNum == 8): self.boolVarLists[8][boolVarListIndex].set(level)           # update debug checkbox 
         elif (boxNum == 9):
             print(strCode)
             # self.writeToTextbox(strCode,0)
-        elif (boxNum == 10):
-            if (strCode == "<"):
-                    self.L1ResponsesList[8].set(self.L1ResponsesList[8].get()+1)    # self.phantomResponseL1
-            elif (strCode == ">"):
-                    self.L2ResponsesList[8].set(self.L2ResponsesList[8].get()+1)    # self.phantomResponseL1
-
+        elif (boxNum == 10):                                                    # BoxNum 10 applies to all boxes
+            if   (strCode == "("): self.errorsL1.set(self.errorsL1.get()+1)
+            elif (strCode == ")"): self.recoveriesL1.set(self.recoveriesL1.get()+1)
+            elif (strCode == "["): self.errorsL2.set(self.errorsL2.get()+1)   
+            elif (strCode == "]"): self.recoveriesL2.set(self.recoveriesL2.get()+1)    
+            elif (strCode == "!"): self.outputErrors.set(self.outputErrors.get()+1)    
+            elif (strCode == "^"): self.outputRecoveries.set(self.outputRecoveries.get()+1)
+            elif (strCode == "!"):
+                tkinter.messagebox.showwarning(title="ERROR",
+                        message="Session was ABORTED due to an unrecoverable input or output error")
 
         # set to zero in startSession    
         # self.phantomResponseL1 = IntVar(value=0)
@@ -1510,7 +1528,7 @@ class GuiClass(object):
             self.writeToTextbox(text,1)
     
     def about(self):
-        tkMessageBox.showinfo("About",__doc__,parent=self.root)
+        messagebox.showinfo("About",__doc__,parent=self.root)
         return
     
     def askBeforeExiting(self):

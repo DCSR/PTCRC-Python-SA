@@ -2,11 +2,30 @@
  *   
  *   Nov 23, 2020 
  *   
- *   Changes to this version (after testing it will be version 301.00)
+ *   To Do:
+ *   -  Rename SA200.py to SA300.py
+ *   -  SA300.py - if timestamp boxNum == 10 then add timestamp to all boxes (that are running)
+ *   -  Assigne version number 301.00 after testing 
+ *   -  Clean up header notes and update Version Notes.
+ *   -  Check Documentation, SA200.py Programmers Guide, API, codes 
+ *   -
+ *   
+ *   *********  Changes to this version *************
+ *   
+ *   Deleted:
+ *        char pumpCharArray[3] = "pP";  
+ *        char lever2CharArray[3] = "jJ"; 
+ *        
+ *   The way HD is handled has been totally rethought in this version.
+ *      checkLeverTwoBits() handles pump, LEDs and timestamps for the HD lever.  
+ *      It calls Box::handle_L2_Response(byte state) to send the timeStamps 
+ *      'H' and 'h'
  *   
  *   Changes to the way outputs are controlled: 
  *   -  Old way: bits were flipped using chip0.digitalWrite(bit,state) 
  *   -  New way: flip bit in variable (eg. L1_Position) then chip0.writePort(0, L1_Position)
+ *   
+ *   chip1.writePort(1,pumpState) moved to tick()
  *   
  *   Procedures rewritten:
  *   Box::moveLeverOne(int state) 
@@ -29,7 +48,7 @@
  *   -    Configured to respond to checkbox in Python 
  *   -    Otherwise HD lever LED is controlled by handle_L2_Response()
  *   
- *   sysVar - not need for at the moment; DecodeSySVars(num) commented out
+ *   sysVar - not need at this point; DecodeSySVars(num) commented out
  *       <SYSVARS num> and DecodeSySVars(num) sets eight sysVars
  *       Change labels for sysVars0-2 in Python
  *       0 Reward Port - Pumps (0) AUX (1)
@@ -37,31 +56,38 @@
  *       2 Check Lever 2 - False (0) True (1)
  *       3 - 7 unused
  *       
- *   SA200.py - sysVar labels removed
+ *   sysVar labels removed in Python
  *   
  *   Box::deliverFoodPellet() stub added 
  *      see notes for future To Do
  *      
- *   "M" timestamp is the millis() at session _startTime. Check - OK
+ *   "M" timestamp added indicating millis() at session _startTime. 
+ *   Presumably Analysis.py can use 'M' to calculate time of input errors  
+ *   as they relate to processor time and _sessionTime for each datafile. 
  *   
- *   handleInputError() sends "!" with millis() timestamp 
- *   Presumably, Analysis can use "M" and "!" to display input errors. 
- *   "!", "^"     < timestamps for input and output errors
+ *   Newly defined in Python
+ *   self.errorsL1          '('  
+ *   self.recoveriesL1      ')'
+ *   self.errorsL2          '['
+ *   self.recoveriesL2      ']'
+ *   self.outputErrors      '#'
+ *   self.outputRecoveries  '^'
  *   
- *   handleOutputError() will send "^"
+ *   Display warning        '!'
+ *   
+ *   'J' and 'j' no longer used for L2 - make note in documentation
+ *   'H' and 'h' denotes state of lever, pump and LED
+ *   
+ *   Timestamps using boxNum 10 convey system information (eg. errors)    
  *   
  *   
- *        
- *   ISSUES and Priorities
- *  
- *   Check Documentation, SA200.py Programmers Guide, API, codes 
  *   
- *   Rename SA200.py to SA300.py
+ * **************  Notes - In progress ******************     
+ * 
+ *   Test how to use several Tstamps in one procedure 
  *   
- *   SA300.py - if timestamp boxNum == 10 then add timestamp to all boxes (that are running)
- *   
- *   Need timestamp for an unrecovered error that displays a message box in Python. 
- *   
+ *   Check error timestamps and codes
+ *    
  *   Make consistent: all boolean
  *       moveLeverOne(int state);    
  *       moveLeverTwo(int state);    
@@ -70,30 +96,17 @@
  *       
  *       handle_L2_Response(byte state);
  *   
+ *   Check (and possibly rethink) timestamps. 
+ *     boxNum, code, mSecTime, state, index
+ *     sendOneTimestamp() sends timestamps with or without state and index
+ *     depending on whether index == 9.     
+ *     CheckBox indexes (0..4)
+ *     lever1CheckVar (0), lever2CheckVar (1), pumpCheckVar (3), LED1CheckVar (4), LED2CheckVar (5)
+ *     
+ *     
+ *   Consider using print() in Python - rather than writeToTextBox() - for errors and diagnostics.
  *   
- *   Clean up if not used:
- *        char pumpCharArray[3] = "pP";  // used for timestamp
- *        char lever2CharArray[3] = "jJ"; 
- *   
- *   Clean up this mess. If necessary, move stuff to Documentation
- *   
- *   add chip1.writePort(1,pumpState) to tick()
- *   
- *   
- *   The way HD is handled has been totally rethought in this version.
- *      checkLeverTwoBits() handles pump, LEDs and timestamps for the HD lever.  
- *      It calls Box::handle_L2_Response(byte state) to send the timeStamps 
- *      'H' and 'h'     
- *   
- *   
- *   pumpState and L2_LED_State written to ports every tick() 
- *   eg chip1.writePort(1,pumpState);
- *   
- *   
- *   ********************   HERE ************************
- *   
- *   
- *   4. Need leverTwoExists??
+ *   Need leverTwoExists??
  *      The issue is when and whether to call checkLeverTwoBits() 
  *      Define global variable that is set by any box running HD
  *   
@@ -311,10 +324,6 @@ byte pumpStateL1 = 0x00;        // Determined by lever 1
 byte pumpStateL2 = 0x00;        // Determined by lever 2 (HD)
 byte L2_Position = 0xFF;        // Retracted
 byte L2_LED_State = 0xFF;       // Off
-int inputErrors = 0;
-int inputRecoveries = 0;
-int outputErrors = 0;
-int outputRecoveries = 0;
 
 boolean sysVarArray[8] = {false,false,false,false,false,false,false,false};
 // sysVarArray[0] used for reward type; 0 = Drug, 1 = Food
@@ -352,8 +361,6 @@ byte ticks[8] = {0,0,0,0,0,0,0,0};
 boolean lastLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 boolean newLeverTwoState[8] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
 boolean leverTwoExists = false;
-char pumpCharArray[3] = "pP";  // used for timestamp
-char lever2CharArray[3] = "jJ"; 
 
 volatile boolean tickFlag = false;
 
@@ -943,51 +950,18 @@ void Box::handle_L1_Response() {
 }
 
 void Box::handle_L2_Response(byte state) {
+   /* Handles timestamp only, 
+      HD control of pump and LED handled in checkLeverOneBits()
+    */
 
    if (state == 1) {
       TStamp tStamp = {_boxNum, 'h', millis() - _startTime, 0, 9};
       printQueue.push(&tStamp);
    }
    else {
-      TStamp tStamp = {_boxNum, 'H', millis() - _startTime, 0, 9};
+      TStamp tStamp = {_boxNum, 'H', millis() - _startTime, 1, 9};
       printQueue.push(&tStamp);
-   }
-
-  /*  checkLeverTwoBits passes the state of each bit in the register
-
-    Older version:
-    if (_boxState == L2_HD) {
-      if (state) {
-        chip1.digitalWrite(_boxNum+8,0);
-        TStamp tStamp1 = {_boxNum, 'J', millis() - _startTime, 0, 9};
-        printQueue.push(&tStamp1);
-        TStamp tStamp2 = {_boxNum, 'P', millis() - _startTime, 1, 2};
-        printQueue.push(&tStamp2);
-      }
-      else {
-        chip1.digitalWrite(_boxNum+8,1);
-        TStamp tStamp1 = {_boxNum, 'j', millis() - _startTime, 0, 9};
-        printQueue.push(&tStamp1);
-        TStamp tStamp2 = {_boxNum, 'p', millis() - _startTime, 1, 2};
-        printQueue.push(&tStamp2);
-      }
-
-   Newer version:
-  if (_boxState == L2_HD) {
-      TStamp tStamp1 = {_boxNum, lever2CharArray[state], millis() - _startTime, 0, 9};
-      printQueue.push(&tStamp1);
-      TStamp tStamp2 = {_boxNum, pumpCharArray[state], millis() - _startTime, 1, 2};
-      printQueue.push(&tStamp2);    
-      if (state) {                      // Lever pressed: HIGH (1)
-        chip1.digitalWrite(_boxNum+8,0);
-        pumpOn = true;
-      }
-      else {                            // Lever up
-        chip1.digitalWrite(_boxNum+8,1);
-        pumpOn = false;
-      }
-  }
-  */  
+   } 
 }
 
 void Box::setProtocolNum(int protocolNum) {
@@ -1210,37 +1184,44 @@ void handleInputError(byte leverNum, byte portValue) {
    byte _portValue;
    char stampChar; 
 
-   inputErrors++;
-   // Print the error that got us here.
-   if (Verbose) Serial.println("9 !_"+String(millis())+"_Port"+String(leverNum));
-
-   if (leverNum == 1) stampChar = '!';
-   else stampChar = '^';
+   if (leverNum == 1) stampChar = '(';
+   else stampChar = ')';
    
    TStamp tStamp = {10, stampChar, millis(), 0, 9};
    printQueue.push(&tStamp);
 
-   for (int x = 0; x < 10; x++) {                      // Try ten times
+   for (int x = 0; x < 10; x++) {                         // Try ten times
       if (leverNum == 1) _portValue = chip1.readPort(0);
       else _portValue = chip3.readPort(0);
       if (_portValue == 0) Serial.println("9 !");         // Still has error
       else {
          recoveredFromError = true;
-         inputRecoveries++;
          if (Verbose) Serial.println("9 Recovered_after_"+String(x+1)+"_attempt(s)");
          break;
       }
    }                                                  // If error after 10 tries 
-   if (!recoveredFromError) {
+   if (recoveredFromError) {
+      if (leverNum == 1) stampChar = '[';
+      else stampChar = ']';
+      TStamp tStamp1 = {10, stampChar, millis(), 0, 9};
+      printQueue.push(&tStamp1);
+   }
+   else {
       Serial.println();
       resetChips(); 
       if (chip1.readPort(0) != 0 && chip3.readPort(0) != 0) {
         if (Verbose) Serial.println("9 Recovered_after_reset");
-           inputRecoveries++;
+        if (leverNum == 1) stampChar = '[';
+        else stampChar = ']';
+        TStamp tStamp2 = {10, stampChar, millis(), 0, 9};
+        printQueue.push(&tStamp2);       
       }
       else {      
         Serial.println();
         Serial.println("9 Aborting_Session");
+        TStamp tStamp3 = {10, stampChar, millis(), 0, 9};
+        printQueue.push(&tStamp3);
+        
         for (int boxNum = 0; boxNum < 8; boxNum++) 
            boxArray[boxNum].endSession();
       }
@@ -1287,11 +1268,11 @@ void checkLeverTwoBits() {
                bitValue = (portTwoValue & (1 << bits));
                if (bitValue == 1) {
                   boxArray[bits].handle_L2_Response(bitValue);
-                  Serial.println("9 bit_"+String(bits)+"=1");
+                  // Serial.println("9 bit_"+String(bits)+"=1");
                }
                else {
                   boxArray[bits].handle_L2_Response(bitValue);
-                  Serial.println("9 bit_"+String(bits)+"=0");
+                  // Serial.println("9 bit_"+String(bits)+"=0");
                }                                  
             }        
          }
@@ -1381,6 +1362,10 @@ void handleInputString()
      else if (stringCode == "C")     boxArray[num1].switchStim2(On);     
      else if (stringCode == "V")     Serial.println("9 Ver=301.00");
      else if (stringCode == "D")     reportDiagnostics(); 
+     else if (stringCode == "T")     {
+        TStamp tStamp = {10, '!', millis(), 0, 9};
+        printQueue.push(&tStamp);
+     }
      /*
      // debug stuff 
      else if (stringCode == "i")     timeUSB();
@@ -1400,10 +1385,6 @@ void reportDiagnostics() {
    maxDelta = 0;
    Serial.println("9 maxQueueRecs="+String(maxQueueRecs));
    Serial.println("9 freeRam="+String(freeRam()));
-   Serial.println("9 inputErrors="+String(inputErrors));
-   Serial.println("9 inputRecoveries="+String(inputRecoveries));
-   Serial.println("9 outputErrors="+String(outputErrors));
-   Serial.println("9 outputRecoveries="+String(outputRecoveries));
    portTwoValue = chip3.readPort(0);
    Serial.println("9 portTwoValue="+String(portTwoValue));
    Serial.print("9 ");
