@@ -1,94 +1,107 @@
 /*  
  *   
- *   Nov 23, 2020 
+ *   December 4, 2020 
  *   
  *   To Do:
  *   -  Rename SA200.py to SA300.py
  *   -  SA300.py - if timestamp boxNum == 10 then add timestamp to all boxes (that are running)
- *   -  Assigne version number 301.00 after testing 
+ *   -  Assign version number 301.00 after testing 
  *   -  Clean up header notes and update Version Notes.
  *   -  Check Documentation, SA200.py Programmers Guide, API, codes 
- *   -
- *   
- *   *********  Changes to this version *************
- *   
- *   Deleted:
- *        char pumpCharArray[3] = "pP";  
- *        char lever2CharArray[3] = "jJ"; 
- *        
- *   The way HD is handled has been totally rethought in this version.
- *      checkLeverTwoBits() handles pump, LEDs and timestamps for the HD lever.  
- *      It calls Box::handle_L2_Response(byte state) to send the timeStamps 
- *      'H' and 'h'
- *   
- *   Changes to the way outputs are controlled: 
- *   -  Old way: bits were flipped using chip0.digitalWrite(bit,state) 
- *   -  New way: flip bit in variable (eg. L1_Position) then chip0.writePort(0, L1_Position)
- *   
- *   chip1.writePort(1,pumpState) moved to tick()
- *   
- *   Procedures rewritten:
- *   Box::moveLeverOne(int state) 
- *   Box::moveLeverTwo(int state)
- *   Box::switchStim1(boolean state)
- *   Box::switchStim2(boolean state)
- *   Box::switchTimedPump(On / Off)
- *   
- *   handleInputError(byte leverNum, byte portValue)
- *   checkLeverOneBits() updated and now calls handleInputError()
- *   
- *   Box::switchRewardPortOn(boolean timed) RENAMED to switchTimedPump(On)
- *        _pumpTime = 0;  <- moved to switchTimedPump(On)
- *        _timedRewardOn RENAMED _timedPumpOn
- *        _rewardTime RENAMED to _pumpTime
- *        _rewardDuration RENAMED to _pumpDuration
- *        rewardDuration RENAMED to pumpDuration
- *        
- *   Box::switchStim2(boolean state)  
- *   -    Configured to respond to checkbox in Python 
- *   -    Otherwise HD lever LED is controlled by handle_L2_Response()
- *   
- *   sysVar - not need at this point; DecodeSySVars(num) commented out
- *       <SYSVARS num> and DecodeSySVars(num) sets eight sysVars
- *       Change labels for sysVars0-2 in Python
- *       0 Reward Port - Pumps (0) AUX (1)
- *       1 Reward Logic - 5VDC on (0) GND On (1)
- *       2 Check Lever 2 - False (0) True (1)
- *       3 - 7 unused
- *       
- *   sysVar labels removed in Python
- *   
- *   Box::deliverFoodPellet() stub added 
- *      see notes for future To Do
- *      
- *   "M" timestamp added indicating millis() at session _startTime. 
- *   Presumably Analysis.py can use 'M' to calculate time of input errors  
- *   as they relate to processor time and _sessionTime for each datafile. 
- *   
- *   Newly defined in Python
- *   self.errorsL1          '('  
- *   self.recoveriesL1      ')'
- *   self.errorsL2          '['
- *   self.recoveriesL2      ']'
- *   self.outputErrors      '#'
- *   self.outputRecoveries  '^'
- *   
- *   Display warning        '!'
- *   
- *   'J' and 'j' no longer used for L2 - make note in documentation
- *   'H' and 'h' denotes state of lever, pump and LED
- *   
- *   Timestamps using boxNum 10 convey system information (eg. errors)    
+ *   -  MessageBoxes: failure to start etc.
+ *   -  Send some info on checkOutputPorts() failure
+ *   - checkoutput
  *   
  *   
- *   
+ 
  * **************  Notes - In progress ******************     
  * 
  *   Test how to use several Tstamps in one procedure 
  *   
- *   Check error timestamps and codes
+ *   Check timestamps and codes
+ *      probably have to run a PR-HD to get all kinds of timstamps
+ *      
+ *   
+ *   
+ *   
+ *   ******************************************************************************
+ *   ******************************************************************************
+ *   
+ *   showPorts() - not needed
+ *   
+ *   resetChips()      - set chips into active mode   
+ *   
+ *   enableSafeMode()   (renamed from disableOutputs())
+ *      not called by anything yet 
+ *      turnStuffOff() deleted
+ *      
+ *   setup() 
+ *     don't really need to do anything with chips here  
  *    
- *   Make consistent: all boolean
+ *   checkOutputPorts()  added
+ *   handleOutputError() added
+ *   
+ *   if (checkOutputPorts()) handleOutputError() added to tick() - 
+ *   
+ *   startSession(byte boxNum) 
+ *     if (boxesRunning == 0) 
+ *        resetChips() 
+ *        setBit(boxesRunning,boxNum)
+ *        
+ *      Boxes::endSession()  
+ *      clearBit(boxesRunning,_boxNum)
+ *      
+ *   AbortSession() added  
+ *      
+ *      
+ *   ********************** Above Done  -  Below not so much ********************* 
+ *   No idea how to enterSafeMode() when all boxes have finish without endlessly   
+ *   checking:
+ *      if (boxesRunning == 0)
+ *         enter SafeMode
+ *      
+ *   Boxes::endSession() 
+ *      bitClear(boxesRunning,   
+ *  
+ *   tick()
+ *      if (boxesRunning > 0)
+ *      checkInputPorts
+ *      every second - if (checkOutputPorts()) handleOutputError();
+ *     
+ *     
+ *   handleOutputError()   |
+ *                         |
+ *   Reset                     |   Combine these?
+ *                         |  
+ *   reportOutputError()   |
+ *   
+
+ *   
+ *   
+ *   
+
+ *      
+ *   
+
+ *   
+
+ *   
+ *   
+ *   startSession(boxNum)
+ *    setBit(boxesRunning,boxNum)
+ *    if (boxesRunnning > 1) {
+ *       reset diagnostic data and chip states
+ *       anything that needs to be done when first box starts? - resetchips() ?
+ *       Start reading inputchips
+ *    }
+ *    
+ *   
+ *   Boxes::endSession() could clearBit(boxesRunning,boxNum)
+ *   
+ *   
+ *   
+ *    
+ *   Make consistent: all boolean  - create new branch to test this at some point
  *       moveLeverOne(int state);    
  *       moveLeverTwo(int state);    
  *       switchStim1(boolean state);
@@ -109,8 +122,6 @@
  *   Need leverTwoExists??
  *      The issue is when and whether to call checkLeverTwoBits() 
  *      Define global variable that is set by any box running HD
- *   
- *   replace turnStuffOff() with disableOutputs()  ????
  *   
  *   HD_DEMO.ino uses startSesssion() and endSession()
  *   Here, _startSession is local to Box
@@ -350,6 +361,7 @@ typedef struct tagTStamp {
 Queue printQueue(sizeof(TStamp), 60, FIFO); // Instantiate printQueue, First In First Out
   // Note: maximum in the queue was 40 when quitting all eight boxes at once (w/o a delay)
 
+byte boxesRunning = 0;
 const uint8_t ledPin = 5;
 extern "C" char *sbrk(int i);   // used in FreeRam()
 String instruction;
@@ -373,6 +385,7 @@ byte diffCriteria = 1;
 
 // enum  states { PRESTART, BLOCK, IBI, L2_HD, FINISHED };
 enum states { PRESTART, L1_ACTIVE, L1_TIMEOUT, IBI, L2_HD, FINISHED };
+
 
 // ******************** Box Class **************
 
@@ -662,12 +675,12 @@ void Box::moveLeverOne(int state) {
    
    if (state == Extend) {                 // Defined LOW = Extend = 0 
       bitClear(L1_Position,_boxNum);      // Set bit to 0
-      TStamp tStamp = {_boxNum, '.', millis() - _startTime, 0, 0};
+      TStamp tStamp = {_boxNum, '.', millis() - _startTime, 1, 0};  // set checkbox with 1
       printQueue.push(&tStamp); 
    }
    else {                                 // Defined LOW = Extend = 0
       bitSet(L1_Position,_boxNum);        // Set bit to 1
-      TStamp tStamp = {_boxNum, '=', millis() - _startTime, 1, 0};
+      TStamp tStamp = {_boxNum, '=', millis() - _startTime, 0, 0};  // uncheck checkbox with 0
       printQueue.push(&tStamp);
    }
    chip0.writePort(0,L1_Position); 
@@ -901,6 +914,7 @@ void Box::endSession() {
     TStamp tStamp = {_boxNum, 'E', millis() - _startTime, 0, 9};
     printQueue.push(&tStamp);
     moveLeverTwo(Retract);
+    bitClear(boxesRunning,_boxNum);
 }
 
 void Box::tick() {                        // do stuff every 10 mSec 
@@ -1075,75 +1089,10 @@ void TC4_Handler()                                // Interrupt Service Routine (
 }
 // **************************  End Timer stuff ****************************
 
-void resetChips() {
-   chip0.begin();
-   chip1.begin();
-   chip2.begin();
-   chip3.begin();
-   if (Verbose) Serial.println("Resetting Port Expander Chips");
-   for (uint8_t i = 0; i <= 15; i++) {
-      chip0.pinMode(i,OUTPUT);             // Set chip0 to OUTPUT
-      chip2.pinMode(i,OUTPUT);             // Set chip2 to OUTPUT
-   }
-   for (uint8_t i = 0; i <= 7; i++)  {
-      chip1.pinMode(i,INPUT_PULLUP);          
-      chip3.pinMode(i,INPUT_PULLUP);          
-   }
-   for (uint8_t i = 8; i <= 15; i++) {
-      chip1.pinMode(i, OUTPUT);               
-      chip3.pinMode(i, OUTPUT);               
-   }
-   chip0.writePort(0,L1_Position);         // To whatever state has previously been assigned
-   chip0.writePort(1,L1_LED_State);         
-   chip2.writePort(0,L2_Position);
-   chip2.writePort(1,L2_LED_State); 
-}
-
-void disableOutputs() {
-  if (Verbose) Serial.println("Disabling Outputs");
-   
-  // ***** Switch all output ports OFF *****
-  L1_Position = 0xFF;              // Retract L1
-  chip0.writePort(0,L1_Position);  
-  L1_LED_State = 0xFF;             // L1 LED Off
-  chip0.writePort(1,L1_LED_State);
-  L2_Position = 0xFF;              // Retract L2
-  chip2.writePort(0,L2_Position);
-  L2_LED_State = 0xFF;             // L2 LED Off
-  chip2.writePort(1,L2_LED_State);
-  pumpState = 0x00; 
-  pumpStateL1 = 0x00;
-  pumpStateL2 = 0x00;
-  chip1.writePort(1,pumpState);      // Pumps Off
-  chip3.writePort(1,0xFF);           // Aux Off
-
-  // ***** Configure all output ports to inputs *****  
-
-  for (uint8_t i = 0; i <= 15; i++) {
-      chip0.pinMode(i,INPUT);             // Set chip0 to OUTPUT
-      chip2.pinMode(i,INPUT);             // Set chip2 to OUTPUT
-  }
-  for (uint8_t i = 8; i <= 15; i++) {
-     chip1.pinMode(i, INPUT);               
-     chip3.pinMode(i, INPUT);               
-  }
-}
-
-
-void turnStuffOff(){
-  chip0.writePort(0xFFFF);
-  if (sysVarArray[1]) chip1.writePort(1,0xFF);    // Pumps or hoppers on chip1 Off
-  else chip1.writePort(1,0x00);
-
-  // chip1.writePort(1,pumpState);      // Pumps Off
-  
-  chip2.writePort(0xFFFF);
-  chip3.writePort(1,0x00);    // Off  
-}
-
 void setup() {
   Serial.begin(115200);
   pinMode(ledPin, OUTPUT);   // GPIO 5
+  /*
   chip0.begin();     // This starts SPI and set the chip select
   chip1.begin();     // pin (10) to OUTPUT
   chip2.begin();                             // different from SelfAdmin201.ino
@@ -1164,10 +1113,153 @@ void setup() {
   portOneValue = chip1.readPort(0);          
   portTwoValue = chip3.readPort(0);          
   // Serial.println(portOneValue,BIN);
-
+  */
   delay(500); 
   init_10_mSec_Timer(); 
-  Serial.println("9 Beta");
+  Serial.println("9 Ver=301.00");
+}
+
+void resetChips() {
+   chip0.begin();
+   chip1.begin();
+   chip2.begin();
+   chip3.begin();
+   if (Verbose) Serial.println("9 Chip Reset");
+   for (uint8_t i = 0; i <= 15; i++) {
+      chip0.pinMode(i,OUTPUT);             // Set chip0 to OUTPUT
+      chip2.pinMode(i,OUTPUT);             // Set chip2 to OUTPUT
+   }
+   for (uint8_t i = 0; i <= 7; i++)  {
+      chip1.pinMode(i,INPUT_PULLUP);          
+      chip3.pinMode(i,INPUT_PULLUP);          
+   }
+   for (uint8_t i = 8; i <= 15; i++) {
+      chip1.pinMode(i, OUTPUT);               
+      chip3.pinMode(i, OUTPUT);               
+   }
+   chip0.writePort(0,L1_Position);         // To whatever state has previously been assigned
+   chip0.writePort(1,L1_LED_State);         
+   chip2.writePort(0,L2_Position);
+   chip2.writePort(1,L2_LED_State); 
+}
+
+void enterSafeMode() {
+  if (Verbose) Serial.println("Disabling Outputs");
+   
+  // ***** Switch all output ports OFF *****
+  L1_Position = 0xFF;              // Retract L1
+  chip0.writePort(0,L1_Position);  
+  L1_LED_State = 0xFF;             // L1 LED Off
+  chip0.writePort(1,L1_LED_State);
+  L2_Position = 0xFF;              // Retract L2
+  chip2.writePort(0,L2_Position);
+  L2_LED_State = 0xFF;             // L2 LED Off
+  chip2.writePort(1,L2_LED_State);
+  pumpState = 0x00; 
+  pumpStateL1 = 0x00;
+  pumpStateL2 = 0x00;
+  chip1.writePort(1,pumpState);      // Pumps Off
+  chip3.writePort(1,0xFF);           // Aux Off
+  // ***** Configure all output ports to inputs *****  
+  for (uint8_t i = 0; i <= 15; i++) {
+      chip0.pinMode(i,INPUT);             // Set chip0 to OUTPUT
+      chip2.pinMode(i,INPUT);             // Set chip2 to OUTPUT
+  }
+  for (uint8_t i = 8; i <= 15; i++) {
+     chip1.pinMode(i, INPUT);               
+     chip3.pinMode(i, INPUT);               
+  }
+}
+
+void handleOutputError(){
+   /* Report output errors; then check ten times to see if it can recover.  
+      If it can't recover then endSession. Otherwise carry on...
+   */
+   boolean errorFound = false;
+   boolean recoveredFromError = false;
+
+   TStamp tStamp = {10, '#', millis(), 0, 9};    // increment self.outputErrors
+   printQueue.push(&tStamp);
+  
+   if (Verbose) Serial.println("9 Output_Error");
+      
+  for (int x = 0; x < 10; x++) {
+    boolean errorFound = false;
+    if (L1_Position  != chip0.readPort(0)) {
+      errorFound = true;
+      chip0.writePort(0,L1_Position);
+      Serial.print("9 Error_L1_Position");
+    }
+    if (L1_LED_State != chip0.readPort(1)) {
+      errorFound = true;
+      chip0.writePort(1,L1_LED_State);
+      Serial.print("9 Error_L1_LED_State");
+    }
+    if (pumpState    != chip1.readPort(1)) {
+      errorFound = true;
+      chip1.writePort(1,pumpState);
+      Serial.print("9 Error_pumpState");
+    }
+    if (L2_Position  != chip2.readPort(0)) {
+      errorFound = true;
+      chip2.writePort(0,L2_Position);
+      Serial.print("9 Error_L2_Position");
+    }
+    if (L2_LED_State != chip2.readPort(1)) {
+      errorFound = true;
+      chip2.writePort(1,L2_LED_State);
+      Serial.print("9 Error_L2_LED_State");
+    }
+    if (errorFound) Serial.print("9 ! ");    // Returns true on error
+    else {
+       if (Verbose) Serial.println("9 Recovered");  
+        recoveredFromError = true;
+        break;
+      }
+  }
+  if (!recoveredFromError) {
+      Serial.println();
+      if (Verbose) Serial.println("9 ErrorPersists");
+      resetChips();
+      if (checkOutputPorts()) {
+         // try one last time after reset
+         abortSession();        
+      }
+      else {
+         TStamp tStamp1 = {10, '^', millis(), 0, 9};   // increment self.outputRecoveries 
+         printQueue.push(&tStamp1);
+         Serial.println("9 Recovered_after_reset");
+      } 
+   }
+}
+
+boolean checkOutputPorts() {
+    boolean errorFound = false;
+    if (L1_Position  != chip0.readPort(0)) errorFound = true;
+    if (L1_LED_State != chip0.readPort(1)) errorFound = true;
+    if (pumpState    != chip1.readPort(1)) errorFound = true;
+    if (L2_Position  != chip2.readPort(0)) errorFound = true;
+    if (L2_LED_State != chip2.readPort(1)) errorFound = true;
+    return errorFound;
+}
+
+void startSession(int boxNum) {
+   if (boxesRunning == 0) {
+      resetChips();
+      bitSet(boxesRunning,boxNum);
+   }
+   Serial.println("9 Starting_Session");
+   boxArray[boxNum].startSession();  
+}
+
+void abortSession() {
+   for (byte boxNum = 0; boxNum < 8; boxNum++) {
+      boxArray[boxNum].endSession();
+   }
+   enterSafeMode();
+   boxesRunning = 0;
+   TStamp tStamp1 = {10, '!', millis(), 0, 9};
+   printQueue.push(&tStamp1);
 }
 
 
@@ -1341,7 +1433,8 @@ void handleInputString()
      }
      if (echoInput) Serial.println("9 <"+stringCode+":"+num1+":"+num2+">"); 
      if (stringCode == "chip0") chip0.digitalWrite(num1,num2); 
-     else if (stringCode == "G")     boxArray[num1].startSession();
+     // else if (stringCode == "G")     boxArray[num1].startSession();
+     else if (stringCode == "G")     startSession(num1);
      else if (stringCode == "Q")     boxArray[num1].endSession();
      else if (stringCode == "L1")    boxArray[num1].handle_L1_Response(); 
      else if (stringCode == "P")     boxArray[num1].switchTimedPump(On);
@@ -1426,8 +1519,9 @@ void tick()    {
    unsigned long delta, micro1;
    micro1 = micros();
    tickCounts++;
-   if (tickCounts == 100) {
+   if (tickCounts == 100) {                           // every second
        digitalWrite(ledPin, !digitalRead(ledPin));
+       if (checkOutputPorts()) handleOutputError();
        tickCounts = 0;
    }
    for (uint8_t i = 0; i < 8; i++) boxArray[i].tick();
