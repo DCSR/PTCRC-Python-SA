@@ -667,9 +667,9 @@ class GuiClass(object):
         
         testButton1 = ttk.Button(self.diagnosticButtonFrame,text="Report Parameters", command = self.reportParameters)
         testButton1.grid(column = 0, row = 1, columnspan = 3)
-        testButton2 = ttk.Button(self.diagnosticButtonFrame,text="testFunction2",command = self.testFunction2)
+        testButton2 = ttk.Button(self.diagnosticButtonFrame,text="Abort All",command = self.testFunction2)
         testButton2.grid(column = 0, row = 2, columnspan = 3)
-        testButton3 = ttk.Button(self.diagnosticButtonFrame,text="testFunction3",command = self.testFunction3)
+        testButton3 = ttk.Button(self.diagnosticButtonFrame,text="Reset Chips",command = self.testFunction3)
         testButton3.grid(column = 0, row = 3, columnspan = 3)
         diagnosticsButton = ttk.Button(self.diagnosticButtonFrame,text="Diagnostics",command = self.diagnostics)
         diagnosticsButton.grid(column = 0, row = 4, columnspan = 3)
@@ -1206,10 +1206,10 @@ class GuiClass(object):
         self.outputText("<R 7>")
 
     def testFunction2(self):
-        pass
+        self.outputText("<A>")      # Abort All
 
     def testFunction3(self):
-        pass
+        self.outputText("<C>")      # Reset Chips
 
     """
     def mimicL1Response(self,boxIndex):

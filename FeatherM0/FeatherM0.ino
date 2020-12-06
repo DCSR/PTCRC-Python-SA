@@ -2,13 +2,57 @@
  *   
  *   December 6, 2020 
  *   
- *   This commit is called revision.
- *   Previous commits
- *   Another transfer for testing:
+ *   This commit is called "Sunday Revision"
+ *   Revert to a more conservative flow:     
+ *      Configure but don't use boxesRunning (for now)  
+ *      
+ *   DONE:
+ *      Startup with proper IO configuration, calls resetChips()
+ *      startSession(int BoxNum) and endSession(int BoxNum) added 
+ *        as wrappers for Boxes::startSession() and BoxesEndSession()
+ *      bitSet and bitClear of boxesRunning handled within Boxes::
+ *      boxesRunning added to reportDiagnostics()
  *   
- *   Another transfer for testing:
+ *   To Do:
+ *      Check maxDelta
+ *      Add resetChips() to Menu: 
+ *          else if (stringCode == "C")   resetChips();   
+ *          else if (stringCode == "A")   abortSession();
+ *          
+ *          testOutputPOrts
+ *   
+ *   Add after testing:
+ *    *   No idea how to enterSafeMode() when all boxes have finish without endlessly   
+ *   checking:
+ *      if (boxesRunning == 0)
+ *         enter SafeMode
+ *      
+  
+ *  
+ *   tick()
+ *      if (boxesRunning > 0)
+ *      checkInputPorts
+ *      every second - if (checkOutputPorts()) handleOutputError();
+ *   
+ *  
+ *  
+ *  ****** Previous Commits *************
+ *  
+ *   "Another transfer for testing" - Dec 4th
+ *      Does not run
+ *   
+ *   "Another transfer for testing" - November 23rd
  *   
  *   Another transfer
+ *   
+ *   Salvage Branch - probably not useful
+ *   
+ *   Flow:
+ *   
+
+ *   
+ *   
+ *   
  *   
  *   
  *   To Do:
@@ -51,59 +95,20 @@
  *   handleOutputError() added
  *   
  *   if (checkOutputPorts()) handleOutputError() added to tick() - 
- *   
- *   startSession(byte boxNum) 
- *     if (boxesRunning == 0) 
- *        resetChips() 
- *        setBit(boxesRunning,boxNum)
- *        
- *      Boxes::endSession()  
- *      clearBit(boxesRunning,_boxNum)
+ *  
  *      
  *   AbortSession() added  
  *      
  *      
  *   ********************** Above Done  -  Below not so much ********************* 
- *   No idea how to enterSafeMode() when all boxes have finish without endlessly   
- *   checking:
- *      if (boxesRunning == 0)
- *         enter SafeMode
- *      
- *   Boxes::endSession() 
- *      bitClear(boxesRunning,   
- *  
- *   tick()
- *      if (boxesRunning > 0)
- *      checkInputPorts
- *      every second - if (checkOutputPorts()) handleOutputError();
+
  *     
  *     
  *   handleOutputError()   |
  *                         |
  *   Reset                     |   Combine these?
  *                         |  
- *   reportOutputError()   |
- *   
-
- *   
- *   
- *   
-
- *      
- *   
-
- *   
-
- *   
- *   
- *   startSession(boxNum)
- *    setBit(boxesRunning,boxNum)
- *    if (boxesRunnning > 1) {
- *       reset diagnostic data and chip states
- *       anything that needs to be done when first box starts? - resetchips() ?
- *       Start reading inputchips
- *    }
- *    
+ *   reportOutputError()   | 
  *   
  *   Boxes::endSession() could clearBit(boxesRunning,boxNum)
  *   
@@ -910,6 +915,7 @@ void Box::startSession() {
       printQueue.push(&tStamp);
       startBlock(); 
   }
+  bitSet(boxesRunning,_boxNum);
 }
 
 void Box::endSession() { 
@@ -1098,36 +1104,6 @@ void TC4_Handler()                                // Interrupt Service Routine (
 }
 // **************************  End Timer stuff ****************************
 
-void setup() {
-  Serial.begin(115200);
-  pinMode(ledPin, OUTPUT);   // GPIO 5
-  /*
-  chip0.begin();     // This starts SPI and set the chip select
-  chip1.begin();     // pin (10) to OUTPUT
-  chip2.begin();                             // different from SelfAdmin201.ino
-  chip3.begin();                             // different from SelfAdmin201.ino
-  for (uint8_t i = 0; i <= 15; i++) {
-    chip0.pinMode(i,OUTPUT);             // Set chip0 to OUTPUT
-    chip2.pinMode(i,OUTPUT);             // Set chip2 to OUTPUT
-  }
-  for (uint8_t i = 0; i <= 7; i++)  {
-     chip1.pinMode(i,INPUT_PULLUP);          
-     chip3.pinMode(i,INPUT_PULLUP);          
-  }
-  for (uint8_t i = 8; i <= 15; i++) {
-     chip1.pinMode(i, OUTPUT);               
-     chip3.pinMode(i, OUTPUT);               
-  }
-  turnStuffOff();  
-  portOneValue = chip1.readPort(0);          
-  portTwoValue = chip3.readPort(0);          
-  // Serial.println(portOneValue,BIN);
-  */
-  delay(500); 
-  init_10_mSec_Timer(); 
-  Serial.println("9 Ver=301.00");
-}
-
 void resetChips() {
    chip0.begin();
    chip1.begin();
@@ -1152,9 +1128,17 @@ void resetChips() {
    chip2.writePort(1,L2_LED_State); 
 }
 
+void setup() {
+  Serial.begin(115200);
+  pinMode(ledPin, OUTPUT);   // GPIO 5
+  resetChips();
+  delay(500); 
+  init_10_mSec_Timer(); 
+  Serial.println("9 Ver=301.00");
+}
+
 void enterSafeMode() {
-  if (Verbose) Serial.println("Disabling Outputs");
-   
+  if (Verbose) Serial.println("Disabling Outputs"); 
   // ***** Switch all output ports OFF *****
   L1_Position = 0xFF;              // Retract L1
   chip0.writePort(0,L1_Position);  
@@ -1253,17 +1237,20 @@ boolean checkOutputPorts() {
 }
 
 void startSession(int boxNum) {
-   if (boxesRunning == 0) {
-      resetChips();
-      bitSet(boxesRunning,boxNum);
-   }
-   Serial.println("9 Starting_Session");
    boxArray[boxNum].startSession();  
+   if (Verbose) Serial.println("9 boxesRunning="+String(boxesRunning)); 
+}
+
+void endSession(int boxNum) {
+   boxArray[boxNum].endSession();
 }
 
 void abortSession() {
-   for (byte boxNum = 0; boxNum < 8; boxNum++) {
-      boxArray[boxNum].endSession();
+   for (byte bits = 0; bits < 8; bits++) {
+      if ((boxesRunning & (1 << bits)) > 0) {      // check which boxes running
+         boxArray[bits].endSession();
+         Serial.println("9 Aborting_Box"+String(bits));
+      }
    }
    enterSafeMode();
    boxesRunning = 0;
@@ -1442,9 +1429,9 @@ void handleInputString()
      }
      if (echoInput) Serial.println("9 <"+stringCode+":"+num1+":"+num2+">"); 
      if (stringCode == "chip0") chip0.digitalWrite(num1,num2); 
-     // else if (stringCode == "G")     boxArray[num1].startSession();
+     // else if (stringCode == "G")  boxArray[num1].startSession();
      else if (stringCode == "G")     startSession(num1);
-     else if (stringCode == "Q")     boxArray[num1].endSession();
+     else if (stringCode == "Q")     endSession(num1);
      else if (stringCode == "L1")    boxArray[num1].handle_L1_Response(); 
      else if (stringCode == "P")     boxArray[num1].switchTimedPump(On);
      // else if (stringCode == "p")     boxArray[num1].switchTimedPump(Off);
@@ -1464,15 +1451,13 @@ void handleInputString()
      else if (stringCode == "C")     boxArray[num1].switchStim2(On);     
      else if (stringCode == "V")     Serial.println("9 Ver=301.00");
      else if (stringCode == "D")     reportDiagnostics(); 
-     else if (stringCode == "T")     {
-        TStamp tStamp = {10, '!', millis(), 0, 9};
-        printQueue.push(&tStamp);
-     }
-     /*
+     else if (stringCode == "A")     abortSession();
+     else if (stringCode == "C")     resetChips();
      // debug stuff 
      else if (stringCode == "i")     timeUSB();
      else if (stringCode == "E")     echoInput = !echoInput;
-     */
+
+     
      inputString = "";
    }
 }
@@ -1482,19 +1467,14 @@ int freeRam () {
   return &stack_dummy - sbrk(0);
 }
 
-void reportDiagnostics() {
+void reportDiagnostics() {   
    Serial.println("9 maxDelta="+String(maxDelta));
    maxDelta = 0;
    Serial.println("9 maxQueueRecs="+String(maxQueueRecs));
    Serial.println("9 freeRam="+String(freeRam()));
-   portTwoValue = chip3.readPort(0);
+   Serial.println("9 portOneValue="+String(portOneValue));
    Serial.println("9 portTwoValue="+String(portTwoValue));
-   Serial.print("9 ");
-   for (byte i = 0; i < 8; i++) {
-      if (newLeverTwoState[i] != boxArray[i].pumpOn) Serial.print(".");
-      else Serial.print("!");
-   }
-   Serial.println();    
+   Serial.println("9 boxesRunning="+String(boxesRunning,BIN));   
 }
 
 void timeUSB() {
