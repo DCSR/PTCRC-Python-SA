@@ -33,7 +33,7 @@ def main(argv=None):
 class GuiClass(object):
     def __init__(self):
 
-        self.version = "SA300.00"
+        self.version = "SA301.00"
         self.varCode = 0
         self.verbose = True
         self.sched = ['0: Do not run', '1: FR(N)', '2: FR1 x 20 trials', '3: FR1 x N trials', '4: PR(step N)', '5: TH', '6: IntA: 5-25', '7: Flush', '8: L2-HD', '9: IntA-HD', '10: 2L-PR-HD']
@@ -667,7 +667,7 @@ class GuiClass(object):
         
         testButton1 = ttk.Button(self.diagnosticButtonFrame,text="Report Parameters", command = self.reportParameters)
         testButton1.grid(column = 0, row = 1, columnspan = 3)
-        testButton2 = ttk.Button(self.diagnosticButtonFrame,text="Abort All",command = self.testFunction2)
+        testButton2 = ttk.Button(self.diagnosticButtonFrame,text="showMaxDelta (uSec)",command = self.testFunction2)
         testButton2.grid(column = 0, row = 2, columnspan = 3)
         testButton3 = ttk.Button(self.diagnosticButtonFrame,text="Reset Chips",command = self.testFunction3)
         testButton3.grid(column = 0, row = 3, columnspan = 3)
@@ -1206,7 +1206,7 @@ class GuiClass(object):
         self.outputText("<R 7>")
 
     def testFunction2(self):
-        self.outputText("<A>")      # Abort All
+        self.outputText("<M>")      # Report maxDelta
 
     def testFunction3(self):
         self.outputText("<C>")      # Reset Chips
@@ -1226,7 +1226,6 @@ class GuiClass(object):
         else: self.outputText("<Debug 0 0>")
 
     def diagnostics(self):
-        self.outputText("<V>")      # Get version on M0
         self.outputText("<D>")      # Get Diagnostics
 
     def drawCumulativeRecord(self, aCanvas, selectedList, max_x_scale):

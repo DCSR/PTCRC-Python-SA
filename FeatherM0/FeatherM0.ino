@@ -340,6 +340,7 @@ byte portOneValue = 255, portTwoValue = 255;
 // The following variables are used to track the state of each output port
 
 boolean Verbose = true;   // note that "verbose" (small v) is a reserved word
+boolean showMaxDelta = false;
 
 // Output Ports Values
 byte L1_Position = 0xFF;
@@ -1109,18 +1110,18 @@ void resetChips() {
    chip1.begin();
    chip2.begin();
    chip3.begin();
-   if (Verbose) Serial.println("9 Chip Reset");
+   if (Verbose) Serial.println("9 resetChips()");
    for (uint8_t i = 0; i <= 15; i++) {
-      chip0.pinMode(i,OUTPUT);             // Set chip0 to OUTPUT
-      chip2.pinMode(i,OUTPUT);             // Set chip2 to OUTPUT
+      chip0.pinMode(i,OUTPUT);             // Set chip0 to OUTPUT - Retract L1 and LED1
+      chip2.pinMode(i,OUTPUT);             // Set chip2 to OUTPUT = Retract L2 and LED2
    }
    for (uint8_t i = 0; i <= 7; i++)  {
-      chip1.pinMode(i,INPUT_PULLUP);          
+      chip1.pinMode(i,INPUT_PULLUP);       // inputs on lower register   
       chip3.pinMode(i,INPUT_PULLUP);          
    }
    for (uint8_t i = 8; i <= 15; i++) {
-      chip1.pinMode(i, OUTPUT);               
-      chip3.pinMode(i, OUTPUT);               
+      chip1.pinMode(i, OUTPUT);            // outputs on higher register Pump   
+      chip3.pinMode(i, OUTPUT);            // AUX
    }
    chip0.writePort(0,L1_Position);         // To whatever state has previously been assigned
    chip0.writePort(1,L1_LED_State);         
@@ -1130,10 +1131,11 @@ void resetChips() {
 
 void setup() {
   Serial.begin(115200);
-  pinMode(ledPin, OUTPUT);   // GPIO 5
+  pinMode(LED_BUILTIN, OUTPUT);   // GPIO 13
   resetChips();
   delay(500); 
   init_10_mSec_Timer(); 
+  Serial.println("9 Setup");
   Serial.println("9 Ver=301.00");
 }
 
@@ -1181,29 +1183,29 @@ void handleOutputError(){
     if (L1_Position  != chip0.readPort(0)) {
       errorFound = true;
       chip0.writePort(0,L1_Position);
-      Serial.print("9 Error_L1_Position");
+      Serial.println("9 Error_L1_Position");
     }
     if (L1_LED_State != chip0.readPort(1)) {
       errorFound = true;
       chip0.writePort(1,L1_LED_State);
-      Serial.print("9 Error_L1_LED_State");
+      Serial.println("9 Error_L1_LED_State");
     }
     if (pumpState    != chip1.readPort(1)) {
       errorFound = true;
       chip1.writePort(1,pumpState);
-      Serial.print("9 Error_pumpState");
+      Serial.println("9 Error_pumpState");
     }
     if (L2_Position  != chip2.readPort(0)) {
       errorFound = true;
       chip2.writePort(0,L2_Position);
-      Serial.print("9 Error_L2_Position");
+      Serial.println("9 Error_L2_Position");
     }
     if (L2_LED_State != chip2.readPort(1)) {
       errorFound = true;
       chip2.writePort(1,L2_LED_State);
-      Serial.print("9 Error_L2_LED_State");
+      Serial.println("9 Error_L2_LED_State");
     }
-    if (errorFound) Serial.print("9 ! ");    // Returns true on error
+    if (errorFound) Serial.println("9 ! ");    // Returns true on error
     else {
        if (Verbose) Serial.println("9 Recovered");  
         recoveredFromError = true;
@@ -1429,12 +1431,10 @@ void handleInputString()
      }
      if (echoInput) Serial.println("9 <"+stringCode+":"+num1+":"+num2+">"); 
      if (stringCode == "chip0") chip0.digitalWrite(num1,num2); 
-     // else if (stringCode == "G")  boxArray[num1].startSession();
      else if (stringCode == "G")     startSession(num1);
      else if (stringCode == "Q")     endSession(num1);
      else if (stringCode == "L1")    boxArray[num1].handle_L1_Response(); 
      else if (stringCode == "P")     boxArray[num1].switchTimedPump(On);
-     // else if (stringCode == "p")     boxArray[num1].switchTimedPump(Off);
      else if (stringCode == "PROTOCOL") boxArray[num1].setProtocolNum(num2);
      else if (stringCode == "PARAM") boxArray[num1].setParamNum(num2);
      else if (stringCode == "TIME")  boxArray[num1].setBlockDuration(num2);  
@@ -1449,11 +1449,11 @@ void handleInputString()
      else if (stringCode == "S")     boxArray[num1].switchStim1(On);
      else if (stringCode == "c")     boxArray[num1].switchStim2(Off);
      else if (stringCode == "C")     boxArray[num1].switchStim2(On);     
-     else if (stringCode == "V")     Serial.println("9 Ver=301.00");
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "A")     abortSession();
      else if (stringCode == "C")     resetChips();
-     // debug stuff 
+     // debug stuff
+     else if (stringCode == "M")     showMaxDelta = !showMaxDelta;
      else if (stringCode == "i")     timeUSB();
      else if (stringCode == "E")     echoInput = !echoInput;
 
@@ -1467,14 +1467,15 @@ int freeRam () {
   return &stack_dummy - sbrk(0);
 }
 
-void reportDiagnostics() {   
+void reportDiagnostics() {
+   Serial.println("9 Ver301.00");
    Serial.println("9 maxDelta="+String(maxDelta));
-   maxDelta = 0;
    Serial.println("9 maxQueueRecs="+String(maxQueueRecs));
    Serial.println("9 freeRam="+String(freeRam()));
    Serial.println("9 portOneValue="+String(portOneValue));
    Serial.println("9 portTwoValue="+String(portTwoValue));
-   Serial.println("9 boxesRunning="+String(boxesRunning,BIN));   
+   Serial.println("9 boxesRunning="+String(boxesRunning,BIN));
+   maxDelta = 0;  
 }
 
 void timeUSB() {
@@ -1507,9 +1508,10 @@ void tick()    {
    int boxIndex;
    unsigned long delta, micro1;
    micro1 = micros();
+   // micro1 = millis();
    tickCounts++;
-   if (tickCounts == 100) {                           // every second
-       digitalWrite(ledPin, !digitalRead(ledPin));
+   if (tickCounts >= 200) {                           // every second
+       digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
        if (checkOutputPorts()) handleOutputError();
        tickCounts = 0;
    }
@@ -1519,10 +1521,18 @@ void tick()    {
    checkLeverTwoBits(); 
    pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
    chip1.writePort(1,pumpState);
+   chip2.writePort(1,L2_LED_State);
 
    sendOneTimeStamp();
    delta = micros() - micro1;
-   if (delta > maxDelta) maxDelta = delta;   
+   // delta = millis() - micro1;
+   if (delta > maxDelta) maxDelta = delta;
+   if (tickCounts == 100){
+      if (showMaxDelta) {
+         Serial.println("9 maxDelta(uSec)="+String(maxDelta));
+         maxDelta = 0; 
+      }
+   }   
 }
 
 void loop() {
