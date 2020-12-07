@@ -1011,13 +1011,13 @@ class GuiClass(object):
 
     def loadFromINIFile(self):
         """
-        Reads 8 lines from SA200.ini, parses the line (depending on the position of spaces)
+        Reads 8 lines from SA300.ini, parses the line (depending on the position of spaces)
         into "" which are assigned to Parameters in each Box.
         Lists as used to iterate over each variable.
         """       
         if (self.verbose):
-            print("Reading SA200_20.ini")
-        iniFile = open('SA200_20.ini','r')
+            print("Reading SA300.ini")
+        iniFile = open('SA300.ini','r')
         for i in range(8):
             aLine = iniFile.readline().rstrip("\n")   # read line 
             tokens = aLine.split()
@@ -1060,7 +1060,7 @@ class GuiClass(object):
         # print("self.varCode =",self.varCode,format(self.varCode,'08b'))
 
     def writeToINIFile(self):
-        INIfileName = "SA200_20.ini"
+        INIfileName = "SA300.ini"
         if (self.verbose):
             print("Writing", INIfileName)
         iniFile = open(INIfileName,'w')        
