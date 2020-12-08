@@ -1,8 +1,8 @@
 """
 
-December 2, 2020
+December 7, 2020
 
-input and output errors shown on Diagnostic tab
+boolean variables controlled by SYSVARS 
 
 """
 
@@ -667,58 +667,37 @@ class GuiClass(object):
         
         testButton1 = ttk.Button(self.diagnosticButtonFrame,text="Report Parameters", command = self.reportParameters)
         testButton1.grid(column = 0, row = 1, columnspan = 3)
-        testButton2 = ttk.Button(self.diagnosticButtonFrame,text="showMaxDelta (uSec)",command = self.testFunction2)
+        testButton2 = ttk.Button(self.diagnosticButtonFrame,text="resetChips()",command = self.testFunction2)
         testButton2.grid(column = 0, row = 2, columnspan = 3)
-        testButton3 = ttk.Button(self.diagnosticButtonFrame,text="Reset Chips",command = self.testFunction3)
+        testButton3 = ttk.Button(self.diagnosticButtonFrame,text="Abort All!",command = self.testFunction3)
         testButton3.grid(column = 0, row = 3, columnspan = 3)
         diagnosticsButton = ttk.Button(self.diagnosticButtonFrame,text="Diagnostics",command = self.diagnostics)
         diagnosticsButton.grid(column = 0, row = 4, columnspan = 3)
 
-        # ******************************* Aril 4th ***************************
-        # Check how and whether "Check Levers", "Use bitCheck" and "selectedReinforcer are used.
-
-        # debugVarlist is part of sysVarList - is that important?        
-        """
-        checkLeversCheckButton = Checkbutton(self.diagnosticButtonFrame, text = "Check Levers", variable = self.checkLeversCheckVar, \
-                    onvalue = True, offvalue = False, command=lambda: self.toggleCheckLevers(self.checkLeversCheckVar.get()))       
-        checkLeversCheckButton.grid(column = 0, row = 0, sticky = (EW))
-        
-        debugCheckButton1 = Checkbutton(self.diagnosticButtonFrame, text = "Use bitCheck",variable = self.debug1CheckVar, \
-                             onvalue = True, offvalue = False, command=lambda: self.toggleDebugVar(0,self.debug1CheckVar.get()))
-        debugCheckButton1.grid(column = 0, row = 5,sticky = (EW))
-
-        # reinforcerlabel = ttk.Label(self.diagnosticButtonFrame, text="Reinforcer")
-        # reinforcerlabel.grid(column = 0, row = 10,pady=5, padx=5)
-        drugRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="Drug", variable=self.selectedReinforcer, value=0)
-        drugRadiobutton.grid(column = 0, row = 11)
-        foodRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="Food", variable=self.selectedReinforcer, value=1)
-        foodRadiobutton.grid(column = 1, row = 11)
-        
-        """
         # Eight tkinter boolean vars widgets
 
-        sys0label = ttk.Label(self.diagnosticButtonFrame, text="Label0")
+        sys0label = ttk.Label(self.diagnosticButtonFrame, text="CheckL1")
         sys0label.grid(column = 0, row = 5, sticky = (W))
         sys0FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys0CheckVar, value=0)
         sys0FalseRadiobutton.grid(column = 1, row = 5, sticky = (W))
         sys0TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys0CheckVar, value=1)
         sys0TrueRadiobutton.grid(column = 2, row = 5, sticky = (W))
 
-        sys1label = ttk.Label(self.diagnosticButtonFrame, text="Label1")
+        sys1label = ttk.Label(self.diagnosticButtonFrame, text="CheckL2")
         sys1label.grid(column = 0, row = 6, sticky = (W))
         sys1FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys1CheckVar, value=0)
         sys1FalseRadiobutton.grid(column = 1, row = 6, sticky = (W))
         sys1TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys1CheckVar, value=1)
         sys1TrueRadiobutton.grid(column = 2, row = 6, sticky = (W))
 
-        sys2label = ttk.Label(self.diagnosticButtonFrame, text="Label2")
+        sys2label = ttk.Label(self.diagnosticButtonFrame, text="send maxDelta")
         sys2label.grid(column = 0, row = 7, sticky = (W))
         sys2FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys2CheckVar, value=0)
         sys2FalseRadiobutton.grid(column = 1, row = 7, sticky = (W))
         sys2TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys2CheckVar, value=1)
         sys2TrueRadiobutton.grid(column = 2, row = 7, sticky = (W))
 
-        sys3label = ttk.Label(self.diagnosticButtonFrame, text="Label3")
+        sys3label = ttk.Label(self.diagnosticButtonFrame, text="Verbose")
         sys3label.grid(column = 0, row = 8, sticky = (W))
         sys3FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys3CheckVar, value=0)
         sys3FalseRadiobutton.grid(column = 1, row = 8, sticky = (W))
@@ -1206,10 +1185,10 @@ class GuiClass(object):
         self.outputText("<R 7>")
 
     def testFunction2(self):
-        self.outputText("<M>")      # Report maxDelta
+        self.outputText("<C>")       # Reset Chips
 
     def testFunction3(self):
-        self.outputText("<C>")      # Reset Chips
+        self.outputText("<A>")       # Abort!
 
     """
     def mimicL1Response(self,boxIndex):

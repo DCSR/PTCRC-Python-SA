@@ -14,12 +14,8 @@
  *      boxesRunning added to reportDiagnostics()
  *   
  *   To Do:
- *      Check maxDelta
- *      Add resetChips() to Menu: 
- *          else if (stringCode == "C")   resetChips();   
- *          else if (stringCode == "A")   abortSession();
  *          
- *          testOutputPOrts
+ *          testOutputPorts
  *   
  *   Add after testing:
  *    *   No idea how to enterSafeMode() when all boxes have finish without endlessly   
@@ -334,14 +330,16 @@ MCP23S17 chip1(chipSelect, 1);
 MCP23S17 chip2(chipSelect, 2);    
 MCP23S17 chip3(chipSelect, 3); 
 
+// SYSVARS
+boolean checkLever1 = true;
+boolean checkLever2 = true;
+boolean Verbose = true;   // note that "verbose" (small v) is a reserved word
+boolean showMaxDelta = false;
+
 byte portOneValue = 255, portTwoValue = 255;
 
 // Variables needed for error detection - from HD_DEMO.ino
 // The following variables are used to track the state of each output port
-
-boolean Verbose = true;   // note that "verbose" (small v) is a reserved word
-boolean showMaxDelta = false;
-
 // Output Ports Values
 byte L1_Position = 0xFF;
 byte L1_LED_State = 0xFF;      
@@ -1377,25 +1375,36 @@ void checkLeverTwoBits() {
    }
 }   
  
-/*
 void decodeSysVars(byte varCode) {
-  byte mask;
-  byte result; 
-  for (byte i = 0; i < 8; i++) {    
-     mask = pow(2,i);           // mask (eg. 00001000)
-     // Serial.println("mask = "+String(mask));
-     result = varCode & mask;    // Uses AND and mask to determine whether to set bit
-     // Serial.println("result = "+String(result));
-     if ( result > 0) sysVarArray[i] = true;
-     else sysVarArray[i] = false;
-  }
-  for (byte i = 0; i < 8; i++) {
-    Serial.print(sysVarArray[i]);
-    }
-    Serial.println("9 varCode="+String(varCode));
-  // leverTwoExists = sysVarArray[2]; 
+     /* Test of decoding
+    * Uses "left shift" of 1 to generate a mask
+    * Could have used 1,2,4,8 etc
+    */
+   if ((varCode & (1 << 0)) > 0) {checkLever1 = true;
+      if (Verbose) Serial.println("9 checkLever1 = true");
+   }
+   else {checkLever1 = false;  
+      if (Verbose) Serial.println("9 checkLever1 = false");
+   }
+   if ((varCode & (1 << 1)) > 0) {checkLever2 = true;
+      if (Verbose) Serial.println("9 checkLever2 = true");
+   }
+   else {checkLever2 = false;  
+      if (Verbose) Serial.println("9 checkLever2 = false");
+   }
+   if ((varCode & (1 << 2)) > 0) {showMaxDelta = true;
+      if (Verbose) Serial.println("9 showMaxDelta = true");
+   }
+   else {showMaxDelta = false;  
+      if (Verbose) Serial.println("9 showMaxDelta = false");
+   }
+   if ((varCode & (1 << 3)) > 0) {Verbose = true;
+      if (Verbose) Serial.println("9 Verbose = true");
+   }
+   else {Verbose = false;  
+      if (Verbose) Serial.println("9 Verbose = false");
+   }
 }
-*/
 
 void getInputString() {
     while (Serial.available() > 0) {               // repeat while something in the buffer
@@ -1452,12 +1461,10 @@ void handleInputString()
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "A")     abortSession();
      else if (stringCode == "C")     resetChips();
+     else if (stringCode == "SYSVARS")  decodeSysVars(num1);
      // debug stuff
-     else if (stringCode == "M")     showMaxDelta = !showMaxDelta;
      else if (stringCode == "i")     timeUSB();
-     else if (stringCode == "E")     echoInput = !echoInput;
-
-     
+     else if (stringCode == "E")     echoInput = !echoInput;   
      inputString = "";
    }
 }
@@ -1475,6 +1482,10 @@ void reportDiagnostics() {
    Serial.println("9 portOneValue="+String(portOneValue));
    Serial.println("9 portTwoValue="+String(portTwoValue));
    Serial.println("9 boxesRunning="+String(boxesRunning,BIN));
+   Serial.println("9 checkLever1="+String(checkLever1));
+   Serial.println("9 checkLever2="+String(checkLever2));
+   Serial.println("9 showMaxDelta="+String(showMaxDelta));
+   Serial.println("9 Verbose="+String(Verbose));
    maxDelta = 0;  
 }
 
@@ -1519,8 +1530,10 @@ void tick()    {
    getInputString();
    checkLeverOneBits();
    checkLeverTwoBits(); 
+   
    pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
    chip1.writePort(1,pumpState);
+   L2_LED_State = pumpStateL2;
    chip2.writePort(1,L2_LED_State);
 
    sendOneTimeStamp();
