@@ -335,6 +335,7 @@ boolean checkLever1 = true;
 boolean checkLever2 = true;
 boolean Verbose = true;   // note that "verbose" (small v) is a reserved word
 boolean showMaxDelta = false;
+boolean checkOutputs = false;
 
 byte portOneValue = 255, portTwoValue = 255;
 
@@ -1124,7 +1125,9 @@ void resetChips() {
    chip0.writePort(0,L1_Position);         // To whatever state has previously been assigned
    chip0.writePort(1,L1_LED_State);         
    chip2.writePort(0,L2_Position);
-   chip2.writePort(1,L2_LED_State); 
+   chip2.writePort(1,L2_LED_State);
+   checkLever1 = true;
+   checkLever2 = true; 
 }
 
 void setup() {
@@ -1138,7 +1141,7 @@ void setup() {
 }
 
 void enterSafeMode() {
-  if (Verbose) Serial.println("Disabling Outputs"); 
+  if (Verbose) Serial.println("Disabling_Outputs"); 
   // ***** Switch all output ports OFF *****
   L1_Position = 0xFF;              // Retract L1
   chip0.writePort(0,L1_Position);  
@@ -1203,8 +1206,7 @@ void handleOutputError(){
       chip2.writePort(1,L2_LED_State);
       Serial.println("9 Error_L2_LED_State");
     }
-    if (errorFound) Serial.println("9 ! ");    // Returns true on error
-    else {
+    if (!errorFound) {
        if (Verbose) Serial.println("9 Recovered");  
         recoveredFromError = true;
         break;
@@ -1309,6 +1311,8 @@ void handleInputError(byte leverNum, byte portValue) {
         Serial.println("9 Aborting_Session");
         TStamp tStamp3 = {10, stampChar, millis(), 0, 9};
         printQueue.push(&tStamp3);
+        checkLever1 = false;
+        checkLever2 = false; 
         
         for (int boxNum = 0; boxNum < 8; boxNum++) 
            boxArray[boxNum].endSession();
@@ -1381,28 +1385,34 @@ void decodeSysVars(byte varCode) {
     * Could have used 1,2,4,8 etc
     */
    if ((varCode & (1 << 0)) > 0) {checkLever1 = true;
-      if (Verbose) Serial.println("9 checkLever1 = true");
+      if (Verbose) Serial.println("9 checkLever1=true");
    }
    else {checkLever1 = false;  
-      if (Verbose) Serial.println("9 checkLever1 = false");
+      if (Verbose) Serial.println("9 checkLever1=false");
    }
    if ((varCode & (1 << 1)) > 0) {checkLever2 = true;
-      if (Verbose) Serial.println("9 checkLever2 = true");
+      if (Verbose) Serial.println("9 checkLever2=true");
    }
    else {checkLever2 = false;  
-      if (Verbose) Serial.println("9 checkLever2 = false");
+      if (Verbose) Serial.println("9 checkLever2=false");
    }
    if ((varCode & (1 << 2)) > 0) {showMaxDelta = true;
-      if (Verbose) Serial.println("9 showMaxDelta = true");
+      if (Verbose) Serial.println("9 showMaxDelta=true");
    }
    else {showMaxDelta = false;  
-      if (Verbose) Serial.println("9 showMaxDelta = false");
+      if (Verbose) Serial.println("9 showMaxDelta=false");
    }
    if ((varCode & (1 << 3)) > 0) {Verbose = true;
-      if (Verbose) Serial.println("9 Verbose = true");
+      if (Verbose) Serial.println("9 Verbose=true");
    }
    else {Verbose = false;  
-      if (Verbose) Serial.println("9 Verbose = false");
+      if (Verbose) Serial.println("9 Verbose=false");
+   }
+   if ((varCode & (1 << 4)) > 0) {checkOutputs = true;
+      if (Verbose) Serial.println("9 checkOutputs=true");
+   }
+   else {Verbose = false;  
+      if (Verbose) Serial.println("9 checkOutputs=false");
    }
 }
 
@@ -1460,8 +1470,9 @@ void handleInputString()
      else if (stringCode == "C")     boxArray[num1].switchStim2(On);     
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "A")     abortSession();
-     else if (stringCode == "C")     resetChips();
+     else if (stringCode == "r")     resetChips();
      else if (stringCode == "SYSVARS")  decodeSysVars(num1);
+     else if (stringCode == "O")     if (checkOutputPorts()) handleOutputError();
      // debug stuff
      else if (stringCode == "i")     timeUSB();
      else if (stringCode == "E")     echoInput = !echoInput;   
@@ -1484,6 +1495,7 @@ void reportDiagnostics() {
    Serial.println("9 boxesRunning="+String(boxesRunning,BIN));
    Serial.println("9 checkLever1="+String(checkLever1));
    Serial.println("9 checkLever2="+String(checkLever2));
+   Serial.println("9 checkOutputs="+String(checkOutputs));
    Serial.println("9 showMaxDelta="+String(showMaxDelta));
    Serial.println("9 Verbose="+String(Verbose));
    maxDelta = 0;  
@@ -1521,19 +1533,23 @@ void tick()    {
    micro1 = micros();
    // micro1 = millis();
    tickCounts++;
-   if (tickCounts >= 200) {                           // every second
+   if (tickCounts >= 100) {                           // every second
        digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-       if (checkOutputPorts()) handleOutputError();
+       if (checkOutputs){
+          if (checkOutputPorts()) handleOutputError();        
+       }
        tickCounts = 0;
    }
    for (uint8_t i = 0; i < 8; i++) boxArray[i].tick();
    getInputString();
-   checkLeverOneBits();
-   checkLeverTwoBits(); 
+   if (checkLever1) checkLeverOneBits();
+   if (checkLever2) checkLeverTwoBits(); 
    
    pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
    chip1.writePort(1,pumpState);
-   L2_LED_State = pumpStateL2;
+
+   // L2_LED_State = pumpStateL2;
+   L2_LED_State = portTwoValue;
    chip2.writePort(1,L2_LED_State);
 
    sendOneTimeStamp();

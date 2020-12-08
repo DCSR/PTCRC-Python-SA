@@ -671,69 +671,71 @@ class GuiClass(object):
         testButton2.grid(column = 0, row = 2, columnspan = 3)
         testButton3 = ttk.Button(self.diagnosticButtonFrame,text="Abort All!",command = self.testFunction3)
         testButton3.grid(column = 0, row = 3, columnspan = 3)
-        diagnosticsButton = ttk.Button(self.diagnosticButtonFrame,text="Diagnostics",command = self.diagnostics)
-        diagnosticsButton.grid(column = 0, row = 4, columnspan = 3)
+        testButton4 = ttk.Button(self.diagnosticButtonFrame,text="Diagnostics",command = self.diagnostics)
+        testButton4.grid(column = 0, row = 4, columnspan = 3)
+        testButton5 = ttk.Button(self.diagnosticButtonFrame,text="checkOutputPorts()",command = self.testFunction5)
+        testButton5.grid(column = 0, row = 5, columnspan = 3)
 
         # Eight tkinter boolean vars widgets
 
         sys0label = ttk.Label(self.diagnosticButtonFrame, text="CheckL1")
-        sys0label.grid(column = 0, row = 5, sticky = (W))
+        sys0label.grid(column = 0, row = 7, sticky = (W))
         sys0FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys0CheckVar, value=0)
-        sys0FalseRadiobutton.grid(column = 1, row = 5, sticky = (W))
+        sys0FalseRadiobutton.grid(column = 1, row = 7, sticky = (W))
         sys0TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys0CheckVar, value=1)
-        sys0TrueRadiobutton.grid(column = 2, row = 5, sticky = (W))
+        sys0TrueRadiobutton.grid(column = 2, row = 7, sticky = (W))
 
         sys1label = ttk.Label(self.diagnosticButtonFrame, text="CheckL2")
-        sys1label.grid(column = 0, row = 6, sticky = (W))
+        sys1label.grid(column = 0, row = 8, sticky = (W))
         sys1FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys1CheckVar, value=0)
-        sys1FalseRadiobutton.grid(column = 1, row = 6, sticky = (W))
+        sys1FalseRadiobutton.grid(column = 1, row = 8, sticky = (W))
         sys1TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys1CheckVar, value=1)
-        sys1TrueRadiobutton.grid(column = 2, row = 6, sticky = (W))
+        sys1TrueRadiobutton.grid(column = 2, row = 8, sticky = (W))
 
         sys2label = ttk.Label(self.diagnosticButtonFrame, text="send maxDelta")
-        sys2label.grid(column = 0, row = 7, sticky = (W))
+        sys2label.grid(column = 0, row = 9, sticky = (W))
         sys2FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys2CheckVar, value=0)
-        sys2FalseRadiobutton.grid(column = 1, row = 7, sticky = (W))
+        sys2FalseRadiobutton.grid(column = 1, row = 9, sticky = (W))
         sys2TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys2CheckVar, value=1)
-        sys2TrueRadiobutton.grid(column = 2, row = 7, sticky = (W))
+        sys2TrueRadiobutton.grid(column = 2, row = 9, sticky = (W))
 
         sys3label = ttk.Label(self.diagnosticButtonFrame, text="Verbose")
-        sys3label.grid(column = 0, row = 8, sticky = (W))
+        sys3label.grid(column = 0, row = 10, sticky = (W))
         sys3FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys3CheckVar, value=0)
-        sys3FalseRadiobutton.grid(column = 1, row = 8, sticky = (W))
+        sys3FalseRadiobutton.grid(column = 1, row = 10, sticky = (W))
         sys3TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys3CheckVar, value=1)
-        sys3TrueRadiobutton.grid(column = 2, row = 8, sticky = (W))
+        sys3TrueRadiobutton.grid(column = 2, row = 10, sticky = (W))
 
-        sys4label = ttk.Label(self.diagnosticButtonFrame, text="Label4")
-        sys4label.grid(column = 0, row = 9, sticky = (W))
+        sys4label = ttk.Label(self.diagnosticButtonFrame, text="checkOutputs")
+        sys4label.grid(column = 0, row = 11, sticky = (W))
         sys4FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys4CheckVar, value=0)
-        sys4FalseRadiobutton.grid(column = 1, row = 9, sticky = (W))
+        sys4FalseRadiobutton.grid(column = 1, row = 11, sticky = (W))
         sys4TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys4CheckVar, value=1)
-        sys4TrueRadiobutton.grid(column = 2, row = 9, sticky = (W))
+        sys4TrueRadiobutton.grid(column = 2, row = 11, sticky = (W))
 
         sys5label = ttk.Label(self.diagnosticButtonFrame, text="Label5")
-        sys5label.grid(column = 0, row = 10, sticky = (W))
+        sys5label.grid(column = 0, row = 12, sticky = (W))
         sys5FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys5CheckVar, value=0)
-        sys5FalseRadiobutton.grid(column = 1, row = 10, sticky = (W))
+        sys5FalseRadiobutton.grid(column = 1, row = 12, sticky = (W))
         sys5TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys5CheckVar, value=1)
-        sys5TrueRadiobutton.grid(column = 2, row = 10, sticky = (W))
+        sys5TrueRadiobutton.grid(column = 2, row = 12, sticky = (W))
 
         sys6label = ttk.Label(self.diagnosticButtonFrame, text="Label6")
-        sys6label.grid(column = 0, row = 11, sticky = (W))
+        sys6label.grid(column = 0, row = 13, sticky = (W))
         sys6FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys6CheckVar, value=0)
-        sys6FalseRadiobutton.grid(column = 1, row = 11, sticky = (W))
+        sys6FalseRadiobutton.grid(column = 1, row = 13, sticky = (W))
         sys6TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys6CheckVar, value=1)
-        sys6TrueRadiobutton.grid(column = 2, row = 11, sticky = (W))
+        sys6TrueRadiobutton.grid(column = 2, row = 13, sticky = (W))
 
         sys7label = ttk.Label(self.diagnosticButtonFrame, text="Label7")
-        sys7label.grid(column = 0, row = 12, sticky = (W))
+        sys7label.grid(column = 0, row = 14, sticky = (W))
         sys7FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys7CheckVar, value=0)
-        sys7FalseRadiobutton.grid(column = 1, row = 12, sticky = (W))
+        sys7FalseRadiobutton.grid(column = 1, row = 14, sticky = (W))
         sys7TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys7CheckVar, value=1)
-        sys7TrueRadiobutton.grid(column = 2, row = 12, sticky = (W))
+        sys7TrueRadiobutton.grid(column = 2, row = 14, sticky = (W))
 
         sendConfigButton = ttk.Button(self.diagnosticButtonFrame,text="Send config",command = self.sendSysVars)
-        sendConfigButton.grid(column = 0, row = 13, columnspan = 3)
+        sendConfigButton.grid(column = 0, row = 15, columnspan = 3)
 
         # ***************************************************************************************
                
@@ -1166,7 +1168,7 @@ class GuiClass(object):
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-135, x_pixel_width, max_x_scale, dataList, ["O","o"], "TimeOut")        
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-115, x_pixel_width, max_x_scale, dataList, ["Z","z"], "HD Trial") 
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-95,  x_pixel_width, max_x_scale, dataList, ["~",","], "Lever 2")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-75,  x_pixel_width, max_x_scale, dataList, ["J"], "L2 Resp")     
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-75,  x_pixel_width, max_x_scale, dataList, ["H","h"], "HD Resp")     
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-55,  x_pixel_width, max_x_scale, dataList, ["B","b"], "Block")
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-35,  x_pixel_width, max_x_scale, dataList, ["I","i"], "IBI")
         GraphLib.eventRecord(aCanvas, x_zero, y_zero-15,  x_pixel_width, max_x_scale, dataList, ["G","E"], "Session")
@@ -1185,10 +1187,16 @@ class GuiClass(object):
         self.outputText("<R 7>")
 
     def testFunction2(self):
-        self.outputText("<C>")       # Reset Chips
+        self.outputText("<r>")       # Reset Chips
 
     def testFunction3(self):
         self.outputText("<A>")       # Abort!
+
+    def diagnostics(self):
+        self.outputText("<D>")      # Get Diagnostics    
+
+    def testFunction5(self):
+        self.outputText("<O>")       # checkOutputPort()
 
     """
     def mimicL1Response(self,boxIndex):
@@ -1203,9 +1211,6 @@ class GuiClass(object):
     def toggleDebugVar(self,index,level):
         if (level): self.outputText("<Debug 0 1>")
         else: self.outputText("<Debug 0 0>")
-
-    def diagnostics(self):
-        self.outputText("<D>")      # Get Diagnostics
 
     def drawCumulativeRecord(self, aCanvas, selectedList, max_x_scale):
         aCanvas.delete('all')
@@ -1327,6 +1332,7 @@ class GuiClass(object):
                 time.sleep(2)
                 # Request version number from sketch name and version Feather M0
                 self.outputText("<V>")
+                self.sendSysVars()
         else:
             self.writeToTextbox("Unable to connect",0)
             self.connectLabelText.set("Unable to connect")
@@ -1470,10 +1476,9 @@ class GuiClass(object):
             elif (strCode == ")"): self.recoveriesL1.set(self.recoveriesL1.get()+1)
             elif (strCode == "["): self.errorsL2.set(self.errorsL2.get()+1)   
             elif (strCode == "]"): self.recoveriesL2.set(self.recoveriesL2.get()+1)    
-            elif (strCode == "!"): self.outputErrors.set(self.outputErrors.get()+1)    
+            elif (strCode == "#"): self.outputErrors.set(self.outputErrors.get()+1)    
             elif (strCode == "^"): self.outputRecoveries.set(self.outputRecoveries.get()+1)
-            elif (strCode == "!"):
-                tkinter.messagebox.showwarning(title="ERROR",
+            elif (strCode == "!"): tkinter.messagebox.showwarning(title="ERROR",
                         message="Session was ABORTED due to an unrecoverable input or output error")
 
         # set to zero in startSession    
