@@ -1193,10 +1193,19 @@ class GuiClass(object):
         self.outputText("<A>")       # Abort!
 
     def diagnostics(self):
-        self.outputText("<D>")      # Get Diagnostics    
+        self.outputText("<D>")      # Get Diagnostics
 
     def testFunction5(self):
         self.outputText("<O>")       # checkOutputPort()
+        """
+        self.handleErrorCode(12301,"(")
+        self.handleErrorCode(12302,")")
+        self.handleErrorCode(12303,"[")
+        self.handleErrorCode(12304,"]")
+        self.handleErrorCode(12305,"#")
+        self.handleErrorCode(12306,"^")
+        self.handleErrorCode(12307,"!")
+        """
 
     """
     def mimicL1Response(self,boxIndex):
@@ -1425,6 +1434,56 @@ class GuiClass(object):
             s = "0"+s
         self.sessionTimeStrList[listIndex].set(h+":"+m+":"+s)
 
+    def send_abort_msg(self):
+        """
+        Non-blocking message window; tkinter info and error messgaes block until msg acknowledged or answered
+        """
+        
+        labelfont = ('times', 30, 'bold')        
+        msg_window = Toplevel(self.root) # Child of root window 
+        msg_window.geometry("650x180+300+300")  # Size of window, plus x and y placement offsets 
+        msg_window.title("Error Message")
+        msg_window.config(bg='red')
+        msg_window.config(borderwidth=5)
+        msg_window.config(relief="sunken")
+        self.msgStr = StringVar()
+        self.msgStr.set("                   Session was ABORTED \r due to an unrecoverable input or output error ")
+
+        label1 = ttk.Label(msg_window,textvariable = self.msgStr, background="White",foreground="Red")
+        #option must be -column, -columnspan, -in, -ipadx, -ipady, -padx, -pady, -row, -rowspan, or -sticky
+        label1.config(font=labelfont)       
+        label1.grid(row=1,column=1, padx = 20, pady = 20, sticky='nesw')
+
+        button1 = ttk.Button(msg_window, text='  OK  ',command = msg_window.destroy)
+        button1.grid(row=2,column=1, padx=20, pady=10)
+
+    def handleErrorCode(self,timeStamp, strCode):
+        """
+        Takes an error timestamp and updates the appropriate tkinter error IntVars,
+        Then adds the timestamp to all data files of boxes currently running.        
+        """
+        if   (strCode == "("):
+            self.errorsL1.set(self.errorsL1.get()+1)
+        elif (strCode == ")"):
+            self.recoveriesL1.set(self.recoveriesL1.get()+1)
+        elif (strCode == "["):
+            self.errorsL2.set(self.errorsL2.get()+1)   
+        elif (strCode == "]"):
+            self.recoveriesL2.set(self.recoveriesL2.get()+1)    
+        elif (strCode == "#"):
+            self.outputErrors.set(self.outputErrors.get()+1)    
+        elif (strCode == "^"):
+            self.outputRecoveries.set(self.outputRecoveries.get()+1)
+
+        for i in range(8):
+            if (self.boxes[i].sessionStarted == True) and (self.boxes[i].sessionCompleted == False):
+                self.boxes[listIndex].dataList.append([timeStamp, strCode])
+                print("error timestamp added to box",i)
+                print(timeStamp,strCode,"<- Error Code")        
+
+        if (strCode == "!"): self.send_abort_msg()        
+        
+
     def handleInput(self, inputLine):
         """
         Document this!
@@ -1471,20 +1530,12 @@ class GuiClass(object):
         elif (boxNum == 9):
             print(strCode)
             # self.writeToTextbox(strCode,0)
-        elif (boxNum == 10):                                                    # BoxNum 10 applies to all boxes
-            if   (strCode == "("): self.errorsL1.set(self.errorsL1.get()+1)
-            elif (strCode == ")"): self.recoveriesL1.set(self.recoveriesL1.get()+1)
-            elif (strCode == "["): self.errorsL2.set(self.errorsL2.get()+1)   
-            elif (strCode == "]"): self.recoveriesL2.set(self.recoveriesL2.get()+1)    
-            elif (strCode == "#"): self.outputErrors.set(self.outputErrors.get()+1)    
-            elif (strCode == "^"): self.outputRecoveries.set(self.outputRecoveries.get()+1)
-            elif (strCode == "!"): tkinter.messagebox.showwarning(title="ERROR",
-                        message="Session was ABORTED due to an unrecoverable input or output error")
+        elif (boxNum == 10):                                                    # BoxNum 10 is an errorCode
+            handleErrorCode(timeStamp, strCode)
 
         # set to zero in startSession    
         # self.phantomResponseL1 = IntVar(value=0)
         # self.phantomResponseL2 = IntVar(value=0)
-        
 
     def periodic_check(self):
         if self.arduino0.activeConnection == True:    
