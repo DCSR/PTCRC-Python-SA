@@ -713,7 +713,7 @@ class GuiClass(object):
         sys4TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys4CheckVar, value=1)
         sys4TrueRadiobutton.grid(column = 2, row = 11, sticky = (W))
 
-        sys5label = ttk.Label(self.diagnosticButtonFrame, text="Label5")
+        sys5label = ttk.Label(self.diagnosticButtonFrame, text="showDebugOutput")
         sys5label.grid(column = 0, row = 12, sticky = (W))
         sys5FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys5CheckVar, value=0)
         sys5FalseRadiobutton.grid(column = 1, row = 12, sticky = (W))
@@ -1477,7 +1477,7 @@ class GuiClass(object):
 
         for i in range(8):
             if (self.boxes[i].sessionStarted == True) and (self.boxes[i].sessionCompleted == False):
-                self.boxes[listIndex].dataList.append([timeStamp, strCode])
+                self.boxes[i].dataList.append([timeStamp, strCode])
                 print("error timestamp added to box",i)
                 print(timeStamp,strCode,"<- Error Code")        
 
@@ -1531,7 +1531,7 @@ class GuiClass(object):
             print(strCode)
             # self.writeToTextbox(strCode,0)
         elif (boxNum == 10):                                                    # BoxNum 10 is an errorCode
-            handleErrorCode(timeStamp, strCode)
+            self.handleErrorCode(timeStamp, strCode)
 
         # set to zero in startSession    
         # self.phantomResponseL1 = IntVar(value=0)

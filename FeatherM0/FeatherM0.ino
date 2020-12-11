@@ -336,6 +336,7 @@ boolean checkLever2 = true;
 boolean Verbose = true;   // note that "verbose" (small v) is a reserved word
 boolean showMaxDelta = false;
 boolean checkOutputs = false;
+boolean showDebugOutput = false;
 
 byte portOneValue = 255, portTwoValue = 255;
 
@@ -1235,12 +1236,13 @@ boolean checkOutputPorts() {
     if (pumpState    != chip1.readPort(1)) errorFound = true;
     if (L2_Position  != chip2.readPort(0)) errorFound = true;
     if (L2_LED_State != chip2.readPort(1)) errorFound = true;
+    if (showDebugOutput)Serial.println("9 OutputError="+String(errorFound)); 
     return errorFound;
 }
 
 void startSession(int boxNum) {
    boxArray[boxNum].startSession();  
-   if (Verbose) Serial.println("9 boxesRunning="+String(boxesRunning)); 
+   if (Verbose) Serial.println("9 boxesRunning="+String(boxesRunning,BIN));
 }
 
 void endSession(int boxNum) {
@@ -1385,34 +1387,40 @@ void decodeSysVars(byte varCode) {
     * Could have used 1,2,4,8 etc
     */
    if ((varCode & (1 << 0)) > 0) {checkLever1 = true;
-      if (Verbose) Serial.println("9 checkLever1=true");
+      if (showDebugOutput) Serial.println("9 checkLever1=true");
    }
    else {checkLever1 = false;  
-      if (Verbose) Serial.println("9 checkLever1=false");
+      if (showDebugOutput) Serial.println("9 checkLever1=false");
    }
    if ((varCode & (1 << 1)) > 0) {checkLever2 = true;
-      if (Verbose) Serial.println("9 checkLever2=true");
+      if (showDebugOutput) Serial.println("9 checkLever2=true");
    }
    else {checkLever2 = false;  
-      if (Verbose) Serial.println("9 checkLever2=false");
+      if (showDebugOutput) Serial.println("9 checkLever2=false");
    }
    if ((varCode & (1 << 2)) > 0) {showMaxDelta = true;
-      if (Verbose) Serial.println("9 showMaxDelta=true");
+      if (showDebugOutput) Serial.println("9 showMaxDelta=true");
    }
    else {showMaxDelta = false;  
-      if (Verbose) Serial.println("9 showMaxDelta=false");
+      if (showDebugOutput) Serial.println("9 showMaxDelta=false");
    }
    if ((varCode & (1 << 3)) > 0) {Verbose = true;
-      if (Verbose) Serial.println("9 Verbose=true");
+      if (showDebugOutput) Serial.println("9 Verbose=true");
    }
    else {Verbose = false;  
-      if (Verbose) Serial.println("9 Verbose=false");
+      if (showDebugOutput) Serial.println("9 Verbose=false");
    }
    if ((varCode & (1 << 4)) > 0) {checkOutputs = true;
-      if (Verbose) Serial.println("9 checkOutputs=true");
+      if (showDebugOutput) Serial.println("9 checkOutputs=true");
    }
-   else {Verbose = false;  
-      if (Verbose) Serial.println("9 checkOutputs=false");
+   else {checkOutputs = false;  
+      if (showDebugOutput) Serial.println("9 checkOutputs=false");
+   }
+   if ((varCode & (1 << 5)) > 0) {showDebugOutput = true;
+      if (showDebugOutput) Serial.println("9 showDebugOutput=true");
+   }
+   else {showDebugOutput = false;  
+      if (showDebugOutput) Serial.println("9 showDebugOutput=false");
    }
 }
 
@@ -1556,7 +1564,7 @@ void tick()    {
    delta = micros() - micro1;
    // delta = millis() - micro1;
    if (delta > maxDelta) maxDelta = delta;
-   if (tickCounts == 100){
+   if (tickCounts == 99){
       if (showMaxDelta) {
          Serial.println("9 maxDelta(uSec)="+String(maxDelta));
          maxDelta = 0; 
