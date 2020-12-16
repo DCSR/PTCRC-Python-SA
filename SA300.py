@@ -18,6 +18,7 @@ import glob
 import time
 import queue
 from datetime import date
+from datetime import datetime
 import ArdLib
 import GraphLib
 from time import sleep
@@ -47,6 +48,7 @@ class GuiClass(object):
         self.box8 = Box(8)
         self.example1List = []
         self.example2List = []
+        self.sessionLog = []
         
         # note that boxes[0] is box1
         self.boxes = [self.box1,self.box2,self.box3,self.box4,self.box5,self.box6,self.box7,self.box8]
@@ -54,7 +56,7 @@ class GuiClass(object):
         self.X_ZERO = 50
         self.Y_ZERO = 275
         self.CANVAS_WIDTH = 600
-        self.CANVAS_HEIGHT = 300
+        self.CANVAS_HEIGHT = 400
         
         # *****************************
         self.arduino0 = ArdLib.Arduino()
@@ -1144,6 +1146,36 @@ class GuiClass(object):
             line = str(pairs[0])+" "+pairs[1]
             print(line)
 
+    def errorRecord(self,aCanvas, x_zero, y_zero, x_pixel_width, max_x_scale, dataList, charList, aLabel):
+        x = x_zero
+        y = y_zero
+        x_scaler = x_pixel_width / (max_x_scale*60*1000)
+        aCanvas.create_text(x_zero-50, y_zero-5, fill="blue", text = aLabel)
+        aCanvas.create_text(x_zero-20, y_zero-5, fill="blue", text = "error")
+        aCanvas.create_text(x_zero-20, y_zero+5, fill="blue", text = "recover")
+        
+        for pairs in dataList:
+            if pairs[1] in charList:
+                newX = (x_zero + pairs[0] * x_scaler // 1)
+                aCanvas.create_line(x, y, newX, y)                              # draw line to newX
+                if (len(charList) == 1):                                        # one char in List = ["P"]
+                    aCanvas.create_line(newX, y, newX, y-10)                    # draw a line upward
+                else:                                                           # two chars in list = ["B","b"]
+                    if pairs[1] == charList[0]:                                 # if first char
+                        newY = y_zero - 10
+                        aCanvas.create_line(newX, y_zero, newX, newY, fill="red")   # move y upwards
+                    else:                                                       # if second char in list
+                        newY = y_zero + 10                                      # move y downwards      
+                        aCanvas.create_line(newX, y_zero, newX, newY, fill="green")           # draw line from y-zero up or down
+                    # y = newY                                                  # no need to remember
+                x = newX
+            """
+            this doesn't work yet - places asterisk under last token token 
+            if pairs[1] == '&':
+                aCanvas.create_text(x, y_zero, fill="blue",text= '*')  # show char underneath
+            """        
+
+
     def drawAllTimeStamps(self,aCanvas,selectedList, max_x_scale):
         if (selectedList < 8): dataList = self.boxes[self.selectedBox.get()].dataList
         elif (selectedList == 8): dataList = self.example1List
@@ -1156,22 +1188,95 @@ class GuiClass(object):
         elif max_x_scale == 30: x_divisions = 6
         elif max_x_scale == 10: x_divisions = 10
         x_zero = 65
-        y_zero = self.Y_ZERO
+        y_zero = 375  # self.Y_ZERO = 275 
         x_pixel_width = 500
+
+        # ************** New stuff - Dec 14th ************************************************
+        # ************************************************************************************
+        # ************************************************************************************
+
+        errorList = []
+        Tzero = 0
+
+        if len(self.sessionLog) == 0:
+            time = datetime.now()
+            dateTimeStr = time.strftime("%b/%d/%Y/%H:%M:%S")
+            self.sessionLog.append(["SA300 started "+dateTimeStr])
+            self.sessionLog.append(["USING Dummy data for test"])
+            self.sessionLog.append([300000,'A',1])    # On connect - 5 min after Feather reset    (5 min)
+            self.sessionLog.append([900000,'M',1])    # Box 1 connects 10 min later - ignore here (15 min)
+            self.sessionLog.append([960000,'@'])      # 1 min into Box 1 session                  (16 min)
+            self.sessionLog.append([964000,'#'])      # 1 min plus 4 sec
+            self.sessionLog.append([1020000,'@'])     # 2 min into Box 1 session                  (17 min)
+            self.sessionLog.append([1024000,'#'])     # 2 min 4 sec
+        
+            self.sessionLog.append([1500000,'$'])    # 10 min into Box 1 session                 (25 min)
+            self.sessionLog.append([1504000,'%'])    # 10 min 4 sec
+        
+            self.sessionLog.append([1560000,'&'])    # 11 min into Box 1 session                 (26 min)
+            self.sessionLog.append([1564000,'!'])    # 11 min 4 sec
+
+        onConnectTime = 0                         # defined
+        offset        = 0                              # 
+        boxStartTime  = 0                    # 10 min later
+        
+        if len(dataList) > 0:
+            print (dataList[1])
+        else: print("No offset for selected box")
+
+        # offset = 
+
+        for line in self.sessionLog:
+            print(line)
+        
+        #print(self.boxes[listIndex].dataList)
+        # self.boxes[self.selectedBox.get()
+
+        for data in self.sessionLog:
+            if (len(data)==2):                   # Ignore comments and M timestamps
+                errorList.append(data)
+            elif (len(data)==3):
+                if ((data[1]) == 'A'):           # A = onConnect
+                    onConnectTime = data[0]
+                    print("onConnectTime captured")
+                elif ((data[1]) == 'M'):
+                    boxStartTime = data[0]
+                    print("boxStartTime captured")
+
+        Tzero = onConnectTime
+        connectStr = "Time serial connection made"
+        
+        if boxStartTime > onConnectTime:
+            Tzero = boxStartTime
+            connectStr = "is Box Start Time"
+            
+        aCanvas.create_text(x_zero+20, y_zero-25, fill="blue", text = "Tzero "+connectStr)
+
+        print("Tzero =",Tzero)
+
+        for data in errorList:
+            data[0] = data[0]-Tzero
+
+        # ******************************
         GraphLib.drawXaxis(aCanvas, x_zero, y_zero, x_pixel_width, max_x_scale, x_divisions)
 
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-235, x_pixel_width, max_x_scale, dataList, ["T","t"], "L1 Trial")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-215, x_pixel_width, max_x_scale, dataList, ["=","."], "Lever 1")        
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-195, x_pixel_width, max_x_scale, dataList, ["L"], "L1 Resp")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-175, x_pixel_width, max_x_scale, dataList, ["P","p"], "Pump")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-155, x_pixel_width, max_x_scale, dataList, ["S","s"], "Stim")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-135, x_pixel_width, max_x_scale, dataList, ["O","o"], "TimeOut")        
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-115, x_pixel_width, max_x_scale, dataList, ["Z","z"], "HD Trial") 
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-95,  x_pixel_width, max_x_scale, dataList, ["~",","], "Lever 2")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-75,  x_pixel_width, max_x_scale, dataList, ["H","h"], "HD Resp")     
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-55,  x_pixel_width, max_x_scale, dataList, ["B","b"], "Block")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-35,  x_pixel_width, max_x_scale, dataList, ["I","i"], "IBI")
-        GraphLib.eventRecord(aCanvas, x_zero, y_zero-15,  x_pixel_width, max_x_scale, dataList, ["G","E"], "Session")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-335, x_pixel_width, max_x_scale, dataList, ["T","t"], "L1 Trial")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-315, x_pixel_width, max_x_scale, dataList, ["=","."], "Lever 1")        
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-295, x_pixel_width, max_x_scale, dataList, ["L"], "L1 Resp")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-275, x_pixel_width, max_x_scale, dataList, ["P","p"], "Pump")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-255, x_pixel_width, max_x_scale, dataList, ["S","s"], "Stim")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-235, x_pixel_width, max_x_scale, dataList, ["O","o"], "TimeOut")        
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-215, x_pixel_width, max_x_scale, dataList, ["Z","z"], "HD Trial") 
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-195,  x_pixel_width, max_x_scale, dataList, ["~",","], "Lever 2")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-175,  x_pixel_width, max_x_scale, dataList, ["H","h"], "HD Resp")     
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-155,  x_pixel_width, max_x_scale, dataList, ["B","b"], "Block")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-135,  x_pixel_width, max_x_scale, dataList, ["I","i"], "IBI")
+        GraphLib.eventRecord(aCanvas, x_zero, y_zero-115,  x_pixel_width, max_x_scale, dataList, ["G","E"], "Session")
+        self.errorRecord(aCanvas, x_zero, y_zero-95,  x_pixel_width, max_x_scale, errorList, ["@","#"], "In")
+        self.errorRecord(aCanvas, x_zero, y_zero-65,  x_pixel_width, max_x_scale, errorList, ["$","%"], "Out")
+        # self.errorRecord(aCanvas, x_zero, y_zero-55,  x_pixel_width, max_x_scale, errorList, ["&"], "ChipReset")
+
+        
 
     def sendCode(self, codeStr):
         self.outputText(codeStr)
@@ -1342,6 +1447,9 @@ class GuiClass(object):
                 # Request version number from sketch name and version Feather M0
                 self.outputText("<V>")
                 self.sendSysVars()
+                time = datetime.now()
+                dateTimeStr = time.strftime("%b/%d/%Y/%H:%M:%S")
+                self.sessionLog.append(["SA300 started "+dateTimeStr])
         else:
             self.writeToTextbox("Unable to connect",0)
             self.connectLabelText.set("Unable to connect")
@@ -1367,7 +1475,11 @@ class GuiClass(object):
             if sched == "0: Do not run":
                 self.boxes[boxIndex].sessionStarted = False
             else:
-                self.boxes[boxIndex].sessionStarted = True                
+                self.boxes[boxIndex].sessionStarted = True
+                """
+                if (self.Tzero == 0) self.outputText("<Q "+str(boxIndex)+">")
+                """
+                
         else:           
            self.writeToTextbox("No arduino connected",0)
 
@@ -1462,6 +1574,7 @@ class GuiClass(object):
         Takes an error timestamp and updates the appropriate tkinter error IntVars,
         Then adds the timestamp to all data files of boxes currently running.        
         """
+        self.sessionLog.append(timeStamp, strCode)
         if   (strCode == "("):
             self.errorsL1.set(self.errorsL1.get()+1)
         elif (strCode == ")"):
@@ -1530,8 +1643,10 @@ class GuiClass(object):
         elif (boxNum == 9):
             print(strCode)
             # self.writeToTextbox(strCode,0)
-        elif (boxNum == 10):                                                    # BoxNum 10 is an errorCode
+        elif (boxNum == 10):     # BoxNum 10 is an errorCode
             self.handleErrorCode(timeStamp, strCode)
+
+
 
         # set to zero in startSession    
         # self.phantomResponseL1 = IntVar(value=0)

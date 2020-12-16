@@ -1,67 +1,5 @@
 /*  
  *   
- *   December 6, 2020 
- *   
- *   This commit is called "Sunday Revision"
- *   Revert to a more conservative flow:     
- *      Configure but don't use boxesRunning (for now)  
- *      
- *   DONE:
- *      Startup with proper IO configuration, calls resetChips()
- *      startSession(int BoxNum) and endSession(int BoxNum) added 
- *        as wrappers for Boxes::startSession() and BoxesEndSession()
- *      bitSet and bitClear of boxesRunning handled within Boxes::
- *      boxesRunning added to reportDiagnostics()
- *   
- *   To Do:
- *          
- *          testOutputPorts
- *   
- *   Add after testing:
- *    *   No idea how to enterSafeMode() when all boxes have finish without endlessly   
- *   checking:
- *      if (boxesRunning == 0)
- *         enter SafeMode
- *      
-  
- *  
- *   tick()
- *      if (boxesRunning > 0)
- *      checkInputPorts
- *      every second - if (checkOutputPorts()) handleOutputError();
- *   
- *  
- *  
- *  ****** Previous Commits *************
- *  
- *   "Another transfer for testing" - Dec 4th
- *      Does not run
- *   
- *   "Another transfer for testing" - November 23rd
- *   
- *   Another transfer
- *   
- *   Salvage Branch - probably not useful
- *   
- *   Flow:
- *   
-
- *   
- *   
- *   
- *   
- *   
- *   To Do:
- *   -  Rename SA200.py to SA300.py
- *   -  SA300.py - if timestamp boxNum == 10 then add timestamp to all boxes (that are running)
- *   -  Assign version number 301.00 after testing 
- *   -  Clean up header notes and update Version Notes.
- *   -  Check Documentation, SA200.py Programmers Guide, API, codes 
- *   -  MessageBoxes: failure to start etc.
- *   -  Send some info on checkOutputPorts() failure
- *   - checkoutput
- *   
- *   
  
  * **************  Notes - In progress ******************     
  * 
@@ -243,7 +181,6 @@
  *   Defined an array of eight boolena variables.
  *   twoLever removed
  *   debugBoolVarList removed
- *   sysVarArray[1] substituted for pumpOnHigh
  *   
  *   Document how the timing is done and relate it to the PowerPoint slide.
  *    Reinforce() changes _timeOut = true which is checked in tick() each 10 mSec.
@@ -324,6 +261,7 @@
 #include <SPI.h>        // Arduino Library SPI.h
 #include "MCP23S17.h"   
 
+String verStr = "Ver301.00";
 const uint8_t chipSelect = 10;  // All four chips use the same SPI chipSelect
 MCP23S17 chip0(chipSelect, 0);  // Instantiate 16 pin Port Expander chip at address 0
 MCP23S17 chip1(chipSelect, 1);  
@@ -340,21 +278,16 @@ boolean showDebugOutput = false;
 
 byte portOneValue = 255, portTwoValue = 255;
 
-// Variables needed for error detection - from HD_DEMO.ino
+// Variables needed for error detection - see HD_DEMO.ino
 // The following variables are used to track the state of each output port
 // Output Ports Values
 byte L1_Position = 0xFF;
 byte L1_LED_State = 0xFF;      
-byte pumpState = 0x00; 
+byte pumpState = 0x00;          // bitwise OR of (pumpStateL1 | pumpStateL2);
 byte pumpStateL1 = 0x00;        // Determined by lever 1
 byte pumpStateL2 = 0x00;        // Determined by lever 2 (HD)
 byte L2_Position = 0xFF;        // Retracted
 byte L2_LED_State = 0xFF;       // Off
-
-boolean sysVarArray[8] = {false,false,false,false,false,false,false,false};
-// sysVarArray[0] used for reward type; 0 = Drug, 1 = Food
-// sysVarArray[1] used for logic type: 0 = 5VDC switches On, 1 = GND switches On
-// sysVarArray[2] used for leverTwoExists
 
 #define On true
 #define Off false
@@ -391,16 +324,14 @@ boolean leverTwoExists = false;
 
 volatile boolean tickFlag = false;
 
-// program housekeeping varaibles
+// program housekeeping variables
 String inputString;
 boolean echoInput = false;
 unsigned long maxDelta = 0;
 byte maxQueueRecs = 0;
-byte diffCriteria = 1;
 
 // enum  states { PRESTART, BLOCK, IBI, L2_HD, FINISHED };
 enum states { PRESTART, L1_ACTIVE, L1_TIMEOUT, IBI, L2_HD, FINISHED };
-
 
 // ******************** Box Class **************
 
@@ -621,16 +552,15 @@ void Box::deliverFoodPellet() {
       Need to define gobal variable - feederState and mimic how it is done
       in Box::switchStim1(boolean state)
       feederState = 0xFF   <- OFF;  Feeders discharge when supplied with GND
-      Originally sysVarArray[1] was designed to select drug vs food
       Note that drug vs food uses different ports and 5VDC vs GND to switch ON
       Future use will likely depend on a protocol and local variables 
-      determining whether to call switchPumpOn() or deliverFoodPellet() 
+      determining whether to call switchTimedPumpOn() or deliverFoodPellet() 
       timestamp Hopper (H,h)
    */  
 }
 
 void Box::switchTimedPump(int state) { 
-    // boxNum 0..7 maps to pin 0..7 on chip1, pins 8..15 paps to Pumps
+    // Pumps for boxNum 0..7 maps to pins 8..15 map on chip1
     // Pump CheckBox is index 2
     // pumpState = 0x00    <- OFF
     // Pump off with bitClear()
@@ -652,34 +582,6 @@ void Box::switchTimedPump(int state) {
     }
     // chip1.writePort(1,pumpStateL1State);  <- called in Tick() 
 }
-
-/*
-
-void Box::switchRewardPortOff() { 
-    // boxNum 0..7 maps to pin 0..7 on chip1 or chip3 
-    // Normally: On (true) switches the bit to HIGH
-    //       and Off (false) switches the bit to LOW
-    // BUT if sysVarArray[1] == true -> then the reverse happens
-   
-    boolean level;
-    // sysVarArray[1] selects of the device goes on with 5VDC or GND
-    // sysVarArray[1] 5VDC On = 0; GND On = 1 
-    if (sysVarArray[1]) level = HIGH;     // if "GND On" go high to turn off
-    else level = LOW;                     // else '5VDC On" go low to turn off
-
-    // sysVarArray[0] selects either Pump Port or AUX Port
-    if (sysVarArray[0] == 0) chip1.digitalWrite(_boxNum+8,level);
-    else chip3.digitalWrite(_boxNum+8,level); 
-                    
-    TStamp tStamp = {_boxNum, 'p', millis() - _startTime, 0, 2};
-    printQueue.push(&tStamp);
-
-    _timedPumpOn = false;
-    
-    // The Pump CheckBox is index 2 
-}
-
-*/
 
 void Box::moveLeverOne(int state) { 
    /*  chip0, pins 0..7 map to boxNum 0..7 to extend/retract Lever 1
@@ -726,11 +628,6 @@ void Box::switchStim1(boolean state) {
     *   L1 LED CheckBox is index 3
     *   Defined On = true; Off = false
     */
-
-    // Junk
-    // boolean level;
-    // level = !state;                        // Defined On = true -> level goes low 
-    // chip0.digitalWrite(_boxNum+8,level);   // boxNum 0..7 maps to pin 8..15 on chip0
 
     if (state == On) {                        // Defined On = true = 1
           bitClear(L1_LED_State,_boxNum);     // LED is on when bit = 0 
@@ -907,7 +804,7 @@ void Box::startSession() {
   if (_protocolNum == 0) endSession();
   else {
       _startTime = millis();
-      TStamp tStamp = {_boxNum, 'M', millis(), 0, 9}; 
+      TStamp tStamp = {10, 'M', millis(), _boxNum, 9}; 
       printQueue.push(&tStamp);
       _blockNumber = 0;  
       _pumpTime = 0; 
@@ -921,14 +818,16 @@ void Box::startSession() {
 
 void Box::endSession() { 
     // endTrial(); the only thing this did was retract the lever, but see next line. 
-    moveLeverOne(Retract);         
+    moveLeverOne(Retract); 
+    TStamp tStamp1 = {10, 'm', millis(), _boxNum, 9}; 
+    printQueue.push(&tStamp1);        
     switchStim1(Off);
     switchTimedPump(Off);
     _pumpTime = 0;
     _timeOutTime = 0;
     _boxState = FINISHED;    
-    TStamp tStamp = {_boxNum, 'E', millis() - _startTime, 0, 9};
-    printQueue.push(&tStamp);
+    TStamp tStamp2 = {_boxNum, 'E', millis() - _startTime, 0, 9};
+    printQueue.push(&tStamp2);
     moveLeverTwo(Retract);
     bitClear(boxesRunning,_boxNum);
 }
@@ -1129,16 +1028,27 @@ void resetChips() {
    chip2.writePort(1,L2_LED_State);
    checkLever1 = true;
    checkLever2 = true; 
+   Serial.println("10 A "+String(millis()));  // onConnect Timestamp
 }
 
 void setup() {
   Serial.begin(115200);
+  while (!Serial) {
+    ; // wait for serial port to connect.
+  }
   pinMode(LED_BUILTIN, OUTPUT);   // GPIO 13
+  L1_Position = 0xFF;             // Retract L1
+  L1_LED_State = 0xFF;            // L1 LED Off
+  L2_Position = 0xFF;             // Retract L2
+  L2_LED_State = 0xFF;            // L2 LED Off
+  pumpState = 0x00;               // Pumps Off
+  pumpStateL1 = 0x00;
+  pumpStateL2 = 0x00;
   resetChips();
   delay(500); 
   init_10_mSec_Timer(); 
-  Serial.println("9 Setup");
   Serial.println("9 Ver=301.00");
+  Serial.println("10 A "+String(millis()));    // To be used as Tzero
 }
 
 void enterSafeMode() {
@@ -1174,56 +1084,53 @@ void handleOutputError(){
    */
    boolean errorFound = false;
    boolean recoveredFromError = false;
-
-   TStamp tStamp = {10, '#', millis(), 0, 9};    // increment self.outputErrors
-   printQueue.push(&tStamp);
   
    if (Verbose) Serial.println("9 Output_Error");
       
-  for (int x = 0; x < 10; x++) {
-    boolean errorFound = false;
-    if (L1_Position  != chip0.readPort(0)) {
-      errorFound = true;
-      chip0.writePort(0,L1_Position);
-      Serial.println("9 Error_L1_Position");
-    }
-    if (L1_LED_State != chip0.readPort(1)) {
-      errorFound = true;
-      chip0.writePort(1,L1_LED_State);
-      Serial.println("9 Error_L1_LED_State");
-    }
-    if (pumpState    != chip1.readPort(1)) {
-      errorFound = true;
-      chip1.writePort(1,pumpState);
-      Serial.println("9 Error_pumpState");
-    }
-    if (L2_Position  != chip2.readPort(0)) {
-      errorFound = true;
-      chip2.writePort(0,L2_Position);
-      Serial.println("9 Error_L2_Position");
-    }
-    if (L2_LED_State != chip2.readPort(1)) {
-      errorFound = true;
-      chip2.writePort(1,L2_LED_State);
-      Serial.println("9 Error_L2_LED_State");
-    }
-    if (!errorFound) {
-       if (Verbose) Serial.println("9 Recovered");  
-        recoveredFromError = true;
-        break;
+   for (int x = 0; x < 10; x++) {
+      boolean errorFound = false;
+      if (L1_Position  != chip0.readPort(0)) {
+         Serial.println("10 $ "+String(millis())+"1 0");
+         errorFound = true;
+         chip0.writePort(0,L1_Position);   
       }
+      if (L1_LED_State != chip0.readPort(1)) {
+         Serial.println("10 $ "+String(millis())+"2 0");
+         errorFound = true;
+         chip0.writePort(1,L1_LED_State);
+      }
+      if (pumpState    != chip1.readPort(1)) {
+         Serial.println("10 $ "+String(millis())+"3 0");
+         errorFound = true;
+         chip1.writePort(1,pumpState);
+      }
+      if (L2_Position  != chip2.readPort(0)) {
+         Serial.println("10 $ "+String(millis())+"4 0");
+         errorFound = true;
+         chip2.writePort(0,L2_Position);
+      }
+      if (L2_LED_State != chip2.readPort(1)) {
+         Serial.println("10 $ "+String(millis())+"5 0");
+         errorFound = true;
+         chip2.writePort(1,L2_LED_State);
+      }
+      if (!errorFound) {
+         if (Verbose) Serial.println("9 Recovered");
+            Serial.println("10 % "+String(millis()));  
+            recoveredFromError = true;
+            break;
+         }
   }
   if (!recoveredFromError) {
       Serial.println();
       if (Verbose) Serial.println("9 ErrorPersists");
-      resetChips();
+      resetChips();                                  // try one last time after reset
       if (checkOutputPorts()) {
-         // try one last time after reset
+         Serial.println("10 ! "+String(millis()));
          abortSession();        
       }
       else {
-         TStamp tStamp1 = {10, '^', millis(), 0, 9};   // increment self.outputRecoveries 
-         printQueue.push(&tStamp1);
+         Serial.println("10 % "+String(millis()));   // increment self.outputRecoveries 
          Serial.println("9 Recovered_after_reset");
       } 
    }
@@ -1236,7 +1143,7 @@ boolean checkOutputPorts() {
     if (pumpState    != chip1.readPort(1)) errorFound = true;
     if (L2_Position  != chip2.readPort(0)) errorFound = true;
     if (L2_LED_State != chip2.readPort(1)) errorFound = true;
-    if (showDebugOutput)Serial.println("9 OutputError="+String(errorFound)); 
+    if (showDebugOutput)Serial.println("9 OutputError"); 
     return errorFound;
 }
 
@@ -1274,50 +1181,35 @@ handleInputError(byte leverNum, byte portValue)
 void handleInputError(byte leverNum, byte portValue) {
    boolean recoveredFromError = false;   
    byte _portValue;
-   char stampChar; 
-
-   if (leverNum == 1) stampChar = '(';
-   else stampChar = ')';
    
-   TStamp tStamp = {10, stampChar, millis(), 0, 9};
-   printQueue.push(&tStamp);
+   Serial.println("10 @ "+String(millis())+' '+String(leverNum)+' '+String(portValue));
 
    for (int x = 0; x < 10; x++) {                         // Try ten times
       if (leverNum == 1) _portValue = chip1.readPort(0);
       else _portValue = chip3.readPort(0);
-      if (_portValue == 0) Serial.println("9 !");         // Still has error
-      else {
+      if (_portValue != 0) {
          recoveredFromError = true;
          if (Verbose) Serial.println("9 Recovered_after_"+String(x+1)+"_attempt(s)");
          break;
       }
    }                                                  // If error after 10 tries 
    if (recoveredFromError) {
-      if (leverNum == 1) stampChar = '[';
-      else stampChar = ']';
-      TStamp tStamp1 = {10, stampChar, millis(), 0, 9};
-      printQueue.push(&tStamp1);
+       Serial.println("10 # "+String(millis())+' '+String(leverNum)+' '+String(_portValue));
    }
    else {
       Serial.println();
       resetChips(); 
       if (chip1.readPort(0) != 0 && chip3.readPort(0) != 0) {
-        if (Verbose) Serial.println("9 Recovered_after_reset");
-        if (leverNum == 1) stampChar = '[';
-        else stampChar = ']';
-        TStamp tStamp2 = {10, stampChar, millis(), 0, 9};
-        printQueue.push(&tStamp2);       
+         if (Verbose) Serial.println("9 Recovered_after_reset");
+         Serial.println("10 # "+String(millis())+' '+String(leverNum)+' '+String(_portValue));
       }
       else {      
-        Serial.println();
-        Serial.println("9 Aborting_Session");
-        TStamp tStamp3 = {10, stampChar, millis(), 0, 9};
-        printQueue.push(&tStamp3);
-        checkLever1 = false;
-        checkLever2 = false; 
-        
-        for (int boxNum = 0; boxNum < 8; boxNum++) 
-           boxArray[boxNum].endSession();
+         checkLever1 = false;
+         checkLever2 = false;         
+         for (int boxNum = 0; boxNum < 8; boxNum++) 
+            boxArray[boxNum].endSession();
+         Serial.println("10 ! "+String(millis()));
+         Serial.println("9 Session_Aborted");
       }
    }   
 }
@@ -1330,7 +1222,7 @@ void checkLeverOneBits() {
   
    static byte oldPortOneValue = 255;       
    portOneValue = chip1.readPort(0);
-   if (portOneValue == 0) handleInputError(1,portOneValue);     
+   if (portOneValue == 0) handleInputError(1,portOneValue);   // Check for Error 
    else if(portOneValue != oldPortOneValue) {                 // something new
       oldPortOneValue = portOneValue;
       // Serial.println (portOneValue,BIN);
@@ -1353,7 +1245,7 @@ void checkLeverTwoBits() {
    */
    static byte oldPortTwoValue = 255;
    byte bitValue;
-   portTwoValue = chip3.readPort(0);
+   portTwoValue = chip3.readPort(0);                             // Check for Error
    if (portTwoValue == 0) handleInputError(2,portTwoValue);      // Input OR output Error
    else {
       if (oldPortTwoValue != portTwoValue) {                     // something changed
@@ -1477,7 +1369,7 @@ void handleInputString()
      else if (stringCode == "c")     boxArray[num1].switchStim2(Off);
      else if (stringCode == "C")     boxArray[num1].switchStim2(On);     
      else if (stringCode == "D")     reportDiagnostics(); 
-     else if (stringCode == "A")     abortSession();
+     else if (stringCode == "Abort")     abortSession();
      else if (stringCode == "r")     resetChips();
      else if (stringCode == "SYSVARS")  decodeSysVars(num1);
      else if (stringCode == "O")     if (checkOutputPorts()) handleOutputError();
@@ -1494,7 +1386,7 @@ int freeRam () {
 }
 
 void reportDiagnostics() {
-   Serial.println("9 Ver301.00");
+   Serial.println("9 "+verStr);
    Serial.println("9 maxDelta="+String(maxDelta));
    Serial.println("9 maxQueueRecs="+String(maxQueueRecs));
    Serial.println("9 freeRam="+String(freeRam()));
@@ -1536,6 +1428,7 @@ void sendOneTimeStamp() {
 
 void tick()    {  
    static int tickCounts = 0;  // used for flashing LED and printTime
+   static byte sec = 0;
    int boxIndex;
    unsigned long delta, micro1;
    micro1 = micros();
@@ -1546,7 +1439,12 @@ void tick()    {
        if (checkOutputs){
           if (checkOutputPorts()) handleOutputError();        
        }
+       sec++;
        tickCounts = 0;
+   }
+   if (sec = 60) {
+      Serial.println("10 @ "+String(millis())+" 0 0");
+      sec = 0;
    }
    for (uint8_t i = 0; i < 8; i++) boxArray[i].tick();
    getInputString();
