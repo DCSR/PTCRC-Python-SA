@@ -1358,7 +1358,6 @@ void handleInputString()
      if (stringCode == "chip0") chip0.digitalWrite(num1,num2); 
      else if (stringCode == "G")     startSession(num1);
      else if (stringCode == "Q")     endSession(num1);
-     else if (stringCode == "O")     if (checkOutputPorts()) handleOutputError();
      else if (stringCode == "L1")    boxArray[num1].handle_L1_Response(); 
      else if (stringCode == "P")     boxArray[num1].switchTimedPump(On);
      else if (stringCode == "PROTOCOL") boxArray[num1].setProtocolNum(num2);
@@ -1380,6 +1379,9 @@ void handleInputString()
      else if (stringCode == "r")     resetChips();
      else if (stringCode == "A")     Serial.println("10 A "+String(millis()));    // To be used as Tzero
      else if (stringCode == "SYSVARS")  decodeSysVars(num1);
+     else if (stringCode == "O"){
+          if (checkOutputPorts()) handleOutputError();
+          }
      // debug stuff
      else if (stringCode == "i")     timeUSB();
      else if (stringCode == "E")     echoInput = !echoInput;   

@@ -1305,7 +1305,7 @@ class GuiClass(object):
         self.outputText("<r>")       # Reset Chips
 
     def abort(self):
-        self.outputText("<A>")       # Abort!
+        self.outputText("<Abort>")       # Abort!
 
     def diagnostics(self):
         self.outputText("<D>")       # Get Diagnostics
@@ -1319,8 +1319,9 @@ class GuiClass(object):
             print(line)
         print("****** End SessionLog ***")
 
-    def testFunction1(self):         # Not used
-        self.send_abort_msg()
+    def testFunction1(self):         # temp use
+        # self.send_abort_msg()
+        self.outputText("<A>")
 
     def toggleCheckLevers(self,checkLeversState):
         if (checkLeversState): self.outputText("<CL>")
@@ -1556,7 +1557,7 @@ class GuiClass(object):
         Non-blocking message window; tkinter info and error messgaes block until msg acknowledged or answered
         """
         
-        labelfont = ('times', 30, 'bold')        
+        labelfont = ('times', 20, 'bold')        
         msg_window = Toplevel(self.root) # Child of root window 
         msg_window.geometry("650x180+300+300")  # Size of window, plus x and y placement offsets 
         msg_window.title("Error Message")
