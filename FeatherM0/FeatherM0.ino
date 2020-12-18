@@ -271,9 +271,10 @@ MCP23S17 chip3(chipSelect, 3);
 // SYSVARS
 boolean checkLever1 = true;
 boolean checkLever2 = true;
+boolean checkOutputs = false;
 boolean Verbose = true;   // note that "verbose" (small v) is a reserved word
 boolean showMaxDelta = false;
-boolean checkOutputs = false;
+boolean abortEnabled = false;
 boolean showDebugOutput = false;
 
 byte portOneValue = 255, portTwoValue = 255;
@@ -804,7 +805,7 @@ void Box::startSession() {
   if (_protocolNum == 0) endSession();
   else {
       _startTime = millis();
-      TStamp tStamp = {10, 'M', millis(), _boxNum, 9}; 
+      TStamp tStamp = {_boxNum, 'M', millis(), 0, 9}; 
       printQueue.push(&tStamp);
       _blockNumber = 0;  
       _pumpTime = 0; 
@@ -818,9 +819,7 @@ void Box::startSession() {
 
 void Box::endSession() { 
     // endTrial(); the only thing this did was retract the lever, but see next line. 
-    moveLeverOne(Retract); 
-    TStamp tStamp1 = {10, 'm', millis(), _boxNum, 9}; 
-    printQueue.push(&tStamp1);        
+    moveLeverOne(Retract);         
     switchStim1(Off);
     switchTimedPump(Off);
     _pumpTime = 0;
@@ -1028,7 +1027,7 @@ void resetChips() {
    chip2.writePort(1,L2_LED_State);
    checkLever1 = true;
    checkLever2 = true; 
-   Serial.println("10 A "+String(millis()));  // onConnect Timestamp
+   Serial.println("10 * "+String(millis()));  // onConnect Timestamp
 }
 
 void setup() {
@@ -1143,7 +1142,9 @@ boolean checkOutputPorts() {
     if (pumpState    != chip1.readPort(1)) errorFound = true;
     if (L2_Position  != chip2.readPort(0)) errorFound = true;
     if (L2_LED_State != chip2.readPort(1)) errorFound = true;
-    if (showDebugOutput)Serial.println("9 OutputError"); 
+    if (showDebugOutput){
+      if (!errorFound) Serial.println("9 No_Output_Error");
+    } 
     return errorFound;
 }
 
@@ -1290,25 +1291,31 @@ void decodeSysVars(byte varCode) {
    else {checkLever2 = false;  
       if (showDebugOutput) Serial.println("9 checkLever2=false");
    }
-   if ((varCode & (1 << 2)) > 0) {showMaxDelta = true;
-      if (showDebugOutput) Serial.println("9 showMaxDelta=true");
-   }
-   else {showMaxDelta = false;  
-      if (showDebugOutput) Serial.println("9 showMaxDelta=false");
-   }
-   if ((varCode & (1 << 3)) > 0) {Verbose = true;
-      if (showDebugOutput) Serial.println("9 Verbose=true");
-   }
-   else {Verbose = false;  
-      if (showDebugOutput) Serial.println("9 Verbose=false");
-   }
-   if ((varCode & (1 << 4)) > 0) {checkOutputs = true;
+   if ((varCode & (1 << 2)) > 0) {checkOutputs = true;
       if (showDebugOutput) Serial.println("9 checkOutputs=true");
    }
    else {checkOutputs = false;  
       if (showDebugOutput) Serial.println("9 checkOutputs=false");
    }
-   if ((varCode & (1 << 5)) > 0) {showDebugOutput = true;
+   if ((varCode & (1 << 3)) > 0) {abortEnabled = true;
+      if (showDebugOutput) Serial.println("9 abortEnabled=true");
+   }
+   else {showMaxDelta = false;  
+      if (showDebugOutput) Serial.println("9 abortEnabled=false");
+   }
+   if ((varCode & (1 << 4)) > 0) {showMaxDelta = true;
+      if (showDebugOutput) Serial.println("9 showMaxDelta=true");
+   }
+   else {showMaxDelta = false;  
+      if (showDebugOutput) Serial.println("9 showMaxDelta=false");
+   }
+   if ((varCode & (1 << 5)) > 0) {Verbose = true;
+      if (showDebugOutput) Serial.println("9 Verbose=true");
+   }
+   else {Verbose = false;  
+      if (showDebugOutput) Serial.println("9 Verbose=false");
+   }
+   if ((varCode & (1 << 6)) > 0) {showDebugOutput = true;
       if (showDebugOutput) Serial.println("9 showDebugOutput=true");
    }
    else {showDebugOutput = false;  
@@ -1386,18 +1393,20 @@ int freeRam () {
 }
 
 void reportDiagnostics() {
-   Serial.println("9 "+verStr);
    Serial.println("9 maxDelta="+String(maxDelta));
    Serial.println("9 maxQueueRecs="+String(maxQueueRecs));
    Serial.println("9 freeRam="+String(freeRam()));
    Serial.println("9 portOneValue="+String(portOneValue));
    Serial.println("9 portTwoValue="+String(portTwoValue));
    Serial.println("9 boxesRunning="+String(boxesRunning,BIN));
-   Serial.println("9 checkLever1="+String(checkLever1));
-   Serial.println("9 checkLever2="+String(checkLever2));
-   Serial.println("9 checkOutputs="+String(checkOutputs));
-   Serial.println("9 showMaxDelta="+String(showMaxDelta));
+   Serial.println("9 showDebugOutput="+String(showDebugOutput));
    Serial.println("9 Verbose="+String(Verbose));
+   Serial.println("9 showMaxDelta="+String(showMaxDelta));
+   Serial.println("9 abortEnabled="+String(abortEnabled));
+   Serial.println("9 checkOutputs="+String(checkOutputs));
+   Serial.println("9 checkLever2="+String(checkLever2));
+   Serial.println("9 checkLever1="+String(checkLever1));   
+   Serial.println("9 "+verStr);
    maxDelta = 0;  
 }
 
@@ -1441,10 +1450,6 @@ void tick()    {
        }
        sec++;
        tickCounts = 0;
-   }
-   if (sec = 60) {
-      Serial.println("10 @ "+String(millis())+" 0 0");
-      sec = 0;
    }
    for (uint8_t i = 0; i < 8; i++) boxArray[i].tick();
    getInputString();

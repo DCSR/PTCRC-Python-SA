@@ -668,15 +668,20 @@ class GuiClass(object):
         self.diagnosticButtonFrame.grid(column = 0, row = 1, sticky = (N))
         
         testButton1 = ttk.Button(self.diagnosticButtonFrame,text="Report Parameters", command = self.reportParameters)
-        testButton1.grid(column = 0, row = 1, columnspan = 3)
-        testButton2 = ttk.Button(self.diagnosticButtonFrame,text="resetChips()",command = self.testFunction2)
-        testButton2.grid(column = 0, row = 2, columnspan = 3)
-        testButton3 = ttk.Button(self.diagnosticButtonFrame,text="Abort All!",command = self.testFunction3)
-        testButton3.grid(column = 0, row = 3, columnspan = 3)
-        testButton4 = ttk.Button(self.diagnosticButtonFrame,text="Diagnostics",command = self.diagnostics)
-        testButton4.grid(column = 0, row = 4, columnspan = 3)
-        testButton5 = ttk.Button(self.diagnosticButtonFrame,text="checkOutputPorts()",command = self.testFunction5)
-        testButton5.grid(column = 0, row = 5, columnspan = 3)
+        testButton1.grid(column = 0, row = 1, columnspan = 2)
+        testButton2 = ttk.Button(self.diagnosticButtonFrame,text="resetChips()",command = self.resetChips)
+        testButton2.grid(column = 0, row = 2, sticky = (EW))
+        testButton3 = ttk.Button(self.diagnosticButtonFrame,text="Abort All!",command = self.abort)
+        testButton3.grid(column = 1, row = 2, sticky = (EW))
+        testButton4 = ttk.Button(self.diagnosticButtonFrame,text="checkOutputPorts()",command = self.checkOutputPorts)
+        testButton4.grid(column = 0, row = 3, sticky = (EW))        
+        testButton5 = ttk.Button(self.diagnosticButtonFrame,text="Diagnostics",command = self.diagnostics)
+        testButton5.grid(column = 1, row = 3, sticky = (EW))
+        testButton6 = ttk.Button(self.diagnosticButtonFrame,text="printSessionLog()",command = self.printSessionLog)
+        testButton6.grid(column = 0, row = 4, sticky = (EW))        
+        testButton7 = ttk.Button(self.diagnosticButtonFrame,text="test1()",command = self.testFunction1)
+        testButton7.grid(column = 1, row = 4, sticky = (EW))
+
 
         # Eight tkinter boolean vars widgets
 
@@ -694,35 +699,35 @@ class GuiClass(object):
         sys1TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys1CheckVar, value=1)
         sys1TrueRadiobutton.grid(column = 2, row = 8, sticky = (W))
 
-        sys2label = ttk.Label(self.diagnosticButtonFrame, text="send maxDelta")
+        sys2label = ttk.Label(self.diagnosticButtonFrame, text="checkOutputs")
         sys2label.grid(column = 0, row = 9, sticky = (W))
         sys2FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys2CheckVar, value=0)
         sys2FalseRadiobutton.grid(column = 1, row = 9, sticky = (W))
         sys2TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys2CheckVar, value=1)
         sys2TrueRadiobutton.grid(column = 2, row = 9, sticky = (W))
 
-        sys3label = ttk.Label(self.diagnosticButtonFrame, text="Verbose")
+        sys3label = ttk.Label(self.diagnosticButtonFrame, text="abortEnabled")
         sys3label.grid(column = 0, row = 10, sticky = (W))
         sys3FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys3CheckVar, value=0)
         sys3FalseRadiobutton.grid(column = 1, row = 10, sticky = (W))
         sys3TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys3CheckVar, value=1)
         sys3TrueRadiobutton.grid(column = 2, row = 10, sticky = (W))
 
-        sys4label = ttk.Label(self.diagnosticButtonFrame, text="checkOutputs")
+        sys4label = ttk.Label(self.diagnosticButtonFrame, text="send maxDelta")
         sys4label.grid(column = 0, row = 11, sticky = (W))
         sys4FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys4CheckVar, value=0)
         sys4FalseRadiobutton.grid(column = 1, row = 11, sticky = (W))
         sys4TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys4CheckVar, value=1)
         sys4TrueRadiobutton.grid(column = 2, row = 11, sticky = (W))
 
-        sys5label = ttk.Label(self.diagnosticButtonFrame, text="showDebugOutput")
+        sys5label = ttk.Label(self.diagnosticButtonFrame, text="verbose")
         sys5label.grid(column = 0, row = 12, sticky = (W))
         sys5FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys5CheckVar, value=0)
         sys5FalseRadiobutton.grid(column = 1, row = 12, sticky = (W))
         sys5TrueRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="True", variable=self.sys5CheckVar, value=1)
         sys5TrueRadiobutton.grid(column = 2, row = 12, sticky = (W))
 
-        sys6label = ttk.Label(self.diagnosticButtonFrame, text="Label6")
+        sys6label = ttk.Label(self.diagnosticButtonFrame, text="showDebugOutput")
         sys6label.grid(column = 0, row = 13, sticky = (W))
         sys6FalseRadiobutton = ttk.Radiobutton(self.diagnosticButtonFrame, text="False", variable=self.sys6CheckVar, value=0)
         sys6FalseRadiobutton.grid(column = 1, row = 13, sticky = (W))
@@ -1195,9 +1200,7 @@ class GuiClass(object):
         # ************************************************************************************
         # ************************************************************************************
 
-        errorList = []
-        Tzero = 0
-
+        """
         if len(self.sessionLog) == 0:
             time = datetime.now()
             dateTimeStr = time.strftime("%b/%d/%Y/%H:%M:%S")
@@ -1216,46 +1219,65 @@ class GuiClass(object):
             self.sessionLog.append([1560000,'&'])    # 11 min into Box 1 session                 (26 min)
             self.sessionLog.append([1564000,'!'])    # 11 min 4 sec
 
+        """
+
         onConnectTime = 0                         # defined
         offset        = 0                              # 
         boxStartTime  = 0                    # 10 min later
-        
-        if len(dataList) > 0:
-            print (dataList[1])
-        else: print("No offset for selected box")
+        errorList = []
+        Tzero = 0
 
-        # offset = 
 
-        for line in self.sessionLog:
-            print(line)
+        if (self.verbose): self.printSessionLog()
         
         #print(self.boxes[listIndex].dataList)
         # self.boxes[self.selectedBox.get()
 
-        for data in self.sessionLog:
-            if (len(data)==2):                   # Ignore comments and M timestamps
-                errorList.append(data)
-            elif (len(data)==3):
-                if ((data[1]) == 'A'):           # A = onConnect
-                    onConnectTime = data[0]
-                    print("onConnectTime captured")
-                elif ((data[1]) == 'M'):
-                    boxStartTime = data[0]
-                    print("boxStartTime captured")
+        
+        for i in range (0,len(self.sessionLog)):
+            if (len(self.sessionLog[i]) > 1):
+                time = self.sessionLog[i][0]
+                code = self.sessionLog[i][1]
+                errorList.append([time,code])
+                
+        if len(self.sessionLog) > 1:
+            print(self.sessionLog[1])                # 2nd entry, char
+            if(self.sessionLog[1][1] == 'A'):           # A = onConnect
+                onConnectTime = self.sessionLog[1][0]   # 2nd entry, time
+                print("onConnectTime captured as", onConnectTime)
 
+        if len(dataList) > 0:
+            print ("selected dataList[1]=",dataList[1])
+            if (dataList[0][1] == 'M'):
+                boxStartTime = dataList[0][0]
+                print("boxStartTime captured as ",boxStartTime)
+        
         Tzero = onConnectTime
         connectStr = "Time serial connection made"
-        
-        if boxStartTime > onConnectTime:
+        if (boxStartTime > onConnectTime):
             Tzero = boxStartTime
             connectStr = "is Box Start Time"
+
             
+        for i in range (0, len(errorList)):
+            errorList[i][0] = errorList[i][0] - Tzero
+                
+        print("****** errorList *******")
+        for line in errorList:
+            print(line)
+        print("****** errorList ***")
+
+
+        print("****** SessionLog *******")
+        for line in self.sessionLog:
+            print(line)
+        print("****** End SessionLog ***")        
+    
         aCanvas.create_text(x_zero+20, y_zero-25, fill="blue", text = "Tzero "+connectStr)
 
         print("Tzero =",Tzero)
 
-        for data in errorList:
-            data[0] = data[0]-Tzero
+
 
         # ******************************
         GraphLib.drawXaxis(aCanvas, x_zero, y_zero, x_pixel_width, max_x_scale, x_divisions)
@@ -1291,32 +1313,27 @@ class GuiClass(object):
         self.outputText("<R 6>")
         self.outputText("<R 7>")
 
-    def testFunction2(self):
+    def resetChips(self):
         self.outputText("<r>")       # Reset Chips
 
-    def testFunction3(self):
+    def abort(self):
         self.outputText("<A>")       # Abort!
 
     def diagnostics(self):
-        self.outputText("<D>")      # Get Diagnostics
+        self.outputText("<D>")       # Get Diagnostics
 
-    def testFunction5(self):
+    def checkOutputPorts(self):
         self.outputText("<O>")       # checkOutputPort()
-        """
-        self.handleErrorCode(12301,"(")
-        self.handleErrorCode(12302,")")
-        self.handleErrorCode(12303,"[")
-        self.handleErrorCode(12304,"]")
-        self.handleErrorCode(12305,"#")
-        self.handleErrorCode(12306,"^")
-        self.handleErrorCode(12307,"!")
-        """
 
-    """
-    def mimicL1Response(self,boxIndex):
-        tempStr = "<L1 "+str(boxIndex)+">"
-        self.outputText(tempStr)
-    """
+    def printSessionLog(self):  
+        print("****** SessionLog *******")
+        for line in self.sessionLog:
+            print(line)
+        print("****** End SessionLog ***")
+
+    def testFunction1(self):         # Not used
+        # self.outputText("<A>")
+        pass
 
     def toggleCheckLevers(self,checkLeversState):
         if (checkLeversState): self.outputText("<CL>")
@@ -1447,8 +1464,8 @@ class GuiClass(object):
                 # Request version number from sketch name and version Feather M0
                 self.outputText("<V>")
                 self.sendSysVars()
-                time = datetime.now()
-                dateTimeStr = time.strftime("%b/%d/%Y/%H:%M:%S")
+                timeNow = datetime.now()
+                dateTimeStr = timeNow.strftime("%b/%d/%Y/%H:%M:%S")
                 self.sessionLog.append(["SA300 started "+dateTimeStr])
         else:
             self.writeToTextbox("Unable to connect",0)
@@ -1569,30 +1586,26 @@ class GuiClass(object):
         button1 = ttk.Button(msg_window, text='  OK  ',command = msg_window.destroy)
         button1.grid(row=2,column=1, padx=20, pady=10)
 
-    def handleErrorCode(self,timeStamp, strCode):
+    def handleErrorCode(self,timeStamp,strCode,port):
         """
         Takes an error timestamp and updates the appropriate tkinter error IntVars,
         Then adds the timestamp to all data files of boxes currently running.        
         """
-        self.sessionLog.append(timeStamp, strCode)
-        if   (strCode == "("):
-            self.errorsL1.set(self.errorsL1.get()+1)
-        elif (strCode == ")"):
-            self.recoveriesL1.set(self.recoveriesL1.get()+1)
-        elif (strCode == "["):
-            self.errorsL2.set(self.errorsL2.get()+1)   
-        elif (strCode == "]"):
-            self.recoveriesL2.set(self.recoveriesL2.get()+1)    
+        
+        self.sessionLog.append([timeStamp,strCode,port])
+        
+        if (strCode == "@"):
+            if (port == 1): self.errorsL1.set(self.errorsL1.get()+1)
+            elif (port == 2): self.errorsL1.set(self.errorsL2.get()+1)
         elif (strCode == "#"):
-            self.outputErrors.set(self.outputErrors.get()+1)    
-        elif (strCode == "^"):
-            self.outputRecoveries.set(self.outputRecoveries.get()+1)
+            if (port == 1): self.recoveriesL1.set(self.recoveriesL1.get()+1)
+            if (port == 2): self.recoveriesL1.set(self.recoveriesL2.get()+1)
 
-        for i in range(8):
-            if (self.boxes[i].sessionStarted == True) and (self.boxes[i].sessionCompleted == False):
-                self.boxes[i].dataList.append([timeStamp, strCode])
-                print("error timestamp added to box",i)
-                print(timeStamp,strCode,"<- Error Code")        
+        # Outputs    
+        elif (strCode == "$"): 
+            self.outputErrors.set(self.outputErrors.get()+1)    
+        elif (strCode == "%"):
+            self.outputRecoveries.set(self.outputRecoveries.get()+1)        
 
         if (strCode == "!"): self.send_abort_msg()        
         
@@ -1601,11 +1614,11 @@ class GuiClass(object):
         """
         Document this!
         """
-        boxNum = 99
-        strCode = "XX"
-        timeStamp = 0
-        level = 0
-        boolVarListIndex = -1
+        codeNum = 99                  # Codes for box number, timer, errorCode etc. 
+        strCode = "XX"                # either single char code or string comment
+        timeStamp = 0                 # time in mSec
+        level = 0                     # sets level of checkbox; also used for lever number in error codes
+        boolVarListIndex = -1         # Checkboxes are organized in two dimensional arrays [BoxNum, Varlist]
         if (self.showDataStreamCheckVar.get() == 1):
             self.writeToTextbox(inputLine,0)
             # print(inputLine)
@@ -1614,7 +1627,7 @@ class GuiClass(object):
         try:
             if len(tokens) > 1:
                 #print(tokens[0],tokens[1])
-                boxNum = (int(tokens[0].decode()))
+                codeNum = (int(tokens[0].decode()))
                 strCode = tokens[1].decode()   # convert from "byte literal"
             if len(tokens) > 2:
                 timeStamp = int(tokens[2].decode())
@@ -1623,8 +1636,8 @@ class GuiClass(object):
                 boolVarListIndex = (int(tokens[4].decode()))
         except:
             print('exception at getInput: ',tokens)   
-        if (boxNum in [0,1,2,3,4,5,6,7]):
-            listIndex = boxNum           
+        if (codeNum in [0,1,2,3,4,5,6,7]):
+            listIndex = codeNum           
             if (strCode == "*"):    # timers get updated but nothing gets added to datafile
                 self.updateTimer(timeStamp,listIndex)
             else:                   # every other timestamp gets added to the datafile
@@ -1639,18 +1652,12 @@ class GuiClass(object):
                     self.InfList[listIndex].set(self.InfList[listIndex].get()+1)                # update infusion label
                 elif (strCode == "E"):
                     self.boxes[listIndex].sessionEnded()
-        elif (boxNum == 8): self.boolVarLists[8][boolVarListIndex].set(level)           # update debug checkbox 
-        elif (boxNum == 9):
+        elif (codeNum == 8): self.boolVarLists[8][boolVarListIndex].set(level)           # update debug checkbox 
+        elif (codeNum == 9):
             print(strCode)
             # self.writeToTextbox(strCode,0)
-        elif (boxNum == 10):     # BoxNum 10 is an errorCode
-            self.handleErrorCode(timeStamp, strCode)
-
-
-
-        # set to zero in startSession    
-        # self.phantomResponseL1 = IntVar(value=0)
-        # self.phantomResponseL2 = IntVar(value=0)
+        elif (codeNum == 10):     # BoxNum 10 is an errorCode
+            self.handleErrorCode(timeStamp, strCode,level)
 
     def periodic_check(self):
         if self.arduino0.activeConnection == True:    
