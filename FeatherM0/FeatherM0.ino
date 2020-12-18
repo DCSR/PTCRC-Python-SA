@@ -1027,7 +1027,7 @@ void resetChips() {
    chip2.writePort(1,L2_LED_State);
    checkLever1 = true;
    checkLever2 = true; 
-   Serial.println("10 * "+String(millis()));  // onConnect Timestamp
+   Serial.println("10 * "+String(millis()));  // resetChip Timestamp
 }
 
 void setup() {
@@ -1047,7 +1047,6 @@ void setup() {
   delay(500); 
   init_10_mSec_Timer(); 
   Serial.println("9 Ver=301.00");
-  Serial.println("10 A "+String(millis()));    // To be used as Tzero
 }
 
 void enterSafeMode() {
@@ -1359,6 +1358,7 @@ void handleInputString()
      if (stringCode == "chip0") chip0.digitalWrite(num1,num2); 
      else if (stringCode == "G")     startSession(num1);
      else if (stringCode == "Q")     endSession(num1);
+     else if (stringCode == "O")     if (checkOutputPorts()) handleOutputError();
      else if (stringCode == "L1")    boxArray[num1].handle_L1_Response(); 
      else if (stringCode == "P")     boxArray[num1].switchTimedPump(On);
      else if (stringCode == "PROTOCOL") boxArray[num1].setProtocolNum(num2);
@@ -1376,10 +1376,10 @@ void handleInputString()
      else if (stringCode == "c")     boxArray[num1].switchStim2(Off);
      else if (stringCode == "C")     boxArray[num1].switchStim2(On);     
      else if (stringCode == "D")     reportDiagnostics(); 
-     else if (stringCode == "Abort")     abortSession();
+     else if (stringCode == "Abort") abortSession();
      else if (stringCode == "r")     resetChips();
+     else if (stringCode == "A")     Serial.println("10 A "+String(millis()));    // To be used as Tzero
      else if (stringCode == "SYSVARS")  decodeSysVars(num1);
-     else if (stringCode == "O")     if (checkOutputPorts()) handleOutputError();
      // debug stuff
      else if (stringCode == "i")     timeUSB();
      else if (stringCode == "E")     echoInput = !echoInput;   

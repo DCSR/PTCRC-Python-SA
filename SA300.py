@@ -1174,9 +1174,15 @@ class GuiClass(object):
                         aCanvas.create_line(newX, y_zero, newX, newY, fill="green")           # draw line from y-zero up or down
                     # y = newY                                                  # no need to remember
                 x = newX
+        for pairs in dataList:
+            if pairs[1] == '*':
+                newX = (x_zero + pairs[0] * x_scaler // 1)
+                aCanvas.create_text(newX, y_zero+10, fill="blue",text= '*')  # show char underneath
+
+        
             """
             this doesn't work yet - places asterisk under last token token 
-            if pairs[1] == '&':
+            if pairs[1] == '*':
                 aCanvas.create_text(x, y_zero, fill="blue",text= '*')  # show char underneath
             """        
 
@@ -1200,12 +1206,11 @@ class GuiClass(object):
         # ************************************************************************************
         # ************************************************************************************
 
-        """
+        
         if len(self.sessionLog) == 0:
             time = datetime.now()
             dateTimeStr = time.strftime("%b/%d/%Y/%H:%M:%S")
-            self.sessionLog.append(["SA300 started "+dateTimeStr])
-            self.sessionLog.append(["USING Dummy data for test"])
+            self.sessionLog.append([0,"SA300 started "+dateTimeStr])
             self.sessionLog.append([300000,'A',1])    # On connect - 5 min after Feather reset    (5 min)
             self.sessionLog.append([900000,'M',1])    # Box 1 connects 10 min later - ignore here (15 min)
             self.sessionLog.append([960000,'@'])      # 1 min into Box 1 session                  (16 min)
@@ -1216,24 +1221,21 @@ class GuiClass(object):
             self.sessionLog.append([1500000,'$'])    # 10 min into Box 1 session                 (25 min)
             self.sessionLog.append([1504000,'%'])    # 10 min 4 sec
         
-            self.sessionLog.append([1560000,'&'])    # 11 min into Box 1 session                 (26 min)
+            self.sessionLog.append([1560000,'*'])    # 11 min into Box 1 session                 (26 min)
             self.sessionLog.append([1564000,'!'])    # 11 min 4 sec
 
-        """
-
-        onConnectTime = 0                         # defined
-        offset        = 0                              # 
-        boxStartTime  = 0                    # 10 min later
+        # define varaibales
+        onConnectTime = 0                         
+        offset        = 0 
+        boxStartTime  = 0
         errorList = []
         Tzero = 0
-
 
         if (self.verbose): self.printSessionLog()
         
         #print(self.boxes[listIndex].dataList)
         # self.boxes[self.selectedBox.get()
-
-        
+       
         for i in range (0,len(self.sessionLog)):
             if (len(self.sessionLog[i]) > 1):
                 time = self.sessionLog[i][0]
@@ -1253,31 +1255,17 @@ class GuiClass(object):
                 print("boxStartTime captured as ",boxStartTime)
         
         Tzero = onConnectTime
-        connectStr = "Time serial connection made"
+        connectStr = "time serial connection made"
         if (boxStartTime > onConnectTime):
             Tzero = boxStartTime
             connectStr = "is Box Start Time"
-
-            
+          
         for i in range (0, len(errorList)):
             errorList[i][0] = errorList[i][0] - Tzero
-                
-        print("****** errorList *******")
-        for line in errorList:
-            print(line)
-        print("****** errorList ***")
 
-
-        print("****** SessionLog *******")
-        for line in self.sessionLog:
-            print(line)
-        print("****** End SessionLog ***")        
-    
-        aCanvas.create_text(x_zero+20, y_zero-25, fill="blue", text = "Tzero "+connectStr)
+        aCanvas.create_text(x_zero+50, y_zero-25, fill="blue", text = "Tzero = "+connectStr)
 
         print("Tzero =",Tzero)
-
-
 
         # ******************************
         GraphLib.drawXaxis(aCanvas, x_zero, y_zero, x_pixel_width, max_x_scale, x_divisions)
@@ -1332,8 +1320,7 @@ class GuiClass(object):
         print("****** End SessionLog ***")
 
     def testFunction1(self):         # Not used
-        # self.outputText("<A>")
-        pass
+        self.send_abort_msg()
 
     def toggleCheckLevers(self,checkLeversState):
         if (checkLeversState): self.outputText("<CL>")
@@ -1462,11 +1449,12 @@ class GuiClass(object):
                 self.writeToTextbox("Connected!",0)
                 time.sleep(2)
                 # Request version number from sketch name and version Feather M0
-                self.outputText("<V>")
+                self.outputText("<A>")
                 self.sendSysVars()
                 timeNow = datetime.now()
                 dateTimeStr = timeNow.strftime("%b/%d/%Y/%H:%M:%S")
-                self.sessionLog.append(["SA300 started "+dateTimeStr])
+                if len(self.sessionLog) > 0: self.sessionLog = []
+                self.sessionLog.append([0,"SA300 started "+dateTimeStr])
         else:
             self.writeToTextbox("Unable to connect",0)
             self.connectLabelText.set("Unable to connect")
@@ -1605,7 +1593,9 @@ class GuiClass(object):
         elif (strCode == "$"): 
             self.outputErrors.set(self.outputErrors.get()+1)    
         elif (strCode == "%"):
-            self.outputRecoveries.set(self.outputRecoveries.get()+1)        
+            self.outputRecoveries.set(self.outputRecoveries.get()+1)
+        elif (strCode == 'A'):
+            messagebox.showinfo(title=None,message="FeatherM0 ready")
 
         if (strCode == "!"): self.send_abort_msg()        
         
