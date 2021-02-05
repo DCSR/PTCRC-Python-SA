@@ -1,247 +1,7 @@
-/*  
- *   
- 
- * **************  Notes - In progress ******************     
- * 
- *   Test how to use several Tstamps in one procedure 
- *   
- *   Check timestamps and codes
- *      probably have to run a PR-HD to get all kinds of timstamps
- *      
- *   
- *   
- *   
- *   ******************************************************************************
- *   ******************************************************************************
- *   
- *   showPorts() - not needed
- *   
- *   resetChips()      - set chips into active mode   
- *   
- *   enableSafeMode()   (renamed from disableOutputs())
- *      not called by anything yet 
- *      turnStuffOff() deleted
- *      
- *   setup() 
- *     don't really need to do anything with chips here  
- *    
- *   checkOutputPorts()  added
- *   handleOutputError() added
- *   
- *   if (checkOutputPorts()) handleOutputError() added to tick() - 
- *  
- *      
- *   AbortSession() added  
- *      
- *      
- *   ********************** Above Done  -  Below not so much ********************* 
-
- *     
- *     
- *   handleOutputError()   |
- *                         |
- *   Reset                     |   Combine these?
- *                         |  
- *   reportOutputError()   | 
- *   
- *   Boxes::endSession() could clearBit(boxesRunning,boxNum)
- *   
- *   
- *   
- *    
- *   Make consistent: all boolean  - create new branch to test this at some point
- *       moveLeverOne(int state);    
- *       moveLeverTwo(int state);    
- *       switchStim1(boolean state);
- *       switchStim2(boolean state);
- *       
- *       handle_L2_Response(byte state);
- *   
- *   Check (and possibly rethink) timestamps. 
- *     boxNum, code, mSecTime, state, index
- *     sendOneTimestamp() sends timestamps with or without state and index
- *     depending on whether index == 9.     
- *     CheckBox indexes (0..4)
- *     lever1CheckVar (0), lever2CheckVar (1), pumpCheckVar (3), LED1CheckVar (4), LED2CheckVar (5)
- *     
- *     
- *   Consider using print() in Python - rather than writeToTextBox() - for errors and diagnostics.
- *   
- *   Need leverTwoExists??
- *      The issue is when and whether to call checkLeverTwoBits() 
- *      Define global variable that is set by any box running HD
- *   
- *   HD_DEMO.ino uses startSesssion() and endSession()
- *   Here, _startSession is local to Box
- *   -  Move stuff to startup() ?
- *       
- *   
- *   
- *   If not running HD and therefore not checking InputPort2) there is little 
- *   overhead to worry about. 
- *   
- *   This is done every 10 mSec in checkInputPort2()
- *   - Issue - will this be called regardless of schedule?
- *      Or only when L2 is extended? 
- *    
- *   
- *   
- *   Send System timestamps - eg. "!" input or output error
- *   - Python should add it to every datafile.
- *   - Raises issue of system time vs box time
- *   
- *   Println statements (if Verbose) need to be changed to some sort
- *   of timestamp
- *   
- *   lastLeverTwoState and newLeverTwoState still needed? 
- *   
- *   rename "Verbose" - "verbose" is a reserved word
- *   
- *   
- *   Added
- *   states { PRESTART, L1_ACTIVE, L1_TIMEOUT, IBI, L2_HD, FINISHED };
- *   
- *   self.sched = 
- *   ['0: Do not run', '1: FR(N)', '2: FR1 x 20 trials', '3: FR1 x N trials', '4: PR(step N)', 
- *   '5: TH', '6: IntA: 5-25', '7: Flush', '8: L2-HD', '9: IntA-HD', '10: 2L-PR-HD']
- *   
- *   _timeOut deleted
- *   inactiveLeverExists renamed to leverTwoExists 
- *   
- *   
- *   moveLeverTwo(Extend or Retract) as appropriate for protocol 
- *   
- *   
- *   July 14, 2020
- *   
- *   First iteration of Ver 300 - rethink of the Box Class and 
- *   downsizing of Lever Class
- *   
- *   checkLeverTwoBits() should pass the change in state and print it to the Serial Port.
- *   
- *   To Do:
- *   
- *   Rename and differentiate procedures for L1 and L2 (moveLever1 etc)
- *   checkLeverTwoBits(): Implement the same check for phantom responses as checkLeverOneBits()
- *   
- *   See Documents/SelfAdmin/Sketch FlowChart.ppt for program flow
- *   
- *   
- *   May 9th.
- *   
- *   TH - Block one ends after 4 injections
- *   "Flush" - N injections separated by Block Time
- *   _cycle stuff deleted
- *   sessionRunning deleted
- *   Fixed lever retract timestamp
- *   boolean _pumpOn = added to functionally separate pump and _timeOut 
- *   Suppress initialize report
- *   Only responds to lever response during BLOCK
- *   Conflict of commands and timestamps for Lever resolved (=,.) 
- *   reportParameters() on Feather called by reportParameters() in Python
- *   
- *   Update Adafruit SAMD Boards to Ver 1.2.7
- *  
- *   To Do:
- *   
- *   Document SysVar stuff
- *   
- *   Document the fact that the lever timestamp is/was inconsistent 
- *   (= and -) vs (= and.) and may require a work around in Analysis
- *   
- *   Block ending retracts lever etc. but no Trial end timestamp. 
- *   endBlock() should endTrial() 
- *   
- *   Check 5-25 - should it override all parameters?
- *   
- *   What should be handled by a sysVar?
- *   -  CheckLeverOneBits?
- *   -  
- *   
- *   _blockDuration and _IBIDuration are a bit complicated.
- *   Some protocols have them set by default (eg.IntA 5-25)
- *   But they can be set in TH.
- *   - the complication is that the first block duration is 6h and changes 
- *   in the second block.
- *   
- *   So we need _blockDurationInit and _IBIDurationInit which can be 
- *   used or not in specific protocols. 
- *   
- * 
- *    
- *    
- *   To Do:
- *   SwitchRewardDevice(On) etc. 
- *    Time stamp could reflect Pump (P,p) or Hopper (H,h)
- *    But that would require updates to graphs
- *   
- *  
- *   
- *   Done on April 7th
- *   Defined an array of eight boolena variables.
- *   twoLever removed
- *   debugBoolVarList removed
- *   
- *   Document how the timing is done and relate it to the PowerPoint slide.
- *    Reinforce() changes _timeOut = true which is checked in tick() each 10 mSec.
- *   - use only one _rewardTime
- *   - _timeOut can be different and longer than pumpDuration
- *   
- *   Test:
- *   - The Python time should reflect _blockTime or _IBITime
- *   - How should IBI be indicated?
- *   
- *   ************************************************************
- *   Four chips are initiaized by the program
- *   
- *   Each bank of levers is associated with 2 (16 bit) ports. 
- *   And, for example, port1.read() and port0.write are using 16 bit addresses. The
- *   MCP23S17 class allows addressing using 8 bit addresses (so don't have to add 8).
- *   It would be more transparent if individual ports were assigned to the lever.  
- *   Also, right now the input and reinforcer output is on the same chip. Need to be  
- *   able to choose chip and port _inputAddr(0,0)
- *   
- *   void Lever::switchRewardPort(boolean state) {
-        chip1.digitalWrite(_boxNum+8,!state);
- *   
- *   Default:  
- *    _lowChip = chip0;
- *    _highChip = chip1; 
- *   
- *   lever.setPorts(inputPort, outputPort).
- *      _inputPort = inputPort;
- *   *************************************************************
- *   
- *   
- *   1. The lever shouldn't care whether it is a pump 
- *   or hopper is switched. It could be coupled to only one device and the way the
- *   port is selected would determine what is switched.
- *   
- *   2. The lever has two options and which reward is used is software selectable. 
- *   
- *   Option two is quicker. 
- *     
- *   Note that all timestamps come from Lever.
- *   The lever could own the Queue and Box could pull from it. 
- *   If Box needs to send a message, just use Serial.println()
- *   
- *   Implications:
- *   Timestamp codes will have to be instantiated differently for lever1 and lever2 
- *   
- *   TIMEOUT and LED = timeOutDuration
- *   pumpDuration may be shorter
- *   
- *   Changes: 
- *   _pumpTime++ until equals pumpDuration
- *   _blockTime++ until equals _blockDuration
- *   _IBILength changed to _IBIDuration
- *   states _boxState = PRESTART; 
- *   
- *   _blockTime was used for IBI as well - created _IBITime
- *     
+/*    
  * This should handle eight boxes with or without an inactive lever.
  * 
- * Two MCP23S17 port expanders are controled by the MCP23S17 library 
+ * Two MCP23S17 port expanders are controlLed by the MCP23S17 library 
  * which was forked from from: github.com/MajenkoLibraries/MCP23S17
  * 
  * Chip0, Port0:  8 L1 levers - retract/extend
@@ -261,7 +21,7 @@
 #include <SPI.h>        // Arduino Library SPI.h
 #include "MCP23S17.h"   
 
-String verStr = "Ver301.00";
+String verStr = "Ver301.01";
 const uint8_t chipSelect = 10;  // All four chips use the same SPI chipSelect
 MCP23S17 chip0(chipSelect, 0);  // Instantiate 16 pin Port Expander chip at address 0
 MCP23S17 chip1(chipSelect, 1);  
@@ -276,6 +36,7 @@ boolean Verbose = true;   // note that "verbose" (small v) is a reserved word
 boolean showMaxDelta = false;
 boolean abortEnabled = false;
 boolean showDebugOutput = false;
+boolean sessionAborted = false; 
 
 byte portOneValue = 255, portTwoValue = 255;
 
@@ -805,13 +566,17 @@ void Box::startSession() {
   if (_protocolNum == 0) endSession();
   else {
       _startTime = millis();
-      TStamp tStamp = {_boxNum, 'M', millis(), 0, 9}; 
-      printQueue.push(&tStamp);
+      //  TStamp tStamp = {_boxNum, 'B', millis() - _startTime, 0, 9};
+      // printQueue.push(&tStamp);
+      TStamp tStamp1 = {_boxNum, 'M', millis(), 0, 9};    // Added to datafile
+      printQueue.push(&tStamp1);
+      TStamp tStamp2 = {10, 'M', millis(), _boxNum, 0};   // Added to sessionLog
+      printQueue.push(&tStamp2);
       _blockNumber = 0;  
       _pumpTime = 0; 
       _timeOutTime = 0;   
-      tStamp = {_boxNum, 'G', millis() - _startTime, 0, 9}; 
-      printQueue.push(&tStamp);
+      TStamp tStamp3 = {_boxNum, 'G', millis() - _startTime, 0, 9};  // Added to datafile
+      printQueue.push(&tStamp3);
       startBlock(); 
   }
   bitSet(boxesRunning,_boxNum);
@@ -825,7 +590,9 @@ void Box::endSession() {
     _pumpTime = 0;
     _timeOutTime = 0;
     _boxState = FINISHED;    
-    TStamp tStamp2 = {_boxNum, 'E', millis() - _startTime, 0, 9};
+    TStamp tStamp1 = {_boxNum, 'E', millis() - _startTime, 0, 9};
+    printQueue.push(&tStamp1);
+    TStamp tStamp2 = {10, 'm', millis(), _boxNum, 0};   // Added to sessionLog
     printQueue.push(&tStamp2);
     moveLeverTwo(Retract);
     bitClear(boxesRunning,_boxNum);
@@ -883,12 +650,12 @@ void Box::handle_L2_Response(byte state) {
     */
 
    if (state == 1) {
-      TStamp tStamp = {_boxNum, 'h', millis() - _startTime, 0, 9};
-      printQueue.push(&tStamp);
+      TStamp tStamp1 = {_boxNum, 'h', millis() - _startTime, 0, 9};
+      printQueue.push(&tStamp1);
    }
    else {
-      TStamp tStamp = {_boxNum, 'H', millis() - _startTime, 1, 9};
-      printQueue.push(&tStamp);
+      TStamp tStamp2 = {_boxNum, 'H', millis() - _startTime, 1, 9};
+      printQueue.push(&tStamp2);
    } 
 }
 
@@ -961,6 +728,8 @@ Box box7(7);
 Box boxArray[8] = {box0, box1, box2, box3, box4, box5, box6, box7}; 
 
 // *************************** Timer stuff **********************************
+// Note that SysTick is a good alternative and has been tested with the M4
+// **************************************************************************
 void init_10_mSec_Timer() { 
   REG_GCLK_GENDIV = GCLK_GENDIV_DIV(3) |          // Divide the 48MHz clock source by divisor 3: 48MHz/3=16MHz
                     GCLK_GENDIV_ID(4);            // Select Generic Clock (GCLK) 4
@@ -1008,7 +777,6 @@ void resetChips() {
    chip1.begin();
    chip2.begin();
    chip3.begin();
-   if (Verbose) Serial.println("9 resetChips()");
    for (uint8_t i = 0; i <= 15; i++) {
       chip0.pinMode(i,OUTPUT);             // Set chip0 to OUTPUT - Retract L1 and LED1
       chip2.pinMode(i,OUTPUT);             // Set chip2 to OUTPUT = Retract L2 and LED2
@@ -1027,7 +795,8 @@ void resetChips() {
    chip2.writePort(1,L2_LED_State);
    checkLever1 = true;
    checkLever2 = true; 
-   Serial.println("10 * "+String(millis()));  // resetChip Timestamp
+   TStamp tStamp = {10, '&', millis(), 0, 0};        // Added to sessionLog
+   printQueue.push(&tStamp);
 }
 
 void setup() {
@@ -1046,11 +815,13 @@ void setup() {
   resetChips();
   delay(500); 
   init_10_mSec_Timer(); 
-  Serial.println("9 Ver=301.00");
+  Serial.println("9 Ver=301.01");
 }
 
 void enterSafeMode() {
-  if (Verbose) Serial.println("Disabling_Outputs"); 
+  if (Verbose) Serial.println("Disabling_Outputs");
+  TStamp tStamp = {10, '(', millis(), 0, 0};        // Added to sessionLog
+  printQueue.push(&tStamp); 
   // ***** Switch all output ports OFF *****
   L1_Position = 0xFF;              // Retract L1
   chip0.writePort(0,L1_Position);  
@@ -1083,53 +854,48 @@ void handleOutputError(){
    boolean errorFound = false;
    boolean recoveredFromError = false;
   
-   if (Verbose) Serial.println("9 Output_Error");
+   if (Verbose) Serial.println("9 "+String(millis())+" Output Error");
       
    for (int x = 0; x < 10; x++) {
       boolean errorFound = false;
       if (L1_Position  != chip0.readPort(0)) {
-         Serial.println("10 $ "+String(millis())+"1 0");
+         Serial.println("10 $ "+String(millis())+" 1 0");
          errorFound = true;
          chip0.writePort(0,L1_Position);   
       }
       if (L1_LED_State != chip0.readPort(1)) {
-         Serial.println("10 $ "+String(millis())+"2 0");
+         Serial.println("10 $ "+String(millis())+" 2 0");
          errorFound = true;
          chip0.writePort(1,L1_LED_State);
       }
       if (pumpState    != chip1.readPort(1)) {
-         Serial.println("10 $ "+String(millis())+"3 0");
+         Serial.println("10 $ "+String(millis())+" 3 0");
          errorFound = true;
          chip1.writePort(1,pumpState);
       }
       if (L2_Position  != chip2.readPort(0)) {
-         Serial.println("10 $ "+String(millis())+"4 0");
+         Serial.println("10 $ "+String(millis())+" 4 0");
          errorFound = true;
          chip2.writePort(0,L2_Position);
       }
       if (L2_LED_State != chip2.readPort(1)) {
-         Serial.println("10 $ "+String(millis())+"5 0");
+         Serial.println("10 $ "+String(millis())+" 5 0");
          errorFound = true;
          chip2.writePort(1,L2_LED_State);
       }
       if (!errorFound) {
-         if (Verbose) Serial.println("9 Recovered");
-            Serial.println("10 % "+String(millis()));  
-            recoveredFromError = true;
-            break;
-         }
+         Serial.println("10 % "+String(millis())+" 5 0");  
+         recoveredFromError = true;
+         break;
+      }
   }
-  if (!recoveredFromError) {
-      Serial.println();
-      if (Verbose) Serial.println("9 ErrorPersists");
+  if (!recoveredFromError) {      
       resetChips();                                  // try one last time after reset
       if (checkOutputPorts()) {
-         Serial.println("10 ! "+String(millis()));
          abortSession();        
       }
       else {
-         Serial.println("10 % "+String(millis()));   // increment self.outputRecoveries 
-         Serial.println("9 Recovered_after_reset");
+         Serial.println("10 r "+String(millis())+" 0 0");   // increment self.outputRecoveries 
       } 
    }
 }
@@ -1141,33 +907,32 @@ boolean checkOutputPorts() {
     if (pumpState    != chip1.readPort(1)) errorFound = true;
     if (L2_Position  != chip2.readPort(0)) errorFound = true;
     if (L2_LED_State != chip2.readPort(1)) errorFound = true;
-    if (showDebugOutput){
-      if (!errorFound) Serial.println("9 No_Output_Error");
-    } 
     return errorFound;
 }
 
 void startSession(int boxNum) {
-   boxArray[boxNum].startSession();  
-   if (Verbose) Serial.println("9 boxesRunning="+String(boxesRunning,BIN));
+   boxArray[boxNum].startSession(); 
+   // sessionLog will show start time for each box.  
 }
 
 void endSession(int boxNum) {
    boxArray[boxNum].endSession();
+   // sessionLog will show start time for each box.
 }
 
-void abortSession() {
+void abortSession() {  
    for (byte bits = 0; bits < 8; bits++) {
       if ((boxesRunning & (1 << bits)) > 0) {      // check which boxes running
-         boxArray[bits].endSession();
-         Serial.println("9 Aborting_Box"+String(bits));
+         boxArray[bits].endSession();         
       }
    }
    enterSafeMode();
+   sessionAborted = true; 
    boxesRunning = 0;
-   TStamp tStamp1 = {10, '!', millis(), 0, 9};
-   printQueue.push(&tStamp1);
+   TStamp tStamp = {10, '!', millis(), 0, 0};
+   printQueue.push(&tStamp);
 }
+
 
 
 /*    ********************** Checking Inputs *********************************
@@ -1189,7 +954,6 @@ void handleInputError(byte leverNum, byte portValue) {
       else _portValue = chip3.readPort(0);
       if (_portValue != 0) {
          recoveredFromError = true;
-         if (Verbose) Serial.println("9 Recovered_after_"+String(x+1)+"_attempt(s)");
          break;
       }
    }                                                  // If error after 10 tries 
@@ -1200,7 +964,6 @@ void handleInputError(byte leverNum, byte portValue) {
       Serial.println();
       resetChips(); 
       if (chip1.readPort(0) != 0 && chip3.readPort(0) != 0) {
-         if (Verbose) Serial.println("9 Recovered_after_reset");
          Serial.println("10 # "+String(millis())+' '+String(leverNum)+' '+String(_portValue));
       }
       else {      
@@ -1209,7 +972,6 @@ void handleInputError(byte leverNum, byte portValue) {
          for (int boxNum = 0; boxNum < 8; boxNum++) 
             boxArray[boxNum].endSession();
          Serial.println("10 ! "+String(millis()));
-         Serial.println("9 Session_Aborted");
       }
    }   
 }
@@ -1377,7 +1139,7 @@ void handleInputString()
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "Abort") abortSession();
      else if (stringCode == "r")     resetChips();
-     else if (stringCode == "A")     Serial.println("10 A "+String(millis()));    // To be used as Tzero
+     else if (stringCode == "A")     Serial.println("10 A "+String(millis())+" 0 0");  // On connect
      else if (stringCode == "SYSVARS")  decodeSysVars(num1);
      else if (stringCode == "O"){
           if (checkOutputPorts()) handleOutputError();
@@ -1453,18 +1215,20 @@ void tick()    {
        sec++;
        tickCounts = 0;
    }
-   for (uint8_t i = 0; i < 8; i++) boxArray[i].tick();
-   getInputString();
-   if (checkLever1) checkLeverOneBits();
-   if (checkLever2) checkLeverTwoBits(); 
+   if (!sessionAborted) {
+     for (uint8_t i = 0; i < 8; i++) boxArray[i].tick();
+     if (checkLever1) checkLeverOneBits();
+     if (checkLever2) checkLeverTwoBits(); 
+     
+     pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
+     chip1.writePort(1,pumpState);
+  
+     L2_LED_State = portTwoValue;
+     chip2.writePort(1,L2_LED_State);
+   }
    
-   pumpState = (pumpStateL1 | pumpStateL2);  // bitwise OR
-   chip1.writePort(1,pumpState);
-
-   // L2_LED_State = pumpStateL2;
-   L2_LED_State = portTwoValue;
-   chip2.writePort(1,L2_LED_State);
-
+   getInputString();
+   
    sendOneTimeStamp();
    delta = micros() - micro1;
    // delta = millis() - micro1;

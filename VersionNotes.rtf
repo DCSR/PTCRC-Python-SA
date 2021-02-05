@@ -1,0 +1,333 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2578
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fswiss\fcharset0 Helvetica-Bold;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww11440\viewh10620\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 Version Notes\
+\
+Priority \
+1. Send something to Steven\
+2. Clean up documentation.\
+3. Can probably delete : errorRecord()\
+\
+Note that sessionLog Button creates a pseudo sessionLog\
+-Asses its format \
+\
+\
+A timestamp has 		box 0..7		    9 comment  10 sessionLog 	\
+   byte codeNum;  		<- boxNum \
+   char code;       		<- char code		    strCode        \
+   uint32_t mSecTime;  	<- time  \
+   byte state;			<- on/off\
+   byte index;			<- checkbox index\
+\
+Python decodes as\
+  codeNum\
+  strCode\
+  TimeStamp\
+  level \
+  Index\
+\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f1\b \cf0 Stuff to check:
+\f0\b0 \
+Test and document how error codes are sent, received, stored and graphed.\
+The number input and output errors should match sessionLog \
+\
+What\'92s the deal with \'91H\'92 vs \'91h\'92 with hold down - is it a timestamp thing?\
+\
+
+\f1\b TO DO: \
+Debug codeDict \{\} then when working move to global\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\b0 \cf0 Work through stuff copied from head of last Commit (below) and separate into historical\
+documentation, issues and stuff to check.  \
+\
+Document the need and use of \'93boxesRunning\'94\
+\
+in FeatherM0 definition of tStamp, change boxNum to codeNum\
+\
+Add timestamped error msg to data files.\
+Lots of comments sent to Serial - turn these into timestamps \
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f1\b \cf0 Issues
+\f0\b0  :\
+Test how to use several Tstamps in one procedure,\
+might have to define several tStamp1, tStamp2 etc.\
+\
+Check timestamps and codes\
+ - probably have to run a PR-HD to get all kinds of timestamps\
+\
+In handleInputString\
+- if (firstSpaceIndex == -1) stringCode = inputString;\
+See Git/BLE_UART/FeatherUART.ino  -1 doesn\'92t work but 255 does.\
+Maybe it is never tested here. \
+\
+
+\f1\b **********  Commits in Reverse Chronological Order ********************
+\f0\b0 \
+\
+
+\f1\b Beta for testing Feb 4\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\b0 \cf0 Version SA301.01"\
+- FeatherM0 : Serial.println("9 Ver=301.01");\
+if codeNum = 10 -> send to sessionLog (renamed from errorLog
+\f1\b \
+
+\f0\b0 - if (!errorFound) Serial.println("9 No_Output_Error");  deleted from CheckOutputPorts()\
+- fixed error with timestamp format \
+	Serial.println("10 $ "+String(millis())+" 2 0");  // space was missing\
+- timestamp added to \'93resetChips()\'94 comment \
+- timestamp added to \'93Session_Aborted\'94 comment\
+- timestamp added to \'93Output_Error\'94 comment\
+- timestamp added to \'93ErrorPersists\'94 comment\
+- timestamp added to \'93Recovered after x attempts\'94 comment\
+- timestamp added to \'93Recovered_after_resetChips()\'94 comment\
+- timestamp added to \'93Recovered from Output Error\'94 comment\
+- Abort!   Boolean sessionAborted used in tick() to shut stuff down. \
+- Extensive changes drawSessionLogTimeStamps(self):\
+    Draw event records of input and output errors\
+    and draw a big red line if aborted.\
+ \
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f1\b \cf0 Beta for testing Dec 18
+\f0\b0 \
+ -	resetChips()      - set chips into active mode   \
+-	enableSafeMode()   (renamed from disableOutputs())\
+	- not called by anything yet \
+-	turnStuffOff() deleted\
+-	setup() - don't really need to do anything with chips here  \
+-	checkOutputPorts()  added\
+-	handleOutputError() added\
+-	if (checkOutputPorts()) handleOutputError() added to tick() - \
+-	AbortSession() added \
+\
+\
+\
+\
+\
+\
+\
+\
+Copied from head of last Commit\
+  \
+ *     \
+ *   handleOutputError()   |\
+ *                         |\
+ *   Reset                     |   Combine these?\
+ *                         |  \
+ *   reportOutputError()   | \
+ *   \
+ *   Boxes::endSession() could clearBit(boxesRunning,boxNum)\
+ *   \
+ *   \
+ *   \
+ *    \
+ *   Make consistent: all boolean  - create new branch to test this at some point\
+ *       moveLeverOne(int state);    \
+ *       moveLeverTwo(int state);    \
+ *       switchStim1(boolean state);\
+ *       switchStim2(boolean state);\
+ *       \
+ *       handle_L2_Response(byte state);\
+ *   \
+ *   Check (and possibly rethink) timestamps. \
+ *     boxNum, code, mSecTime, state, index\
+ *     sendOneTimestamp() sends timestamps with or without state and index\
+ *     depending on whether index == 9.     \
+ *     CheckBox indexes (0..4)\
+ *     lever1CheckVar (0), lever2CheckVar (1), pumpCheckVar (3), LED1CheckVar (4), LED2CheckVar (5)\
+ *     \
+ *     \
+ *   Consider using print() in Python - rather than writeToTextBox() - for errors and diagnostics.\
+ *   \
+ *   Need leverTwoExists??\
+ *      The issue is when and whether to call checkLeverTwoBits() \
+ *      Define global variable that is set by any box running HD\
+ *   \
+ *   HD_DEMO.ino uses startSesssion() and endSession()\
+ *   Here, _startSession is local to Box\
+ *   -  Move stuff to startup() ?\
+ *       \
+ *   \
+ *   \
+ *   If not running HD and therefore not checking InputPort2) there is little \
+ *   overhead to worry about. \
+ *   \
+ *   This is done every 10 mSec in checkInputPort2()\
+ *   - Issue - will this be called regardless of schedule?\
+ *      Or only when L2 is extended? \
+ *    \
+ *   \
+ *   \
+ *   Send System timestamps - eg. "!" input or output error\
+ *   - Python should add it to every datafile.\
+ *   - Raises issue of system time vs box time\
+ *   \
+ *   Println statements (if Verbose) need to be changed to some sort\
+ *   of timestamp\
+ *   \
+ *   lastLeverTwoState and newLeverTwoState still needed? \
+ *   \
+ *   rename "Verbose" - "verbose" is a reserved word\
+ *   \
+ *   \
+ *   Added\
+ *   states \{ PRESTART, L1_ACTIVE, L1_TIMEOUT, IBI, L2_HD, FINISHED \};\
+ *   \
+ *   self.sched = \
+ *   ['0: Do not run', '1: FR(N)', '2: FR1 x 20 trials', '3: FR1 x N trials', '4: PR(step N)', \
+ *   '5: TH', '6: IntA: 5-25', '7: Flush', '8: L2-HD', '9: IntA-HD', '10: 2L-PR-HD']\
+ *   \
+ *   _timeOut deleted\
+ *   inactiveLeverExists renamed to leverTwoExists \
+ *   \
+ *   \
+ *   moveLeverTwo(Extend or Retract) as appropriate for protocol \
+ *   \
+ *   \
+ *   July 14, 2020\
+ *   \
+ *   First iteration of Ver 300 - rethink of the Box Class and \
+ *   downsizing of Lever Class\
+ *   \
+ *   checkLeverTwoBits() should pass the change in state and print it to the Serial Port.\
+ *   \
+ *   To Do:\
+ *   \
+ *   Rename and differentiate procedures for L1 and L2 (moveLever1 etc)\
+ *   checkLeverTwoBits(): Implement the same check for phantom responses as checkLeverOneBits()\
+ *   \
+ *   See Documents/SelfAdmin/Sketch FlowChart.ppt for program flow\
+ *   \
+ *   \
+ *   May 9th.\
+ *   \
+ *   TH - Block one ends after 4 injections\
+ *   "Flush" - N injections separated by Block Time\
+ *   _cycle stuff deleted\
+ *   sessionRunning deleted\
+ *   Fixed lever retract timestamp\
+ *   boolean _pumpOn = added to functionally separate pump and _timeOut \
+ *   Suppress initialize report\
+ *   Only responds to lever response during BLOCK\
+ *   Conflict of commands and timestamps for Lever resolved (=,.) \
+ *   reportParameters() on Feather called by reportParameters() in Python\
+ *   \
+ *   Update Adafruit SAMD Boards to Ver 1.2.7\
+ *  \
+ *   To Do:\
+ *   \
+ *   Document SysVar stuff\
+ *   \
+ *   Document the fact that the lever timestamp is/was inconsistent \
+ *   (= and -) vs (= and.) and may require a work around in Analysis\
+ *   \
+ *   Block ending retracts lever etc. but no Trial end timestamp. \
+ *   endBlock() should endTrial() \
+ *   \
+ *   Check 5-25 - should it override all parameters?\
+ *   \
+ *   What should be handled by a sysVar?\
+ *   -  CheckLeverOneBits?\
+ *   -  \
+ *   \
+ *   _blockDuration and _IBIDuration are a bit complicated.\
+ *   Some protocols have them set by default (eg.IntA 5-25)\
+ *   But they can be set in TH.\
+ *   - the complication is that the first block duration is 6h and changes \
+ *   in the second block.\
+ *   \
+ *   So we need _blockDurationInit and _IBIDurationInit which can be \
+ *   used or not in specific protocols. \
+ *   \
+ * \
+ *    \
+ *    \
+ *   To Do:\
+ *   SwitchRewardDevice(On) etc. \
+ *    Time stamp could reflect Pump (P,p) or Hopper (H,h)\
+ *    But that would require updates to graphs\
+ *   \
+ *  \
+ *   \
+ *   Done on April 7th\
+ *   Defined an array of eight boolena variables.\
+ *   twoLever removed\
+ *   debugBoolVarList removed\
+ *   \
+ *   Document how the timing is done and relate it to the PowerPoint slide.\
+ *    Reinforce() changes _timeOut = true which is checked in tick() each 10 mSec.\
+ *   - use only one _rewardTime\
+ *   - _timeOut can be different and longer than pumpDuration\
+ *   \
+ *   Test:\
+ *   - The Python time should reflect _blockTime or _IBITime\
+ *   - How should IBI be indicated?\
+ *   \
+ *   ************************************************************\
+ *   Four chips are initiaized by the program\
+ *   \
+ *   Each bank of levers is associated with 2 (16 bit) ports. \
+ *   And, for example, port1.read() and port0.write are using 16 bit addresses. The\
+ *   MCP23S17 class allows addressing using 8 bit addresses (so don't have to add 8).\
+ *   It would be more transparent if individual ports were assigned to the lever.  \
+ *   Also, right now the input and reinforcer output is on the same chip. Need to be  \
+ *   able to choose chip and port _inputAddr(0,0)\
+ *   \
+ *   void Lever::switchRewardPort(boolean state) \{\
+        chip1.digitalWrite(_boxNum+8,!state);\
+ *   \
+ *   Default:  \
+ *    _lowChip = chip0;\
+ *    _highChip = chip1; \
+ *   \
+ *   lever.setPorts(inputPort, outputPort).\
+ *      _inputPort = inputPort;\
+ *   *************************************************************\
+ *   \
+ *   \
+ *   1. The lever shouldn't care whether it is a pump \
+ *   or hopper is switched. It could be coupled to only one device and the way the\
+ *   port is selected would determine what is switched.\
+ *   \
+ *   2. The lever has two options and which reward is used is software selectable. \
+ *   \
+ *   Option two is quicker. \
+ *     \
+ *   Note that all timestamps come from Lever.\
+ *   The lever could own the Queue and Box could pull from it. \
+ *   If Box needs to send a message, just use Serial.println()\
+ *   \
+ *   Implications:\
+ *   Timestamp codes will have to be instantiated differently for lever1 and lever2 \
+ *   \
+ *   TIMEOUT and LED = timeOutDuration\
+ *   pumpDuration may be shorter\
+ *   \
+ *   Changes: \
+ *   _pumpTime++ until equals pumpDuration\
+ *   _blockTime++ until equals _blockDuration\
+ *   _IBILength changed to _IBIDuration\
+ *   states _boxState = PRESTART; \
+ *   \
+ *   _blockTime was used for IBI as well - created _IBITime\
+ *   \
+\
+\
+\
+\
+\
+}
