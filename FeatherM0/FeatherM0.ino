@@ -845,6 +845,8 @@ void enterSafeMode() {
      chip1.pinMode(i, INPUT);               
      chip3.pinMode(i, INPUT);               
   }
+  checkLever1 = false;
+  checkLever2 = false; 
 }
 
 void handleOutputError(){
@@ -966,12 +968,8 @@ void handleInputError(byte leverNum, byte portValue) {
       if (chip1.readPort(0) != 0 && chip3.readPort(0) != 0) {
          Serial.println("10 # "+String(millis())+' '+String(leverNum)+' '+String(_portValue));
       }
-      else {      
-         checkLever1 = false;
-         checkLever2 = false;         
-         for (int boxNum = 0; boxNum < 8; boxNum++) 
-            boxArray[boxNum].endSession();
-         Serial.println("10 ! "+String(millis()));
+      else {
+         abortSession();
       }
    }   
 }
@@ -1046,6 +1044,7 @@ void decodeSysVars(byte varCode) {
    else {checkLever1 = false;  
       if (showDebugOutput) Serial.println("9 checkLever1=false");
    }
+   
    if ((varCode & (1 << 1)) > 0) {checkLever2 = true;
       if (showDebugOutput) Serial.println("9 checkLever2=true");
    }
@@ -1057,7 +1056,7 @@ void decodeSysVars(byte varCode) {
    }
    else {checkOutputs = false;  
       if (showDebugOutput) Serial.println("9 checkOutputs=false");
-   }
+   }   
    if ((varCode & (1 << 3)) > 0) {abortEnabled = true;
       if (showDebugOutput) Serial.println("9 abortEnabled=true");
    }
