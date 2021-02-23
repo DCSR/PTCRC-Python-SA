@@ -1004,21 +1004,17 @@ void checkLeverTwoBits() {
    *  bit in the byte.
    */
    static byte oldPortTwoValue = 255;
-   byte bitValue;
    portTwoValue = chip3.readPort(0);                             // Check for Error
    if (portTwoValue == 0) handleInputError(2,portTwoValue);      // Input OR output Error
    else {
       if (oldPortTwoValue != portTwoValue) {                     // something changed
          for (int bits = 7; bits > -1; bits--) {
             if ((portTwoValue & (1 << bits)) != (oldPortTwoValue & (1 << bits))) {
-               bitValue = (portTwoValue & (1 << bits));
-               if (bitValue == 1) {
-                  boxArray[bits].handle_L2_Response(bitValue);
-                  // Serial.println("9 bit_"+String(bits)+"=1");
+               if (bitRead(portTwoValue,bits) == 1) {
+                  boxArray[bits].handle_L2_Response(1);
                }
                else {
-                  boxArray[bits].handle_L2_Response(bitValue);
-                  // Serial.println("9 bit_"+String(bits)+"=0");
+                  boxArray[bits].handle_L2_Response(0);
                }                                  
             }        
          }
@@ -1138,7 +1134,7 @@ void handleInputString()
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "Abort") abortSession();
      else if (stringCode == "r")     resetChips();
-     else if (stringCode == "A")     Serial.println("10 A "+String(millis())+" 0 0");  // On connect
+     // else if (stringCode == "A")     Serial.println("10 A "+String(millis())+" 0 0");  // On connect
      else if (stringCode == "SYSVARS")  decodeSysVars(num1);
      else if (stringCode == "O"){
           if (checkOutputPorts()) handleOutputError();
