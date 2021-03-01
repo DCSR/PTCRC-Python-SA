@@ -1130,7 +1130,7 @@ void handleInputString()
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "Abort") abortSession();
      else if (stringCode == "r")     resetChips();
-     else if (stringCode == "A")     Serial.println("10 A "+String(millis())+" 0 0");  // On connect
+     // else if (stringCode == "A")     Serial.println("10 A "+String(millis())+" 0 0");  // On connect
      else if (stringCode == "SYSVARS")  decodeSysVars(num1);
      else if (stringCode == "O"){
           if (checkOutputPorts()) handleOutputError();
