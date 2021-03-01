@@ -1,19 +1,79 @@
 {\rtf1\ansi\ansicpg1252\cocoartf2578
 \cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fswiss\fcharset0 Helvetica-Bold;}
-{\colortbl;\red255\green255\blue255;}
-{\*\expandedcolortbl;;}
+{\colortbl;\red255\green255\blue255;\red251\green2\blue7;}
+{\*\expandedcolortbl;;\cssrgb\c100000\c14913\c0;}
 \margl1440\margr1440\vieww11440\viewh10620\viewkind0
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
 \f0\fs24 \cf0 Version Notes\
 \
-Priority \
-1. Send something to Steven\
-2. Clean up documentation.\
-3. Can probably delete : errorRecord()\
+Git/SA200.GraphLib.py   < different > Git/Analysis/GraphLib.py\
 \
-Note that sessionLog Button creates a pseudo sessionLog\
--Asses its format \
+As a temp fix, EventRecord() was made identical in the two.\
+\
+\
+****** Delete soon *******\
+Data from Feb 24:\
+The session aborted after ~48 seconds\
+The data files show no error codes.\
+Look at FeatherM0 - it would appear to send \{10, '!', millis(), 0, 0\};\
+****************************\
+\
+drawSessionLog disabled and button commented out - delete eventually\
+\
+Check OnConnect.\
+\
+        codeDict = \{'A':' Millis() on Connect ', \\\
+                    '@':' Input error on port ', \\\
+                    '#':' Recovered from input error on port ', \\\
+                    '$':' Output error on port ', \\\
+                    '%':' Recovered from output error ', \\\
+                    '&':' chipsReset() ', \\\
+                    '!':' Session Aborted! ', \\\
+                    'r':' Recovery after resetChips() ', \\\
+                    'M':' Session started - Box: ', \\\
+                    'm':' Session ended - Box: ', \\\
+                    '(':' enterSafeMode() '\
+                    \}\
+\
+\
+\
+FeatherM0 is sending codes OK.\
+FeatherM0 sends port number with input error - handled on screen\
+\
+SA300 stores error codes to the data files and graphs timestamps from datafiles\
+\
+\
+\
+March 1:\
+\
+Check latest SA300 commit with equipment\
+ \
+1. Each box has its own Millis() onConnect\
+2. Only boxes running get error codes added\
+	Check how/whether error codes are stored in individual data files. \
+	The number of input and output errors should match sessionLog \
+3. SessionLog prints useful stuff\
+4. Screen Error codes correct\
+5. Data files saved\
+\
+\
+Analysis changes have not been commited \
+Check with new data files Analysis shows useful stuff? \
+\
+\
+\
+Priority \
+1. Clean up documentation.\
+2. Analysis needs to show error codes.\
+   Event record kwarg = (Tzero = 0)  \
+3. abortEnabled - not used? Irrelevant?\
+4. Can probably delete : errorRecord()\
+\
+\
+Thursday Feb 11\
+\
+abortEnabled irrelevant -\cf2  Delete \cf0 \
 \
 \
 A timestamp has 		box 0..7		    9 comment  10 sessionLog 	\
@@ -31,17 +91,10 @@ Python decodes as\
   Index\
 \
 \
+\
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
-\f1\b \cf0 Stuff to check:
-\f0\b0 \
-Test and document how error codes are sent, received, stored and graphed.\
-The number input and output errors should match sessionLog \
-\
-What\'92s the deal with \'91H\'92 vs \'91h\'92 with hold down - is it a timestamp thing?\
-\
-
-\f1\b TO DO: \
+\f1\b \cf0 TO DO: \
 Debug codeDict \{\} then when working move to global\
 \
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
@@ -53,7 +106,6 @@ Document the need and use of \'93boxesRunning\'94\
 \
 in FeatherM0 definition of tStamp, change boxNum to codeNum\
 \
-Add timestamped error msg to data files.\
 Lots of comments sent to Serial - turn these into timestamps \
 \
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
@@ -72,11 +124,24 @@ See Git/BLE_UART/FeatherUART.ino  -1 doesn\'92t work but 255 does.\
 Maybe it is never tested here. \
 \
 
-\f1\b **********  Commits in Reverse Chronological Order ********************
-\f0\b0 \
+\f1\b **********  Commits in Reverse Chronological Order ********************\
 \
+Error TimeStamps saved to data files\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
-\f1\b Beta for testing Feb 4\
+\f0\b0 \cf0 kwarg t_zero added to eventRecord() in /SA200/GraphLib\
+Pseudo file created that loads automatically - ErrorData.py - add to Commit
+\f1\b \
+\
+\
+AbortsSessionFix\
+
+\f0\b0 Small change to FeatherM0 sketch. Apparently abortSession() was called in \
+handleOutputError() but not in handleInputError()\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f1\b \cf0 Beta for testing Feb 4\
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
 \f0\b0 \cf0 Version SA301.01"\

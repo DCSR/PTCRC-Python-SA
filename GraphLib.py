@@ -132,14 +132,18 @@ def logLogPlot(aCanvas,x_zero,y_zero,x_pixel_width,y_pixel_height, \
             x = new_x
             y = new_y
             
-def eventRecord(aCanvas, x_zero, y_zero, x_pixel_width, max_x_scale, dataList, charList, aLabel):
+def eventRecord(aCanvas, x_zero, y_zero, x_pixel_width, max_x_scale, dataList, charList, aLabel, t_zero = 0):
+    """
+    t_zero is the millis() at start time. Most timestamps are saved as session time, but error timetsamps
+    are saved as raw millis() and therefore need to have session start time subtracted
+    """
     x = x_zero
     y = y_zero
     x_scaler = x_pixel_width / (max_x_scale*60*1000)
-    aCanvas.create_text(x_zero-30, y_zero-5, fill="blue", text = aLabel) 
+    aCanvas.create_text(x_zero-65, y_zero-5, fill="blue", text = aLabel, anchor = "w") 
     for pairs in dataList:
         if pairs[1] in charList:
-            newX = (x_zero + pairs[0] * x_scaler // 1)
+            newX = (x_zero + ((pairs[0]-t_zero) * x_scaler) // 1)
             aCanvas.create_line(x, y, newX, y)
             if (len(charList) == 1):           #eg. charList = ["P"]
                 aCanvas.create_line(newX, y, newX, y-10)

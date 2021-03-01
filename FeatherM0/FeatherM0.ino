@@ -570,8 +570,6 @@ void Box::startSession() {
       // printQueue.push(&tStamp);
       TStamp tStamp1 = {_boxNum, 'M', millis(), 0, 9};    // Added to datafile
       printQueue.push(&tStamp1);
-      TStamp tStamp2 = {10, 'M', millis(), _boxNum, 0};   // Added to sessionLog
-      printQueue.push(&tStamp2);
       _blockNumber = 0;  
       _pumpTime = 0; 
       _timeOutTime = 0;   
@@ -592,8 +590,6 @@ void Box::endSession() {
     _boxState = FINISHED;    
     TStamp tStamp1 = {_boxNum, 'E', millis() - _startTime, 0, 9};
     printQueue.push(&tStamp1);
-    TStamp tStamp2 = {10, 'm', millis(), _boxNum, 0};   // Added to sessionLog
-    printQueue.push(&tStamp2);
     moveLeverTwo(Retract);
     bitClear(boxesRunning,_boxNum);
 }
@@ -1134,7 +1130,7 @@ void handleInputString()
      else if (stringCode == "D")     reportDiagnostics(); 
      else if (stringCode == "Abort") abortSession();
      else if (stringCode == "r")     resetChips();
-     // else if (stringCode == "A")     Serial.println("10 A "+String(millis())+" 0 0");  // On connect
+     else if (stringCode == "A")     Serial.println("10 A "+String(millis())+" 0 0");  // On connect
      else if (stringCode == "SYSVARS")  decodeSysVars(num1);
      else if (stringCode == "O"){
           if (checkOutputPorts()) handleOutputError();
