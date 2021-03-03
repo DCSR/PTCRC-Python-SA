@@ -1696,7 +1696,7 @@ class GuiClass(object):
         self.sessionLog.append(str(timeStamp)+" "+strCode+codeDict[strCode]+str(num1))
         
         for i in range(8):
-            if (self.boxes[i].sessionStarted == True) and (strCode <> "A"):
+            if (self.boxes[i].sessionStarted == True) and (strCode != "A"):
                 self.boxes[i].dataList.append([timeStamp, strCode])
 
         if (strCode == "A"):
